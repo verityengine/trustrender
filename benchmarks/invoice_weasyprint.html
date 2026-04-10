@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  @page {
+    size: letter;
+    margin: 1in;
+    @top-right { content: "Acme Corporation"; font-size: 8pt; color: #777; }
+    @bottom-center { content: "Page " counter(page) " of " counter(pages); font-size: 8pt; color: #777; }
+  }
+  body { font-family: Helvetica, Arial, sans-serif; font-size: 10pt; margin: 0; color: #333; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.3in; }
+  .logo { width: 1.5in; height: 0.45in; background: #2962ff; display: flex; align-items: center; justify-content: center; }
+  .logo-text { color: white; font-size: 28pt; font-weight: bold; }
+  .invoice-title { text-align: right; }
+  .invoice-title h1 { font-size: 24pt; margin: 0; }
+  .invoice-title .number { font-size: 10pt; color: #666; }
+  .addresses { display: flex; gap: 0.5in; margin-bottom: 0.2in; }
+  .addresses > div { flex: 1; }
+  .addresses strong { display: block; margin-bottom: 4pt; }
+  .details { display: flex; margin-bottom: 0.3in; }
+  .details > div { flex: 1; }
+  .details strong { display: block; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 0.2in; }
+  th { background: #f0f0f0; text-align: left; padding: 6pt 8pt; font-weight: bold; }
+  th.right, td.right { text-align: right; }
+  td { padding: 6pt 8pt; border-bottom: 0.3pt solid #ccc; }
+  .totals { text-align: right; margin-bottom: 0.4in; }
+  .totals table { width: auto; margin-left: auto; }
+  .totals td { border: none; padding: 3pt 8pt; }
+  .totals .total { font-weight: bold; font-size: 12pt; border-top: 0.5pt solid #333; }
+  .notes { border-top: 0.5pt solid #ccc; padding-top: 0.1in; font-size: 9pt; color: #666; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo"><span class="logo-text">T</span></div>
+  <div class="invoice-title">
+    <h1>INVOICE</h1>
+    <div class="number">Invoice #INV-2026-0042</div>
+  </div>
+</div>
+
+<div class="addresses">
+  <div>
+    <strong>From:</strong>
+    Acme Corporation<br>
+    123 Business Ave, Suite 400<br>
+    San Francisco, CA 94105<br>
+    billing@acme.com
+  </div>
+  <div>
+    <strong>Bill To:</strong>
+    Contoso Ltd.<br>
+    456 Enterprise Blvd<br>
+    New York, NY 10001<br>
+    accounts@contoso.com
+  </div>
+</div>
+
+<div class="details">
+  <div><strong>Invoice Date</strong>April 10, 2026</div>
+  <div><strong>Due Date</strong>May 10, 2026</div>
+  <div><strong>Payment Terms</strong>Net 30</div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Description</th>
+      <th class="right">Qty</th>
+      <th class="right">Unit Price</th>
+      <th class="right">Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>Website redesign and development</td><td class="right">1</td><td class="right">$4,500.00</td><td class="right">$4,500.00</td></tr>
+    <tr><td>2</td><td>Logo design and brand identity package</td><td class="right">1</td><td class="right">$2,200.00</td><td class="right">$2,200.00</td></tr>
+    <tr><td>3</td><td>SEO optimization and keyword research</td><td class="right">1</td><td class="right">$1,800.00</td><td class="right">$1,800.00</td></tr>
+    <tr><td>4</td><td>Social media content creation (monthly)</td><td class="right">3</td><td class="right">$750.00</td><td class="right">$2,250.00</td></tr>
+    <tr><td>5</td><td>Email marketing campaign setup</td><td class="right">1</td><td class="right">$1,200.00</td><td class="right">$1,200.00</td></tr>
+    <tr><td>6</td><td>Analytics dashboard configuration</td><td class="right">1</td><td class="right">$950.00</td><td class="right">$950.00</td></tr>
+    <tr><td>7</td><td>Content writing - blog posts</td><td class="right">5</td><td class="right">$300.00</td><td class="right">$1,500.00</td></tr>
+    <tr><td>8</td><td>Photography and image editing</td><td class="right">1</td><td class="right">$800.00</td><td class="right">$800.00</td></tr>
+    <tr><td>9</td><td>Hosting setup and DNS configuration</td><td class="right">1</td><td class="right">$350.00</td><td class="right">$350.00</td></tr>
+    <tr><td>10</td><td>Staff training and documentation</td><td class="right">2</td><td class="right">$500.00</td><td class="right">$1,000.00</td></tr>
+  </tbody>
+</table>
+
+<div class="totals">
+  <table>
+    <tr><td>Subtotal:</td><td class="right">$16,550.00</td></tr>
+    <tr><td>Tax (8.5%):</td><td class="right">$1,406.75</td></tr>
+    <tr class="total"><td>Total Due:</td><td class="right">$17,956.75</td></tr>
+  </table>
+</div>
+
+<div class="notes">
+  <strong>Notes:</strong> Payment is due within 30 days. Please include the invoice number with your payment.
+  For questions, contact billing@acme.com.
+</div>
+
+</body>
+</html>

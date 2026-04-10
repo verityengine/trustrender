@@ -1,0 +1,48 @@
+{
+  "company": {
+    "name": "Acme Corporation",
+    "address_line1": "123 Business Ave, Suite 400",
+    "address_line2": "San Francisco, CA 94105",
+    "email": "accounts@acme.com",
+    "phone": "(415) 555-0100"
+  },
+  "customer": {
+    "name": "Contoso Ltd.",
+    "account_number": "ACCT-78432",
+    "address_line1": "456 Enterprise Blvd",
+    "address_line2": "New York, NY 10001",
+    "email": "accounts@contoso.com"
+  },
+  "statement_date": "April 10, 2026",
+  "period": "March 1 - March 31, 2026",
+  "opening_balance": "$12,450.00",
+  "closing_balance": "$18,267.50",
+  "total_charges": "$9,225.00",
+  "total_payments": "-$3,407.50",
+  "transactions": [
+    {"date": "Mar 01", "description": "Opening Balance", "reference": "", "amount": "", "balance": "$12,450.00"},
+    {"date": "Mar 02", "description": "Invoice #INV-2026-0031 - Website maintenance retainer (monthly)", "reference": "INV-2026-0031", "amount": "$1,500.00", "balance": "$13,950.00"},
+    {"date": "Mar 03", "description": "Payment received - Wire transfer", "reference": "PMT-9981", "amount": "-$2,000.00", "balance": "$11,950.00"},
+    {"date": "Mar 05", "description": "Invoice #INV-2026-0032 - Emergency server migration and DNS reconfiguration including after-hours support", "reference": "INV-2026-0032", "amount": "$3,200.00", "balance": "$15,150.00"},
+    {"date": "Mar 07", "description": "Credit memo - Duplicate billing adjustment for January hosting fees", "reference": "CR-0044", "amount": "-$450.00", "balance": "$14,700.00"},
+    {"date": "Mar 08", "description": "Invoice #INV-2026-0033 - SSL certificate renewal (3 domains)", "reference": "INV-2026-0033", "amount": "$450.00", "balance": "$15,150.00"},
+    {"date": "Mar 10", "description": "Invoice #INV-2026-0034 - Email marketing platform setup and configuration", "reference": "INV-2026-0034", "amount": "$875.00", "balance": "$16,025.00"},
+    {"date": "Mar 12", "description": "Payment received - ACH transfer", "reference": "PMT-9993", "amount": "-$500.00", "balance": "$15,525.00"},
+    {"date": "Mar 14", "description": "Invoice #INV-2026-0035 - Database optimization and query performance tuning for production environment", "reference": "INV-2026-0035", "amount": "$1,200.00", "balance": "$16,725.00"},
+    {"date": "Mar 15", "description": "Invoice #INV-2026-0036 - API rate limiting implementation", "reference": "INV-2026-0036", "amount": "$650.00", "balance": "$17,375.00"},
+    {"date": "Mar 17", "description": "Credit memo - Service level agreement credit for March 5 incident downtime exceeding guaranteed uptime threshold", "reference": "CR-0045", "amount": "-$275.00", "balance": "$17,100.00"},
+    {"date": "Mar 18", "description": "Invoice #INV-2026-0037 - User authentication system security audit", "reference": "INV-2026-0037", "amount": "$500.00", "balance": "$17,600.00"},
+    {"date": "Mar 20", "description": "Payment received - Check #4521", "reference": "PMT-10002", "amount": "-$182.50", "balance": "$17,417.50"},
+    {"date": "Mar 22", "description": "Invoice #INV-2026-0038 - Monitoring dashboard configuration and alert setup", "reference": "INV-2026-0038", "amount": "$350.00", "balance": "$17,767.50"},
+    {"date": "Mar 25", "description": "Invoice #INV-2026-0039 - Quarterly security penetration testing", "reference": "INV-2026-0039", "amount": "$500.00", "balance": "$18,267.50"},
+    {"date": "Mar 28", "description": "Closing Balance", "reference": "", "amount": "", "balance": "$18,267.50"}
+  ],
+  "aging": {
+    "current": "$5,575.00",
+    "days_30": "$3,200.00",
+    "days_60": "$1,500.00",
+    "days_90": "$7,992.50",
+    "total": "$18,267.50"
+  },
+  "notes": "Payment terms: Net 30. Please reference your account number on all payments. For questions, contact accounts@acme.com or call (415) 555-0100."
+}
