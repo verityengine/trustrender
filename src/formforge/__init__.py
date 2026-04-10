@@ -1,4 +1,4 @@
-"""Typeset: fast, code-first PDF generation from structured data."""
+"""Formforge: fast, code-first PDF generation from structured data."""
 
 from __future__ import annotations
 
@@ -6,28 +6,29 @@ import json
 import os
 from pathlib import Path
 
-import typst as _typst
+from .engine import compile_typst, compile_typst_file
+from .errors import ErrorCode, FormforgeError
 
-from .engine import compile_typst
-from .errors import TypesetError
+# Re-export for public API
+from .errors import ErrorCode as ErrorCode  # noqa: F811
 from .templates import render_template
 
 __version__ = "0.1.0"
 
-__all__ = ["render", "TypesetError", "__version__", "bundled_font_dir"]
+__all__ = ["render", "FormforgeError", "ErrorCode", "__version__", "bundled_font_dir"]
 
 # Resolved once at import time — deterministic across local, test, and container.
-# Check multiple locations: dev layout (src/typeset -> fonts/) and env var.
+# Check multiple locations: dev layout (src/formforge -> fonts/) and env var.
 def _find_bundled_fonts() -> Path | None:
     """Find bundled font directory. Checked once at import time."""
     # 1. Environment variable (explicit override, used in containers)
-    env_path = os.environ.get("TYPESET_FONT_PATH")
+    env_path = os.environ.get("FORMFORGE_FONT_PATH")
     if env_path:
         p = Path(env_path)
         if p.is_dir():
             return p.resolve()
 
-    # 2. Development layout: src/typeset/__init__.py -> ../../fonts/
+    # 2. Development layout: src/formforge/__init__.py -> ../../fonts/
     dev_path = Path(__file__).resolve().parent.parent.parent / "fonts"
     if dev_path.is_dir():
         return dev_path
@@ -91,34 +92,39 @@ def render(
         PDF file contents as bytes.
 
     Raises:
-        TypesetError: If rendering fails. The error includes the path to the
-            intermediate ``.typ`` file for debugging.
+        FormforgeError: If rendering fails. Check ``code`` for the error category,
+            ``stage`` for where it failed, and ``detail`` for the full diagnostic.
         FileNotFoundError: If the template or data file does not exist.
     """
     template_path = Path(template)
     if not template_path.exists():
-        raise FileNotFoundError(f"Template not found: {template_path}")
+        raise FormforgeError(
+            f"Template not found: {template_path}",
+            code=ErrorCode.TEMPLATE_NOT_FOUND,
+            stage="data_resolution",
+            template_path=str(template_path),
+        )
 
     data_dict = _resolve_data(data)
     is_jinja = template_path.name.endswith(".j2.typ")
     resolved_fonts = _build_font_paths(font_paths)
 
     if is_jinja:
+        # Jinja errors (syntax, undefined vars) are caught and classified
+        # inside render_template
         rendered = render_template(template_path, data_dict)
         pdf_bytes = compile_typst(
             rendered,
             template_path.parent,
             debug=debug,
             font_paths=resolved_fonts,
+            template_path=template_path,
         )
     else:
-        compile_kwargs: dict = {"format": "pdf"}
-        if resolved_fonts:
-            compile_kwargs["font_paths"] = resolved_fonts
-        try:
-            pdf_bytes = _typst.compile(str(template_path), **compile_kwargs)
-        except _typst.TypstError as exc:
-            raise TypesetError(str(exc)) from exc
+        pdf_bytes = compile_typst_file(
+            template_path,
+            font_paths=resolved_fonts,
+        )
 
     if output is not None:
         output_path = Path(output)
@@ -132,6 +138,14 @@ def _resolve_data(data: dict | str | os.PathLike) -> dict:
     """Resolve data argument to a dict."""
     if isinstance(data, dict):
         return data
+
+    if not isinstance(data, (str, os.PathLike)):
+        raise FormforgeError(
+            f"Data must be a dict, JSON string, or path to a .json file, "
+            f"got {type(data).__name__}",
+            code=ErrorCode.INVALID_DATA,
+            stage="data_resolution",
+        )
 
     # Try as file path first
     path = Path(data) if not isinstance(data, str) else None
@@ -151,14 +165,21 @@ def _resolve_data(data: dict | str | os.PathLike) -> dict:
             result = json.loads(data)
             if isinstance(result, dict):
                 return result
-            raise TypesetError(
-                f"Data JSON must be an object, got {type(result).__name__}"
+            raise FormforgeError(
+                f"Data JSON must be an object, got {type(result).__name__}",
+                code=ErrorCode.INVALID_DATA,
+                stage="data_resolution",
             )
         except json.JSONDecodeError as exc:
-            msg = f"Invalid data: not a valid file path or JSON string: {exc}"
-            raise TypesetError(msg) from exc
+            raise FormforgeError(
+                f"Invalid data: not a valid file path or JSON string: {exc}",
+                code=ErrorCode.INVALID_DATA,
+                stage="data_resolution",
+            ) from exc
 
-    raise TypesetError(
+    raise FormforgeError(
         f"Data must be a dict, JSON string, or path to a .json file, "
-        f"got {type(data).__name__}"
+        f"got {type(data).__name__}",
+        code=ErrorCode.INVALID_DATA,
+        stage="data_resolution",
     )

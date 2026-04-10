@@ -1,19 +1,19 @@
-"""CLI entry point for Typeset."""
+"""CLI entry point for Formforge."""
 
 from __future__ import annotations
 
 import argparse
 import sys
 
-from . import TypesetError, __version__, render
+from . import FormforgeError, __version__, render
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="typeset",
+        prog="formforge",
         description="Generate PDFs from structured data. No browser required.",
     )
-    parser.add_argument("--version", action="version", version=f"typeset {__version__}")
+    parser.add_argument("--version", action="version", version=f"formforge {__version__}")
 
     sub = parser.add_subparsers(dest="command")
 
@@ -68,6 +68,26 @@ def main(argv: list[str] | None = None) -> int:
     return 1
 
 
+def _format_error(exc: FormforgeError) -> str:
+    """Format a FormforgeError for CLI output with full diagnostics."""
+    lines = []
+    lines.append(f"error[{exc.code.value}]: {str(exc).split(chr(10))[0]}")
+    lines.append(f"  stage: {exc.stage}")
+    if exc.template_path:
+        lines.append(f"  template: {exc.template_path}")
+    if exc.source_path:
+        lines.append(f"  intermediate: {exc.source_path}")
+
+    # Show full diagnostic if it's multi-line (more than the summary)
+    summary = str(exc).split("\n")[0]
+    if exc.detail and exc.detail != summary:
+        lines.append("")
+        for line in exc.detail.splitlines():
+            lines.append(f"  {line}")
+
+    return "\n".join(lines)
+
+
 def _run_render(args: argparse.Namespace) -> int:
     try:
         pdf_bytes = render(
@@ -79,11 +99,11 @@ def _run_render(args: argparse.Namespace) -> int:
         if args.debug:
             print("  Debug mode: intermediate .typ file preserved in template directory")
         return 0
-    except FileNotFoundError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+    except FormforgeError as exc:
+        print(_format_error(exc), file=sys.stderr)
         return 1
-    except TypesetError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+    except FileNotFoundError as exc:
+        print(f"error: {exc}", file=sys.stderr)
         return 1
 
 
@@ -93,7 +113,7 @@ def _run_serve(args: argparse.Namespace) -> int:
     from .server import create_app
 
     app = create_app(args.templates, debug=args.debug, font_paths=args.font_paths)
-    print(f"Typeset server starting on {args.host}:{args.port}")
+    print(f"Formforge server starting on {args.host}:{args.port}")
     print(f"  Templates: {args.templates}")
     print(f"  Debug: {args.debug}")
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")

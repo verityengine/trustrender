@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "typeset"
+name = "formforge"
 version = "0.1.0"
 description = "Fast, code-first PDF generation from structured data. No browser, no Chromium."
 requires-python = ">=3.11"
@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-typeset = "typeset.cli:main"
+formforge = "formforge.cli:main"
 
 [project.optional-dependencies]
 dev = [

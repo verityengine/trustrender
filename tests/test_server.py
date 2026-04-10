@@ -1,14 +1,17 @@
 """Tests for the HTTP server endpoints."""
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
 from starlette.testclient import TestClient
 
-from typeset.server import create_app
+from formforge.server import create_app
 
 EXAMPLES = Path("examples")
+FIXTURES = Path("tests/fixtures")
+HAS_TYPST_CLI = shutil.which("typst") is not None
 
 
 @pytest.fixture
@@ -86,12 +89,14 @@ class TestInputValidation:
     def test_missing_template(self, client):
         resp = client.post("/render", json={"data": {}})
         assert resp.status_code == 400
-        assert "template" in resp.json()["error"]
+        assert resp.json()["error"] == "INVALID_DATA"
+        assert "template" in resp.json()["message"]
 
     def test_missing_data(self, client):
         resp = client.post("/render", json={"template": "invoice.j2.typ"})
         assert resp.status_code == 400
-        assert "data" in resp.json()["error"]
+        assert resp.json()["error"] == "INVALID_DATA"
+        assert "data" in resp.json()["message"]
 
     def test_data_must_be_object(self, client):
         resp = client.post("/render", json={
@@ -107,7 +112,8 @@ class TestInputValidation:
             "format": "png",
         })
         assert resp.status_code == 400
-        assert "Unknown fields" in resp.json()["error"]
+        assert resp.json()["error"] == "INVALID_DATA"
+        assert "Unknown fields" in resp.json()["message"]
 
     def test_invalid_json(self, client):
         resp = client.post(
@@ -136,7 +142,8 @@ class TestPathTraversal:
             "data": {},
         })
         assert resp.status_code == 400
-        assert "Invalid template path" in resp.json()["error"]
+        assert resp.json()["error"] == "INVALID_DATA"
+        assert "Invalid template path" in resp.json()["message"]
 
     def test_absolute_path_rejected(self, client):
         resp = client.post("/render", json={
@@ -156,7 +163,8 @@ class TestTemplateNotFound:
             "data": {},
         })
         assert resp.status_code == 404
-        assert "not found" in resp.json()["error"]
+        assert resp.json()["error"] == "TEMPLATE_NOT_FOUND"
+        assert "not found" in resp.json()["message"]
 
     def test_404_has_request_id(self, client):
         resp = client.post("/render", json={
@@ -208,3 +216,164 @@ class TestRenderErrors:
         # Invoice template references assets/logo.png — should succeed since
         # the template dir is examples/ which has assets/logo.png
         assert resp.status_code == 200
+
+
+# --- Server execution model: CLI backend, killable timeout ---
+
+
+@pytest.mark.skipif(not HAS_TYPST_CLI, reason="typst CLI not on PATH")
+class TestServerTimeout:
+    """Server timeout is real: subprocess is killed, 504 returned.
+
+    Uses a very short render_timeout (0.001s) so that any real template
+    will timeout reliably — this tests timeout behavior, not template speed.
+    """
+
+    @pytest.fixture
+    def fast_timeout_client(self):
+        app = create_app(EXAMPLES, render_timeout=0.001)
+        return TestClient(app, raise_server_exceptions=False)
+
+    @pytest.fixture
+    def fast_timeout_fixtures_client(self):
+        app = create_app(FIXTURES, render_timeout=0.001)
+        return TestClient(app, raise_server_exceptions=False)
+
+    def test_jinja_timeout_returns_504(self, fast_timeout_client):
+        """Jinja template timeout returns 504 with RENDER_TIMEOUT."""
+        resp = fast_timeout_client.post("/render", json={
+            "template": "invoice.j2.typ",
+            "data": json.load(open(EXAMPLES / "invoice_data.json")),
+        })
+        assert resp.status_code == 504
+        data = resp.json()
+        assert data["error"] == "RENDER_TIMEOUT"
+
+    def test_static_timeout_returns_504(self, fast_timeout_client):
+        """Raw .typ template timeout returns 504 with RENDER_TIMEOUT."""
+        resp = fast_timeout_client.post("/render", json={
+            "template": "hello.typ",
+            "data": {},
+        })
+        assert resp.status_code == 504
+        data = resp.json()
+        assert data["error"] == "RENDER_TIMEOUT"
+
+    def test_timeout_response_has_request_id(self, fast_timeout_client):
+        """Timeout error responses include request_id."""
+        resp = fast_timeout_client.post("/render", json={
+            "template": "hello.typ",
+            "data": {},
+        })
+        assert resp.status_code == 504
+        assert "X-Request-ID" in resp.headers
+        assert "request_id" in resp.json()
+
+    def test_timeout_response_has_stage(self, fast_timeout_client):
+        """Timeout error response includes stage field."""
+        resp = fast_timeout_client.post("/render", json={
+            "template": "hello.typ",
+            "data": {},
+        })
+        assert resp.status_code == 504
+        assert "stage" in resp.json()
+
+    def test_repeated_timeouts_no_temp_file_leak(self, fast_timeout_fixtures_client):
+        """Repeated timeouts do not accumulate orphan temp files."""
+        before = set(FIXTURES.glob("_formforge_*"))
+        for _ in range(3):
+            fast_timeout_fixtures_client.post("/render", json={
+                "template": "simple.j2.typ",
+                "data": json.load(open(FIXTURES / "simple.json")),
+            })
+        after = set(FIXTURES.glob("_formforge_*"))
+        new_files = after - before
+        assert len(new_files) == 0, f"Orphan temp files: {new_files}"
+
+    def test_same_template_succeeds_with_normal_timeout(self):
+        """Same template that times out at 0.001s succeeds with normal timeout."""
+        app = create_app(EXAMPLES, render_timeout=30)
+        client = TestClient(app)
+        resp = client.post("/render", json={
+            "template": "hello.typ",
+            "data": {},
+        })
+        assert resp.status_code == 200
+        assert resp.content[:5] == b"%PDF-"
+
+    def test_debug_mode_timeout_preserves_artifact(self):
+        """In debug mode, timeout preserves intermediate file for inspection."""
+        app = create_app(FIXTURES, render_timeout=0.001, debug=True)
+        client = TestClient(app, raise_server_exceptions=False)
+        before = set(FIXTURES.glob("_formforge_*"))
+        resp = client.post("/render", json={
+            "template": "simple.j2.typ",
+            "data": json.load(open(FIXTURES / "simple.json")),
+        })
+        assert resp.status_code == 504
+        after = set(FIXTURES.glob("_formforge_*"))
+        new_files = after - before
+        assert len(new_files) == 1, "Debug mode should preserve artifact on timeout"
+        # Cleanup test artifact
+        for f in new_files:
+            f.unlink()
+
+    def test_no_artifact_leak_in_examples(self):
+        """Normal server operation does not leave artifacts in examples/."""
+        before = set(EXAMPLES.glob("_formforge_*"))
+        app = create_app(EXAMPLES, render_timeout=30)
+        client = TestClient(app)
+        # Successful render
+        resp = client.post("/render", json={
+            "template": "invoice.j2.typ",
+            "data": json.load(open(EXAMPLES / "invoice_data.json")),
+        })
+        assert resp.status_code == 200
+        after = set(EXAMPLES.glob("_formforge_*"))
+        assert after == before, f"Artifacts leaked: {after - before}"
+
+
+@pytest.mark.skipif(not HAS_TYPST_CLI, reason="typst CLI not on PATH")
+class TestServerCLIBackendParity:
+    """Server forced CLI path produces same results as normal render path."""
+
+    def test_jinja_render_succeeds(self, client):
+        """Jinja template renders successfully through server CLI backend."""
+        resp = client.post("/render", json={
+            "template": "invoice.j2.typ",
+            "data": json.load(open(EXAMPLES / "invoice_data.json")),
+        })
+        assert resp.status_code == 200
+        assert resp.content[:5] == b"%PDF-"
+        assert len(resp.content) > 1000
+
+    def test_static_render_succeeds(self, client):
+        """Raw .typ template renders successfully through server CLI backend."""
+        resp = client.post("/render", json={
+            "template": "hello.typ",
+            "data": {},
+        })
+        assert resp.status_code == 200
+        assert resp.content[:5] == b"%PDF-"
+
+    def test_font_paths_work(self):
+        """Explicit font paths work through server CLI backend."""
+        fonts_dir = Path("fonts")
+        font_paths = [str(fonts_dir)] if fonts_dir.is_dir() else None
+        app = create_app(EXAMPLES, font_paths=font_paths)
+        client = TestClient(app)
+        resp = client.post("/render", json={
+            "template": "invoice.j2.typ",
+            "data": json.load(open(EXAMPLES / "invoice_data.json")),
+        })
+        assert resp.status_code == 200
+        assert resp.content[:5] == b"%PDF-"
+
+    def test_bundled_fonts_work(self, client):
+        """Bundled fonts are resolved at app creation and work in CLI backend."""
+        resp = client.post("/render", json={
+            "template": "invoice.j2.typ",
+            "data": json.load(open(EXAMPLES / "invoice_data.json")),
+        })
+        assert resp.status_code == 200
+        assert resp.content[:5] == b"%PDF-"

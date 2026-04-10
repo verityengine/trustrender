@@ -3,6 +3,6 @@
 
 = Hello Typst
 
-This is a minimal smoke test for the Typeset project.
+This is a minimal smoke test for the Formforge project.
 
 Rendered by Typst via Python.

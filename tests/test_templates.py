@@ -1,6 +1,6 @@
 """Tests for Jinja2 template preprocessing and auto-escaping."""
 
-from typeset.templates import render_template, typst_escape
+from formforge.templates import render_template, typst_escape
 
 FIXTURES = "tests/fixtures"
 

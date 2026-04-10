@@ -1,4 +1,4 @@
-"""Concurrent load test for the Typeset server.
+"""Concurrent load test for the Formforge server.
 
 Exploratory operational benchmark — not definitive capacity planning.
 Tests render throughput, latency, and temp file cleanup under load.
@@ -42,7 +42,7 @@ def render_request(client, data, template="invoice.j2.typ"):
 
 
 def count_temp_files():
-    return len(glob.glob(f"{TEMPLATE_DIR}/_typeset_*.typ"))
+    return len(glob.glob(f"{TEMPLATE_DIR}/_formforge_*.typ"))
 
 
 def stats_summary(times):
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     data = load_invoice_data()
 
     print("=" * 60)
-    print("TYPESET SERVER LOAD TEST")
+    print("FORMFORGE SERVER LOAD TEST")
     print("=" * 60)
     print(f"Server: {SERVER_URL}")
     print()

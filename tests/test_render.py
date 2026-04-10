@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from typeset import TypesetError, render
+from formforge import FormforgeError, render
 
 FIXTURES = Path("tests/fixtures")
 
@@ -69,11 +69,11 @@ class TestDataResolution:
         assert pdf[:5] == b"%PDF-"
 
     def test_invalid_json_string(self):
-        with pytest.raises(TypesetError, match="Invalid data"):
+        with pytest.raises(FormforgeError, match="Invalid data"):
             render(FIXTURES / "simple.j2.typ", "not json at all {{{")
 
     def test_json_array_rejected(self):
-        with pytest.raises(TypesetError, match="must be an object"):
+        with pytest.raises(FormforgeError, match="must be an object"):
             render(FIXTURES / "simple.j2.typ", "[1, 2, 3]")
 
 
@@ -81,10 +81,10 @@ class TestDebugMode:
     @pytest.fixture(autouse=True)
     def _clean_intermediates(self):
         """Remove any leftover intermediate files before and after each test."""
-        for f in FIXTURES.glob("_typeset_*.typ"):
+        for f in FIXTURES.glob("_formforge_*.typ"):
             f.unlink()
         yield
-        for f in FIXTURES.glob("_typeset_*.typ"):
+        for f in FIXTURES.glob("_formforge_*.typ"):
             f.unlink()
 
     def test_debug_preserves_intermediate(self):
@@ -93,16 +93,17 @@ class TestDebugMode:
             FIXTURES / "simple.json",
             debug=True,
         )
-        intermediates = list(FIXTURES.glob("_typeset_*.typ"))
+        intermediates = list(FIXTURES.glob("_formforge_*.typ"))
         assert len(intermediates) == 1
 
     def test_no_debug_cleans_up(self):
         render(FIXTURES / "simple.j2.typ", FIXTURES / "simple.json")
-        intermediates = list(FIXTURES.glob("_typeset_*.typ"))
+        intermediates = list(FIXTURES.glob("_formforge_*.typ"))
         assert len(intermediates) == 0
 
 
 class TestFileNotFound:
     def test_missing_template(self):
-        with pytest.raises(FileNotFoundError, match="Template not found"):
+        with pytest.raises(FormforgeError, match="Template not found") as exc_info:
             render("nonexistent.j2.typ", {})
+        assert exc_info.value.code.value == "TEMPLATE_NOT_FOUND"

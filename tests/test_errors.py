@@ -4,31 +4,31 @@ from pathlib import Path
 
 import pytest
 
-from typeset import TypesetError, render
+from formforge import FormforgeError, render
 
 FIXTURES = Path("tests/fixtures")
 
 
 class TestMissingImage:
-    def test_raises_typeset_error(self):
-        with pytest.raises(TypesetError, match="file not found"):
+    def test_raises_formforge_error(self):
+        with pytest.raises(FormforgeError, match="file not found"):
             render(FIXTURES / "missing_image.j2.typ", {"title": "Test"})
 
     def test_preserves_intermediate_file(self):
         try:
             render(FIXTURES / "missing_image.j2.typ", {"title": "Test"})
-        except TypesetError as exc:
+        except FormforgeError as exc:
             assert exc.source_path is not None
             assert Path(exc.source_path).exists()
             # Clean up
             Path(exc.source_path).unlink()
         else:
-            pytest.fail("Expected TypesetError")
+            pytest.fail("Expected FormforgeError")
 
 
 class TestBadSyntax:
-    def test_raises_typeset_error(self):
-        with pytest.raises(TypesetError, match="expected length"):
+    def test_raises_formforge_error(self):
+        with pytest.raises(FormforgeError, match="expected length"):
             render(FIXTURES / "bad_syntax.typ", {})
 
 
@@ -88,11 +88,11 @@ class TestErrorMessageQuality:
     def test_includes_source_path_hint(self):
         try:
             render(FIXTURES / "missing_image.j2.typ", {"title": "T"})
-        except TypesetError as exc:
+        except FormforgeError as exc:
             msg = str(exc)
-            assert "Rendered source preserved at:" in msg
+            assert "Intermediate source:" in msg
             # Clean up
             if exc.source_path:
                 Path(exc.source_path).unlink()
         else:
-            pytest.fail("Expected TypesetError")
+            pytest.fail("Expected FormforgeError")

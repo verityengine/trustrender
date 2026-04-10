@@ -2,8 +2,8 @@
 
 from markupsafe import Markup
 
-from typeset.filters import typst_color, typst_markup, typst_money
-from typeset.templates import render_template, typst_escape
+from formforge.filters import typst_color, typst_markup, typst_money
+from formforge.templates import render_template, typst_escape
 
 FIXTURES = "tests/fixtures"
 

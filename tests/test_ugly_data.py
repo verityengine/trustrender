@@ -13,7 +13,7 @@ Tests realistic messy data that could break rendering:
 
 from pathlib import Path
 
-from typeset import render
+from formforge import render
 
 EXAMPLES = Path("examples")
 

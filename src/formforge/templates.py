@@ -27,8 +27,10 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError, UndefinedError
 from markupsafe import Markup
+
+from .errors import ErrorCode, FormforgeError
 
 
 def typst_escape(value: object) -> object:
@@ -58,6 +60,9 @@ def render_template(template_path: str | os.PathLike, data: dict) -> str:
 
     Auto-escapes Typst special characters in all string values.
     Values passed through the ``typst_markup`` filter bypass escaping.
+
+    Raises:
+        FormforgeError: With appropriate code for syntax or variable errors.
     """
     template_path = Path(template_path)
 
@@ -69,5 +74,33 @@ def render_template(template_path: str | os.PathLike, data: dict) -> str:
         keep_trailing_newline=True,
     )
     env.filters.update(FILTERS)
-    template = env.get_template(template_path.name)
-    return template.render(**data)
+
+    try:
+        template = env.get_template(template_path.name)
+    except TemplateSyntaxError as exc:
+        raise FormforgeError(
+            f"Template syntax error: {exc.message}",
+            code=ErrorCode.TEMPLATE_SYNTAX,
+            stage="template_preprocess",
+            detail=f"{exc.filename}:{exc.lineno}: {exc.message}",
+            template_path=str(template_path),
+        ) from exc
+
+    try:
+        return template.render(**data)
+    except UndefinedError as exc:
+        raise FormforgeError(
+            f"Undefined template variable: {exc.message}",
+            code=ErrorCode.TEMPLATE_VARIABLE,
+            stage="template_preprocess",
+            detail=str(exc),
+            template_path=str(template_path),
+        ) from exc
+    except TemplateSyntaxError as exc:
+        raise FormforgeError(
+            f"Template syntax error: {exc.message}",
+            code=ErrorCode.TEMPLATE_SYNTAX,
+            stage="template_preprocess",
+            detail=f"{exc.filename}:{exc.lineno}: {exc.message}",
+            template_path=str(template_path),
+        ) from exc

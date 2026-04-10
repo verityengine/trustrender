@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from typeset.cli import main
+from formforge.cli import main
 
 FIXTURES = Path("tests/fixtures")
 
@@ -59,5 +59,5 @@ class TestCLIRender:
         ])
         assert code == 0
         # Clean up intermediate files
-        for f in FIXTURES.glob("_typeset_*.typ"):
+        for f in FIXTURES.glob("_formforge_*.typ"):
             f.unlink()
