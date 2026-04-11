@@ -613,3 +613,178 @@ class TestCreditNotes:
         from facturx import get_xml_from_pdf
         _, xml_bytes = get_xml_from_pdf(pdf)
         assert b">380<" in xml_bytes
+
+
+# ---------------------------------------------------------------------------
+# Arithmetic consistency validation
+# ---------------------------------------------------------------------------
+
+
+class TestArithmeticConsistency:
+    """Prove arithmetic mismatches are caught before rendering."""
+
+    def test_consistent_totals_pass(self):
+        """Correctly computed totals pass validation."""
+        data = _load_einvoice_data()
+        errors = validate_zugferd_invoice_data(data)
+        assert errors == []
+
+    def test_subtotal_mismatch_rejected(self):
+        """subtotal != sum(line_total) -> error."""
+        data = _load_einvoice_data()
+        data["subtotal"] = 9999.00  # actual sum is 8950.00
+        errors = validate_zugferd_invoice_data(data)
+        paths = [e.path for e in errors]
+        assert "subtotal" in paths
+        assert any("sum of line totals" in e.message for e in errors)
+
+    def test_tax_total_mismatch_rejected(self):
+        """tax_total != sum(tax_entries.amount) -> error."""
+        data = _load_einvoice_data()
+        data["tax_total"] = 9999.00  # actual sum of entries is 1700.50
+        errors = validate_zugferd_invoice_data(data)
+        paths = [e.path for e in errors]
+        assert "tax_total" in paths
+        assert any("sum of tax entry amounts" in e.message for e in errors)
+
+    def test_grand_total_mismatch_rejected(self):
+        """total != subtotal + tax_total -> error."""
+        data = _load_einvoice_data()
+        data["total"] = 5000.00  # should be 8950 + 1700.50 = 10650.50
+        errors = validate_zugferd_invoice_data(data)
+        paths = [e.path for e in errors]
+        assert "total" in paths
+        assert any("subtotal + tax_total" in e.message for e in errors)
+
+    def test_penny_rounding_within_tolerance(self):
+        """Off-by-one-cent is within tolerance (<=0.01)."""
+        data = _load_einvoice_data()
+        # Shift total by exactly 0.01 — should still pass
+        data["total"] = 10650.51  # actual is 10650.50
+        errors = validate_zugferd_invoice_data(data)
+        total_errors = [e for e in errors if e.path == "total"]
+        assert total_errors == []
+
+    def test_two_cent_mismatch_rejected(self):
+        """Off-by-two-cents exceeds tolerance -> error."""
+        data = _load_einvoice_data()
+        data["total"] = 10650.53  # actual is 10650.50, diff = 0.03
+        errors = validate_zugferd_invoice_data(data)
+        paths = [e.path for e in errors]
+        assert "total" in paths
+
+    def test_all_three_wrong_produces_three_errors(self):
+        """All three consistency checks fire independently."""
+        data = _load_einvoice_data()
+        data["subtotal"] = 1.00
+        data["tax_total"] = 2.00
+        data["total"] = 9999.00
+        errors = validate_zugferd_invoice_data(data)
+        paths = [e.path for e in errors]
+        assert "subtotal" in paths
+        assert "tax_total" in paths
+        assert "total" in paths
+
+    def test_render_rejects_inconsistent_totals(self):
+        """render() raises ZUGFERD_ERROR for arithmetic mismatch."""
+        data = _load_einvoice_data()
+        data["total"] = 9999.00
+        with pytest.raises(TrustRenderError) as exc_info:
+            render("examples/einvoice.j2.typ", data, zugferd="en16931")
+        assert exc_info.value.code == ErrorCode.ZUGFERD_ERROR
+
+    def test_preflight_rejects_inconsistent_totals(self):
+        """preflight() fails for arithmetic mismatch."""
+        from trustrender.readiness import preflight
+        data = _load_einvoice_data()
+        data["total"] = 9999.00
+        verdict = preflight("examples/einvoice.j2.typ", data, zugferd="en16931")
+        assert verdict.ready is False
+
+    def test_mixed_rate_consistency(self):
+        """Mixed-rate invoice with correct arithmetic passes."""
+        data = _load_einvoice_data()
+        data["items"][0]["tax_rate"] = 7
+        data["items"][0]["line_total"] = 4500.00
+        data["items"][1]["tax_rate"] = 19
+        data["items"][2]["tax_rate"] = 19
+        data["tax_entries"] = [
+            {"rate": 7, "basis": 4500.00, "amount": 315.00},
+            {"rate": 19, "basis": 4450.00, "amount": 845.50},
+        ]
+        data["subtotal"] = 8950.00
+        data["tax_total"] = 1160.50
+        data["total"] = 10110.50
+        errors = validate_zugferd_invoice_data(data)
+        assert errors == []
+
+
+# ---------------------------------------------------------------------------
+# Zero/negative tax rate rejection
+# ---------------------------------------------------------------------------
+
+
+class TestZeroTaxRateRejection:
+    """Prove 0% and negative tax rates are rejected."""
+
+    def test_zero_tax_rate_rejected(self):
+        """tax_rate: 0 -> explicit error (not silently category S)."""
+        data = _load_einvoice_data()
+        data["items"][0]["tax_rate"] = 0
+        errors = validate_zugferd_invoice_data(data)
+        paths = [e.path for e in errors]
+        assert "items[0].tax_rate" in paths
+        assert any("not supported in v1" in e.message for e in errors)
+
+    def test_negative_tax_rate_rejected(self):
+        """Negative tax rate -> error."""
+        data = _load_einvoice_data()
+        data["items"][0]["tax_rate"] = -19
+        errors = validate_zugferd_invoice_data(data)
+        paths = [e.path for e in errors]
+        assert "items[0].tax_rate" in paths
+
+    def test_zero_tax_entry_rate_rejected(self):
+        """tax_entries with rate 0 -> error."""
+        data = _load_einvoice_data()
+        data["items"][0]["tax_rate"] = 0
+        data["tax_entries"] = [
+            {"rate": 0, "basis": 4500.00, "amount": 0.00},
+            {"rate": 19, "basis": 4450.00, "amount": 845.50},
+        ]
+        errors = validate_zugferd_invoice_data(data)
+        paths = [e.path for e in errors]
+        assert "items[0].tax_rate" in paths
+        assert "tax_entries[0].rate" in paths
+
+    def test_error_message_mentions_exempt_and_reverse_charge(self):
+        """Error message explains WHY 0% is rejected."""
+        data = _load_einvoice_data()
+        data["items"][0]["tax_rate"] = 0
+        errors = validate_zugferd_invoice_data(data)
+        rate_errors = [e for e in errors if "tax_rate" in e.path]
+        assert any("zero-rated" in e.message for e in rate_errors)
+        assert any("reverse-charge" in e.message for e in rate_errors)
+
+    def test_valid_positive_rates_still_pass(self):
+        """Positive rates (7%, 19%) are unaffected."""
+        data = _load_einvoice_data()
+        errors = validate_zugferd_invoice_data(data)
+        rate_errors = [e for e in errors if "tax_rate" in e.path]
+        assert rate_errors == []
+
+    def test_render_rejects_zero_rate(self):
+        """render() raises ZUGFERD_ERROR for 0% tax rate."""
+        data = _load_einvoice_data()
+        data["items"][0]["tax_rate"] = 0
+        with pytest.raises(TrustRenderError) as exc_info:
+            render("examples/einvoice.j2.typ", data, zugferd="en16931")
+        assert exc_info.value.code == ErrorCode.ZUGFERD_ERROR
+
+    def test_preflight_rejects_zero_rate(self):
+        """preflight() fails for 0% tax rate."""
+        from trustrender.readiness import preflight
+        data = _load_einvoice_data()
+        data["items"][0]["tax_rate"] = 0
+        verdict = preflight("examples/einvoice.j2.typ", data, zugferd="en16931")
+        assert verdict.ready is False

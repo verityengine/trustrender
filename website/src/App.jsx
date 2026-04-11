@@ -2273,7 +2273,7 @@ function ComplianceWedge() {
                 Validated e&#8209;invoicing for the supported German B2B path.
               </h2>
               <p className="text-[15px] text-mid leading-relaxed mb-6">
-                TrustRender runs XSD validation and semantic checks before the PDF is created. Structurally invalid data is rejected before a document is produced. Output is PDF/A-3b with embedded CII XML for the supported EN 16931 invoice flow.
+                TrustRender validates invoice data and checks arithmetic consistency before the PDF is created. When the optional facturx library is installed, XSD and Schematron schema validation also run. Structurally invalid data is rejected before a document is produced. Output is PDF/A-3b with embedded CII XML for the supported EN 16931 invoice flow.
               </p>
               <p className="text-[13px] text-mid/70 leading-relaxed">
                 Scoped to German domestic B2B invoicing: DE, EUR, mixed VAT rates, standard invoices and credit notes. No Java, no iText, no browser.

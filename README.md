@@ -104,14 +104,14 @@ Measured: 1,000-row invoice renders in 211ms (33 pages). Server throughput: 53.8
 
 ### EN 16931 e-invoicing (narrow scope)
 
-Supports a narrow subset of EN 16931 e-invoicing: **domestic German B2B invoices with standard VAT, in EUR, via SEPA payment only.** Reverse charge, cross-border, allowances/discounts, and non-EUR currencies are not supported. This is not full German e-invoicing mandate coverage. PDF/A-3b output with embedded CII XML, validated by XSD and Schematron before embedding.
+Supports a narrow subset of EN 16931 e-invoicing: **domestic German B2B invoices with standard VAT, in EUR, via SEPA payment only.** Reverse charge, cross-border, allowances/discounts, and non-EUR currencies are not supported. This is not full German e-invoicing mandate coverage. PDF/A-3b output with embedded CII XML. When the optional `facturx` library is installed (`pip install "trustrender[zugferd]"`), XSD and Schematron validation run before embedding; without it, field-level and arithmetic consistency validation still run but schema validation is skipped.
 
 ```
 trustrender render einvoice.j2.typ data.json -o invoice.pdf --zugferd en16931
 ```
 
 Supported: DE, EUR, standard VAT (single or mixed rates), invoices and credit notes.
-Not supported (fails loudly): reverse charge, cross-border, allowances/charges, non-EUR.
+Not supported (fails loudly): reverse charge, cross-border, allowances/charges, non-EUR, zero/negative tax rates.
 
 See [docs/einvoice-scope.md](docs/einvoice-scope.md) for the full scope matrix.
 

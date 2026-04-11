@@ -187,7 +187,19 @@ def validate_zugferd_invoice_data(
                         actual="missing",
                     ))
             if "tax_rate" in item:
-                tax_rates.add(item["tax_rate"])
+                rate = item["tax_rate"]
+                if isinstance(rate, (int, float)) and rate <= 0:
+                    errors.append(ContractError(
+                        path=f"items[{i}].tax_rate",
+                        message=(
+                            f"tax_rate must be > 0 (got {rate}); "
+                            "zero-rated, exempt, and reverse-charge categories "
+                            "are not supported in v1"
+                        ),
+                        expected="positive number (e.g. 7 or 19)",
+                        actual=str(rate),
+                    ))
+                tax_rates.add(rate)
 
     # --- Tax entries ---
     tax_entries = data.get("tax_entries")
@@ -197,6 +209,22 @@ def validate_zugferd_invoice_data(
             expected="list", actual="missing",
         ))
     else:
+        # Reject zero/negative rates in tax_entries
+        for j, entry in enumerate(tax_entries):
+            if isinstance(entry, dict):
+                erate = entry.get("rate")
+                if isinstance(erate, (int, float)) and erate <= 0:
+                    errors.append(ContractError(
+                        path=f"tax_entries[{j}].rate",
+                        message=(
+                            f"tax_entries rate must be > 0 (got {erate}); "
+                            "zero-rated, exempt, and reverse-charge categories "
+                            "are not supported in v1"
+                        ),
+                        expected="positive number (e.g. 7 or 19)",
+                        actual=str(erate),
+                    ))
+
         # Bidirectional consistency: item rates ↔ tax_entries rates
         entry_rates = {e.get("rate") for e in tax_entries if isinstance(e, dict)}
 
@@ -229,6 +257,7 @@ def validate_zugferd_invoice_data(
                         ))
 
     # --- Totals ---
+    totals_numeric = True
     for field in ("subtotal", "tax_total", "total"):
         val = data.get(field)
         if val is None or not isinstance(val, (int, float)):
@@ -237,6 +266,57 @@ def validate_zugferd_invoice_data(
                 message=f"required numeric value for EN 16931",
                 expected="number",
                 actual="missing" if val is None else type(val).__name__,
+            ))
+            totals_numeric = False
+
+    # --- Arithmetic consistency ---
+    # Only check when all totals are numeric (otherwise we already reported above).
+    if totals_numeric and isinstance(items, list) and items:
+        subtotal = data.get("subtotal", 0)
+        tax_total = data.get("tax_total", 0)
+        total = data.get("total", 0)
+
+        # sum(line_total) == subtotal
+        line_totals = [
+            item["line_total"]
+            for item in items
+            if isinstance(item, dict) and isinstance(item.get("line_total"), (int, float))
+        ]
+        if line_totals:
+            expected_subtotal = round(sum(line_totals), 2)
+            if round(abs(expected_subtotal - subtotal), 2) > 0.01:
+                errors.append(ContractError(
+                    path="subtotal",
+                    message=f"subtotal ({subtotal}) does not match sum of line totals ({expected_subtotal})",
+                    expected=str(expected_subtotal),
+                    actual=str(subtotal),
+                ))
+
+        # sum(tax_entries.amount) == tax_total
+        if isinstance(tax_entries, list) and tax_entries:
+            entry_amounts = [
+                e["amount"]
+                for e in tax_entries
+                if isinstance(e, dict) and isinstance(e.get("amount"), (int, float))
+            ]
+            if entry_amounts:
+                expected_tax = round(sum(entry_amounts), 2)
+                if round(abs(expected_tax - tax_total), 2) > 0.01:
+                    errors.append(ContractError(
+                        path="tax_total",
+                        message=f"tax_total ({tax_total}) does not match sum of tax entry amounts ({expected_tax})",
+                        expected=str(expected_tax),
+                        actual=str(tax_total),
+                    ))
+
+        # subtotal + tax_total == total
+        expected_total = round(subtotal + tax_total, 2)
+        if round(abs(expected_total - total), 2) > 0.01:
+            errors.append(ContractError(
+                path="total",
+                message=f"total ({total}) does not match subtotal + tax_total ({expected_total})",
+                expected=str(expected_total),
+                actual=str(total),
             ))
 
     # --- Payment ---

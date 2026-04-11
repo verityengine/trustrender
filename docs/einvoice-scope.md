@@ -37,6 +37,8 @@ Single authoritative reference for what TrustRender supports, rejects, and does 
 | Unsupported payment means | `ContractError` on `payment.means` |
 | Missing IBAN for credit transfer | `ContractError` on `payment.iban` |
 | Allowances, charges, or discounts present in data | `ContractError` — not supported in v1 |
+| Zero or negative tax rate | `ContractError` on `items[].tax_rate` — exempt/zero-rated/reverse-charge not supported |
+| Arithmetic inconsistency (line totals, tax entries, grand total) | `ContractError` on `subtotal`, `tax_total`, or `total` |
 | Empty line items list | `ContractError` on `items` |
 | Unsupported invoice type (not 380 or 381) | `ContractError` on `invoice_type` |
 | `referenced_invoice` on type 380 | `ContractError` — only valid for credit notes |
@@ -62,9 +64,9 @@ Single authoritative reference for what TrustRender supports, rejects, and does 
 
 | Layer | When it runs | What it checks |
 |-------|-------------|----------------|
-| Field validation (`validate_zugferd_invoice_data`) | `render()`, `preflight()` | Required fields, currency, country, tax rate, payment, allowances/charges |
-| XSD schema validation (`facturx.xml_check_xsd`) | `preflight()` (if facturx installed) | CII XML structure against EN 16931 XSD |
-| Schematron validation (`facturx.xml_check_schematron`) | Test suite only | EN 16931 business rules |
+| Field validation (`validate_zugferd_invoice_data`) | `render()`, `preflight()` | Required fields, currency, country, tax rate, arithmetic consistency, payment, allowances/charges |
+| XSD schema validation (`facturx.xml_check_xsd`) | `render()`, `preflight()` (if facturx installed) | CII XML structure against EN 16931 XSD |
+| Schematron validation (`facturx.xml_check_schematron`) | `render()`, `preflight()` (if facturx installed) | EN 16931 business rules |
 | Mustang reference validator | Manual, one-time (see zugferd-prototype.md) | Full PDF/A-3b + XML compliance |
 
 ## Proof status

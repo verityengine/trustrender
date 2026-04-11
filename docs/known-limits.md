@@ -29,7 +29,7 @@ Not supported (fails loudly at validation time):
 
 ### Mustang validation is manual
 
-One-time manual validation against the Mustang reference validator has passed for the EN 16931 profile (see `docs/zugferd-prototype.md`). This is not automated in CI but is available locally via `make mustang-validate` (requires Java). Mustang validation is the only compliance check not in the render pipeline; XSD and Schematron both run in `render()` and `preflight()` when `facturx` is installed.
+One-time manual validation against the Mustang reference validator has passed for the EN 16931 profile (see `docs/zugferd-prototype.md`). This is not automated in CI but is available locally via `make mustang-validate` (requires Java). Mustang validation is the only compliance check not in the render pipeline; XSD and Schematron both run in `render()` and `preflight()` when `facturx` is installed. Without `facturx`, schema validation is silently skipped in `render()` and reported as a warning in `preflight()`. Install with `pip install "trustrender[zugferd]"` to enable full schema validation.
 
 ### Validation layers in the render pipeline
 
