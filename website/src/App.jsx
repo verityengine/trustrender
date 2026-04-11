@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import * as pdfjsLib from 'pdfjs-dist'
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
+import JSZip from 'jszip'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
@@ -1463,6 +1464,10 @@ function AppWorkspace() {
   const [renderError, setRenderError] = useState(null)
   const [traceId, setTraceId] = useState(null)
 
+  // Outputs state — session-local render bundles
+  const [outputBundles, setOutputBundles] = useState([])
+  const MAX_BUNDLES = 50
+
   // History state
   const [traces, setTraces] = useState(null) // null=not loaded, []=empty, [...]=data
   const [historyError, setHistoryError] = useState(null) // 'disabled' or 'error'
@@ -1591,6 +1596,12 @@ function AppWorkspace() {
     setRenderStatus('rendering'); setRenderError(null); setCurrentPage(1); setTraceId(null)
     if (pdfData?.downloadUrl) URL.revokeObjectURL(pdfData.downloadUrl)
     setPdfData(null)
+
+    // Freeze render-time state for bundle
+    const frozenTemplate = template
+    const frozenSource = templateSource
+    const frozenJson = JSON.stringify(JSON.parse(json), null, 2)
+
     try {
       const data = JSON.parse(json)
       const renderPayload = { template, data, validate: true, debug: true }
@@ -1601,7 +1612,8 @@ function AppWorkspace() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(renderPayload),
       })
-      if (res.headers.get('X-Trace-ID')) setTraceId(res.headers.get('X-Trace-ID'))
+      const resTraceId = res.headers.get('X-Trace-ID') || null
+      if (resTraceId) setTraceId(resTraceId)
       if (res.ok) {
         const buf = await res.arrayBuffer()
         const uint8 = new Uint8Array(buf)
@@ -1618,14 +1630,97 @@ function AppWorkspace() {
         }
         setPdfData({ pages, totalPages: pdf.numPages, downloadUrl })
         setRenderStatus('done')
+
+        // Capture output bundle
+        const bundle = {
+          id: crypto.randomUUID(),
+          timestamp: new Date().toISOString(),
+          templateName: frozenTemplate,
+          templateSource: frozenSource,
+          jsonData: frozenJson,
+          pdfBytes: uint8,
+          traceId: resTraceId,
+          trace: null,
+          outcome: 'success',
+        }
+        // Best-effort trace fetch
+        if (resTraceId) {
+          try {
+            const tr = await fetch(apiUrl(`/history/${resTraceId}`))
+            if (tr.ok) bundle.trace = await tr.json()
+          } catch { /* trace is optional */ }
+        }
+        setOutputBundles(prev => [bundle, ...prev].slice(0, MAX_BUNDLES))
       } else {
-        setRenderError(await res.json()); setRenderStatus('error')
+        const errData = await res.json()
+        setRenderError(errData); setRenderStatus('error')
+        // Record failed render (no pdfBytes)
+        setOutputBundles(prev => [{
+          id: crypto.randomUUID(),
+          timestamp: new Date().toISOString(),
+          templateName: frozenTemplate,
+          templateSource: frozenSource,
+          jsonData: frozenJson,
+          pdfBytes: null,
+          traceId: resTraceId,
+          trace: null,
+          outcome: 'error',
+          errorMessage: errData.message || 'Render failed',
+        }, ...prev].slice(0, MAX_BUNDLES))
       }
     } catch (e) {
       const isNet = e instanceof TypeError && e.message.includes('fetch')
       setRenderError({ error: isNet ? 'NETWORK' : 'RENDER_ERROR', message: isNet ? 'Server unreachable' : e.message })
       setRenderStatus('error')
     }
+  }
+
+  // ── ZIP bundle helpers ──
+  const makeProvenance = (bundle) => JSON.stringify({
+    version: '0.1.0',
+    engine: 'TrustRender',
+    timestamp: bundle.timestamp,
+    template: bundle.templateName,
+    hashes: {
+      template: bundle.trace?.template_hash || 'unavailable',
+      data: bundle.trace?.data_hash || 'unavailable',
+      output_pdf: bundle.trace?.output_hash || 'unavailable',
+    },
+    outcome: bundle.outcome,
+    duration_ms: bundle.trace?.total_ms || null,
+  }, null, 2)
+
+  const downloadBundle = async (bundle) => {
+    const zip = new JSZip()
+    const ts = bundle.timestamp.replace(/[:.]/g, '-').slice(0, 19)
+    const folderName = `trustrender-${bundle.templateName.replace(/\.j2\.typ$|\.typ$/, '')}-${ts}`
+    const folder = zip.folder(folderName)
+    if (bundle.pdfBytes) folder.file('output.pdf', bundle.pdfBytes)
+    folder.file(bundle.templateName, bundle.templateSource)
+    folder.file('data.json', bundle.jsonData)
+    if (bundle.trace) folder.file('trace.json', JSON.stringify(bundle.trace, null, 2))
+    folder.file('provenance.json', makeProvenance(bundle))
+    const blob = await zip.generateAsync({ type: 'blob' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = `${folderName}.zip`; a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const downloadAllBundles = async () => {
+    const zip = new JSZip()
+    for (const b of outputBundles.filter(b => b.outcome === 'success')) {
+      const ts = b.timestamp.replace(/[:.]/g, '-').slice(0, 19)
+      const folder = zip.folder(`${b.templateName.replace(/\.j2\.typ$|\.typ$/, '')}-${ts}`)
+      if (b.pdfBytes) folder.file('output.pdf', b.pdfBytes)
+      folder.file(b.templateName, b.templateSource)
+      folder.file('data.json', b.jsonData)
+      if (b.trace) folder.file('trace.json', JSON.stringify(b.trace, null, 2))
+      folder.file('provenance.json', makeProvenance(b))
+    }
+    const blob = await zip.generateAsync({ type: 'blob' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = `trustrender-session-${new Date().toISOString().slice(0, 10)}.zip`; a.click()
+    URL.revokeObjectURL(url)
   }
 
   const STAGES = ['payload', 'template', 'environment', 'compliance', 'semantic']
@@ -1665,13 +1760,16 @@ function AppWorkspace() {
             </button>
           </div>
           <div className="flex items-center gap-1 bg-surface rounded-lg p-1 border border-rule-light">
-            {[['ready', 'Ready'], ['generate', 'Generate'], ['history', 'History']].map(([key, label]) => (
+            {[['ready', 'Ready'], ['generate', 'Generate'], ['outputs', 'Outputs'], ['history', 'History']].map(([key, label]) => (
               <button key={key} onClick={() => setTab(key)}
                 className={`text-[13px] px-4 py-1.5 rounded-md font-medium transition-colors cursor-pointer
                   ${tab === key ? 'bg-panel text-ink shadow-sm' : 'text-muted hover:text-mid'}`}>
                 {label}
                 {key === 'ready' && verdict && !checking && (
                   <span className={`ml-1.5 inline-block w-1.5 h-1.5 rounded-full ${verdict.ready ? 'bg-sage' : 'bg-wine'}`} />
+                )}
+                {key === 'outputs' && outputBundles.length > 0 && (
+                  <span className="ml-1.5 text-[10px] font-mono text-muted">{outputBundles.length}</span>
                 )}
               </button>
             ))}
@@ -1963,6 +2061,53 @@ function AppWorkspace() {
                     )}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* ── OUTPUTS TAB ── */}
+            {tab === 'outputs' && (
+              <div className="space-y-4">
+                {outputBundles.length === 0 ? (
+                  <div className="bg-panel rounded-xl border border-rule-light p-8 text-center" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
+                    <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-rule-light flex items-center justify-center text-muted text-[18px]">{'\u2193'}</div>
+                    <p className="text-[13px] text-mid mb-1">No renders in this session yet.</p>
+                    <p className="text-[12px] text-muted">Render a document from the Ready tab to see output bundles here.</p>
+                    <p className="text-[10px] text-muted/50 mt-3">Session outputs — stored in browser, cleared on refresh.</p>
+                  </div>
+                ) : (
+                  <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
+                    <div className="px-4 py-2.5 border-b border-rule-light flex items-center justify-between">
+                      <span className="text-[10px] font-mono text-muted">{outputBundles.length} bundle{outputBundles.length !== 1 ? 's' : ''} <span className="text-muted/40">· session only</span></span>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setOutputBundles([])} className="text-[10px] text-muted hover:text-ink cursor-pointer">Clear</button>
+                        {outputBundles.some(b => b.outcome === 'success') && (
+                          <button onClick={downloadAllBundles} className="text-[11px] px-3 py-1 rounded-md border border-rule-light hover:border-rule text-muted hover:text-ink font-medium cursor-pointer transition-colors">
+                            Download all
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="divide-y divide-rule-light">
+                      {outputBundles.map(b => (
+                        <div key={b.id} className="px-4 py-3 flex items-center gap-3">
+                          <div className={`w-2 h-2 rounded-full ${b.outcome === 'success' ? 'bg-sage' : 'bg-wine'}`} />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[13px] font-semibold text-ink truncate">{b.templateName}</div>
+                            <div className="text-[10px] text-muted font-mono">{new Date(b.timestamp).toLocaleTimeString()}{b.trace ? ` · ${b.trace.total_ms}ms` : ''}</div>
+                          </div>
+                          <span className={`text-[10px] font-mono font-semibold ${b.outcome === 'success' ? 'text-sage' : 'text-wine'}`}>{b.outcome}</span>
+                          {b.outcome === 'success' ? (
+                            <button onClick={() => downloadBundle(b)} className="text-[11px] text-rust hover:text-wine font-medium cursor-pointer ml-2">
+                              ZIP
+                            </button>
+                          ) : (
+                            <span className="text-[10px] text-muted/40 ml-2">{b.errorMessage || 'failed'}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

@@ -472,6 +472,19 @@ def create_app(
         Route("/stats", api_stats, methods=["GET"]),
     ])
 
+    # /api/ route group: same endpoints under /api/ prefix for the bundled
+    # playground frontend (which always calls /api/...).
+    api_routes = [
+        Route("/health", health, methods=["GET"]),
+        Route("/render", render_endpoint, methods=["POST"]),
+        Route("/preflight", preflight_endpoint, methods=["POST"]),
+        Route("/template-source", template_source_endpoint, methods=["GET"]),
+        Route("/history", api_history, methods=["GET"]),
+        Route("/history/{trace_id}", api_trace, methods=["GET"]),
+        Route("/stats", api_stats, methods=["GET"]),
+    ]
+    routes.append(Mount("/api", routes=api_routes))
+
     if dashboard and trace_store:
         from .dashboard import dashboard_routes
 
