@@ -2222,27 +2222,53 @@ function PerformanceProof() {
             </div>
           </FadeUp>
 
-          {/* Audit trail preview */}
+          {/* Ops dashboard preview */}
           <FadeUp delay={200}>
-            <div className="bg-panel/[0.06] rounded-xl border border-panel/10 p-6">
-              <div className="text-[11px] tracking-[0.15em] uppercase text-panel/40 font-semibold mb-5">Render trace (live from pipeline)</div>
-              <div className="space-y-3 font-mono text-[11px]">
-                {[
-                  { k: 'template', v: 'sha256:3d947997ca81c63c' },
-                  { k: 'data', v: 'sha256:ee4cae030af90e5d' },
-                  { k: 'output', v: 'sha256:f0a78d0d127974e6' },
-                  { k: 'engine', v: 'trustrender 0.1.0' },
-                  { k: 'duration', v: '71ms' },
-                  { k: 'outcome', v: 'success' },
-                ].map(r => (
-                  <div key={r.k} className="flex justify-between border-b border-panel/8 pb-2">
-                    <span className="text-panel/40">{r.k}</span>
-                    <span className="text-panel/70">{r.v}</span>
-                  </div>
-                ))}
+            <div className="bg-panel/[0.06] rounded-xl border border-panel/10 overflow-hidden">
+              {/* Dashboard header bar */}
+              <div className="px-5 py-3 border-b border-panel/8 flex items-center justify-between">
+                <span className="text-[12px] font-semibold text-panel/70">Ops Dashboard</span>
+                <div className="flex items-center gap-4 text-[10px] font-mono text-panel/30">
+                  <span>6 renders</span>
+                  <span className="text-sage">100%</span>
+                  <span>84ms avg</span>
+                </div>
               </div>
-              <div className="mt-4 text-[10px] text-panel/30">
-                Every render is fingerprinted: input hashes + output SHA-256 + stage-by-stage timing.
+              {/* Trace detail */}
+              <div className="p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-[14px] font-bold text-panel/90">einvoice.j2.typ</span>
+                  <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-sage/20 text-sage">OK</span>
+                  <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-rust/20 text-rust">EN16931</span>
+                </div>
+                {/* Pipeline stages */}
+                <div className="space-y-2 mb-4">
+                  {[
+                    { stage: 'zugferd_validation', time: '0ms', meta: 'en16931' },
+                    { stage: 'contract_validation', time: '1ms', meta: '' },
+                    { stage: 'compilation', time: '54ms', meta: '46KB' },
+                    { stage: 'zugferd_postprocess', time: '96ms', meta: '8573B XML' },
+                  ].map(s => (
+                    <div key={s.stage} className="flex items-center gap-3 px-3 py-2 rounded bg-panel/[0.04] border border-panel/6">
+                      <span className="text-sage text-[11px]">{'\u2713'}</span>
+                      <span className="text-[11px] font-mono text-panel/60 flex-1">{s.stage}</span>
+                      <span className="text-[10px] font-mono text-panel/30">{s.time}{s.meta ? ` \u00b7 ${s.meta}` : ''}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* Identity */}
+                <div className="border-t border-panel/8 pt-3">
+                  <div className="text-[9px] tracking-[0.15em] uppercase text-panel/25 font-semibold mb-2">Identity</div>
+                  <div className="space-y-1.5 font-mono text-[10px]">
+                    <div className="flex justify-between"><span className="text-panel/30">template</span><span className="text-panel/50">sha256:6958217f022d9d54</span></div>
+                    <div className="flex justify-between"><span className="text-panel/30">data</span><span className="text-panel/50">sha256:5184ad6254598a63</span></div>
+                    <div className="flex justify-between"><span className="text-panel/30">output</span><span className="text-panel/50">sha256:a23cc650b6d7c7ab</span></div>
+                    <div className="flex justify-between"><span className="text-panel/30">engine</span><span className="text-panel/50">trustrender 0.1.0</span></div>
+                  </div>
+                </div>
+              </div>
+              <div className="px-5 py-2.5 border-t border-panel/8 text-[10px] text-panel/25">
+                Every render is traced. Inspect pipeline stages, hashes, and compliance runs in the ops dashboard.
               </div>
             </div>
           </FadeUp>
