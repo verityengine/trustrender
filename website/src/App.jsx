@@ -2343,8 +2343,15 @@ function FinalCTA() {
             <a href="#app" className="px-7 py-3.5 bg-panel text-ink text-[14px] font-semibold rounded transition-colors hover:bg-panel/90 inline-block">
               Try the playground
             </a>
-            <div className="px-7 py-3.5 border border-panel/20 rounded inline-block">
-              <code className="font-mono text-[13px] text-panel/60">pip install trustrender</code>
+          </div>
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
+            <div className="px-5 py-4 border border-panel/15 rounded-lg">
+              <div className="text-[10px] tracking-[0.15em] uppercase text-panel/30 font-semibold mb-2">Lean core</div>
+              <code className="font-mono text-[13px] text-panel/70">pip install trustrender</code>
+            </div>
+            <div className="px-5 py-4 border border-rust/30 rounded-lg bg-rust/[0.06]">
+              <div className="text-[10px] tracking-[0.15em] uppercase text-rust/60 font-semibold mb-2">With e-invoicing</div>
+              <code className="font-mono text-[13px] text-panel/70">pip install "trustrender[zugferd]"</code>
             </div>
           </div>
         </FadeUp>
