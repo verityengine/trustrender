@@ -71,6 +71,18 @@ def main(argv: list[str] | None = None) -> int:
         help="Additional font directory (can be repeated)",
     )
     serve_cmd.add_argument(
+        "--render-timeout",
+        type=float,
+        default=30,
+        help="Maximum seconds per render request (default: 30)",
+    )
+    serve_cmd.add_argument(
+        "--max-concurrent",
+        type=int,
+        default=8,
+        help="Maximum simultaneous render operations; excess gets 503 (default: 8)",
+    )
+    serve_cmd.add_argument(
         "--dashboard",
         action="store_true",
         help="Enable read-only dashboard at /dashboard",
@@ -715,12 +727,16 @@ def _run_serve(args: argparse.Namespace) -> int:
         args.templates,
         debug=args.debug,
         font_paths=args.font_paths,
+        render_timeout=args.render_timeout,
+        max_concurrent_renders=args.max_concurrent,
         dashboard=args.dashboard,
         history_path=args.history,
     )
     print(f"Formforge server starting on {args.host}:{args.port}")
     print(f"  Templates: {args.templates}")
     print(f"  Debug: {args.debug}")
+    print(f"  Render timeout: {args.render_timeout}s")
+    print(f"  Max concurrent: {args.max_concurrent}")
     if args.dashboard:
         print(f"  Dashboard: http://{args.host}:{args.port}/dashboard")
     if args.history:

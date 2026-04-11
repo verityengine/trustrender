@@ -457,3 +457,57 @@ class TestServerCLIBackendParity:
         )
         assert resp.status_code == 200
         assert resp.content[:5] == b"%PDF-"
+
+
+class TestBackpressure:
+    """Backpressure: server returns 503 when at render capacity."""
+
+    def test_accepts_under_limit(self):
+        app = create_app(EXAMPLES, max_concurrent_renders=2)
+        client = TestClient(app)
+        resp = client.post(
+            "/render",
+            json={"template": "hello.typ", "data": {}},
+        )
+        assert resp.status_code == 200
+
+    def test_503_when_at_capacity(self):
+        """When all render slots are busy, new requests get 503."""
+        import asyncio
+        import threading
+
+        app = create_app(EXAMPLES, max_concurrent_renders=1)
+        sem = app.state.render_semaphore
+
+        # Pre-acquire the semaphore in an event loop on another thread
+        # to simulate a busy render slot.
+        loop = asyncio.new_event_loop()
+        acquired = threading.Event()
+
+        def hold_semaphore():
+            async def _hold():
+                await sem.acquire()
+                acquired.set()
+                # Hold until test is done
+                while acquired.is_set():
+                    await asyncio.sleep(0.01)
+
+            loop.run_until_complete(_hold())
+
+        t = threading.Thread(target=hold_semaphore, daemon=True)
+        t.start()
+        acquired.wait(timeout=2)
+
+        try:
+            client = TestClient(app)
+            resp = client.post(
+                "/render",
+                json={"template": "hello.typ", "data": {}},
+            )
+            assert resp.status_code == 503
+            data = resp.json()
+            assert "capacity" in data["message"]
+        finally:
+            acquired.clear()  # release the hold
+            t.join(timeout=2)
+            loop.close()

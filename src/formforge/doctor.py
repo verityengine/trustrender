@@ -101,6 +101,53 @@ def check_fonts_dir() -> tuple[str, str]:
     return OK, f"Bundled fonts: {fonts} ({len(font_files)} files)"
 
 
+def check_template_fonts(templates_dir: Path | None = None) -> tuple[str, str]:
+    """Check that fonts referenced in templates are available in bundled fonts."""
+    import re
+
+    from formforge import bundled_font_dir
+
+    fonts_dir = bundled_font_dir()
+    if fonts_dir is None:
+        return WARN, "Font check skipped — bundled font directory not found"
+
+    # Collect available font family names from bundled .ttf/.otf filenames
+    available = set()
+    for ext in ("*.ttf", "*.otf"):
+        for f in fonts_dir.glob(f"**/{ext}"):
+            # Inter-Bold.ttf -> "inter", Inter-Regular.ttf -> "inter"
+            name = re.split(r"[-_]", f.stem)[0].lower()
+            available.add(name)
+
+    # Find templates
+    if templates_dir is None:
+        repo_root = _find_repo_root()
+        if repo_root is None:
+            return WARN, "Font check skipped — examples/ directory not found"
+        templates_dir = repo_root / "examples"
+
+    # Parse font declarations from templates
+    font_pattern = re.compile(r'font:\s*"([^"]+)"')
+    missing: list[tuple[str, str]] = []  # (template, font_name)
+
+    for template in templates_dir.glob("**/*.typ"):
+        if template.name.startswith("_formforge_"):
+            continue
+        try:
+            content = template.read_text()
+        except Exception:
+            continue
+        for match in font_pattern.finditer(content):
+            font_name = match.group(1)
+            if font_name.lower() not in available:
+                missing.append((template.name, font_name))
+
+    if missing:
+        details = ", ".join(f"{t}: {f}" for t, f in missing[:5])
+        return WARN, f"Templates reference unavailable fonts: {details}"
+    return OK, f"Template fonts: all declared fonts found in bundled ({', '.join(sorted(available))})"
+
+
 def check_env_backend() -> tuple[str, str]:
     val = os.environ.get("FORMFORGE_BACKEND")
     if val is None:
@@ -214,6 +261,7 @@ def run_doctor(smoke: bool = False) -> int:
 
     checks.append(check_backends(typst_py_result[0], typst_cli_result[0]))
     checks.append(check_fonts_dir())
+    checks.append(check_template_fonts())
 
     # Environment
     checks.append(check_env_backend())

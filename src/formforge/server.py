@@ -38,9 +38,11 @@ from .engine import TypstCliBackend
 from .errors import ErrorCode
 
 MAX_BODY_SIZE = 1_048_576  # 1 MB
+MAX_TEMPLATE_SOURCE_SIZE = 262_144  # 256 KB — templates should be small
 RENDER_TIMEOUT = 30  # seconds
-ALLOWED_FIELDS = {"template", "data", "debug", "validate", "zugferd", "provenance"}
-PREFLIGHT_FIELDS = {"template", "data", "zugferd"}
+MAX_CONCURRENT_RENDERS = 8  # backpressure: reject with 503 when at capacity
+ALLOWED_FIELDS = {"template", "data", "debug", "validate", "zugferd", "provenance", "template_source"}
+PREFLIGHT_FIELDS = {"template", "data", "zugferd", "template_source"}
 
 
 def _server_render(
@@ -80,6 +82,7 @@ def create_app(
     debug: bool = False,
     font_paths: list[str | os.PathLike] | None = None,
     render_timeout: float = RENDER_TIMEOUT,
+    max_concurrent_renders: int = MAX_CONCURRENT_RENDERS,
     dashboard: bool = False,
     history_path: str | None = None,
 ) -> Starlette:
@@ -96,14 +99,50 @@ def create_app(
             and include source_path in error responses.
         font_paths: Additional font directories to pass to the renderer.
         render_timeout: Maximum seconds for a render request (default 30).
+        max_concurrent_renders: Maximum simultaneous render operations.
+            When at capacity, new requests get 503.  Default 8.
     """
     templates_dir = Path(templates_dir).resolve()
     # Resolve font paths once at startup — same precedence as render():
     # explicit paths + bundled fonts + system fonts (Typst default)
     resolved_fonts = _build_font_paths(font_paths)
+    render_semaphore = asyncio.Semaphore(max_concurrent_renders)
 
     async def health(request: Request) -> JSONResponse:
         return JSONResponse({"status": "ok", "version": __version__})
+
+    async def template_source_endpoint(request: Request) -> Response:
+        """Return raw template source for browser-based editing."""
+        request_id = request.state.request_id
+        name = request.query_params.get("name")
+        if not name or not isinstance(name, str):
+            return _error(400, ErrorCode.INVALID_DATA, "Missing 'name' query parameter", request_id, stage="execution")
+
+        # Path traversal protection
+        template_path = (templates_dir / name).resolve()
+        if not str(template_path).startswith(str(templates_dir)):
+            return _error(400, ErrorCode.INVALID_DATA, "Invalid template path", request_id, stage="execution")
+        if not template_path.exists():
+            return _error(404, ErrorCode.TEMPLATE_NOT_FOUND, f"Template not found: {name}", request_id, stage="execution")
+
+        source = template_path.read_text(encoding="utf-8")
+        return JSONResponse({"source": source}, headers={"X-Request-ID": request_id})
+
+    def _write_ephemeral_template(template_name: str, source: str) -> Path:
+        """Write ephemeral template source to a temp file for pipeline consumption.
+
+        Uses the same ``_formforge_*`` naming pattern as Jinja2 preprocessing.
+        The caller is responsible for cleanup.
+        """
+        import random
+        import string
+
+        suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
+        # Preserve extension so the pipeline detects Jinja2 vs raw Typst
+        ext = "".join(Path(template_name).suffixes)  # e.g. ".j2.typ"
+        temp_path = templates_dir / f"_formforge_{suffix}{ext}"
+        temp_path.write_text(source, encoding="utf-8")
+        return temp_path
 
     async def render_endpoint(request: Request) -> Response:
         request_id = request.state.request_id
@@ -201,85 +240,115 @@ def create_app(
                 stage="execution",
             )
 
-        # Path traversal protection
-        template_path = (templates_dir / template_name).resolve()
-        if not str(template_path).startswith(str(templates_dir)):
-            return _error(
-                400,
-                ErrorCode.INVALID_DATA,
-                "Invalid template path",
-                request_id,
-                stage="execution",
-            )
-        if not template_path.exists():
-            return _error(
-                404,
-                ErrorCode.TEMPLATE_NOT_FOUND,
-                f"Template not found: {template_name}",
-                request_id,
-                stage="execution",
-            )
+        # Ephemeral template source: write to temp file for pipeline consumption
+        template_source = payload.get("template_source")
+        ephemeral_path = None
+        if template_source is not None:
+            if not isinstance(template_source, str):
+                return _error(400, ErrorCode.INVALID_DATA, "'template_source' must be a string", request_id, stage="execution")
+            if len(template_source.encode("utf-8")) > MAX_TEMPLATE_SOURCE_SIZE:
+                return _error(400, ErrorCode.INVALID_DATA, f"'template_source' exceeds {MAX_TEMPLATE_SOURCE_SIZE // 1024}KB limit", request_id, stage="execution")
+            # Still validate that the base template exists (for include resolution context)
+            base_path = (templates_dir / template_name).resolve()
+            if not str(base_path).startswith(str(templates_dir)):
+                return _error(400, ErrorCode.INVALID_DATA, "Invalid template path", request_id, stage="execution")
+            if not base_path.exists():
+                return _error(404, ErrorCode.TEMPLATE_NOT_FOUND, f"Base template not found: {template_name}", request_id, stage="execution")
+            ephemeral_path = _write_ephemeral_template(template_name, template_source)
+            template_path = ephemeral_path
+        else:
+            # Path traversal protection
+            template_path = (templates_dir / template_name).resolve()
+            if not str(template_path).startswith(str(templates_dir)):
+                return _error(
+                    400,
+                    ErrorCode.INVALID_DATA,
+                    "Invalid template path",
+                    request_id,
+                    stage="execution",
+                )
+            if not template_path.exists():
+                return _error(
+                    404,
+                    ErrorCode.TEMPLATE_NOT_FOUND,
+                    f"Template not found: {template_name}",
+                    request_id,
+                    stage="execution",
+                )
 
         # Render with killable execution via CLI subprocess backend.
         # Primary timeout: subprocess kill inside TypstCliBackend.
         # Watchdog: asyncio.wait_for with extra margin — defensive backstop
         # only, should never fire in normal operation.
+        # Backpressure: semaphore limits concurrent renders; excess gets 503.
         use_debug = debug or req_debug
-        try:
-            result = await asyncio.wait_for(
-                asyncio.to_thread(
-                    _server_render,
-                    template_path,
-                    data,
-                    debug=use_debug,
-                    validate=req_validate,
-                    zugferd=req_zugferd,
-                    provenance=req_provenance,
-                    font_paths=resolved_fonts,
-                    timeout=render_timeout,
-                ),
-                timeout=render_timeout + 5,  # watchdog — subprocess kill is primary
-            )
-        except asyncio.TimeoutError:
-            # Watchdog fired — subprocess kill was slow or stuck.
-            # This is an exceptional event; the primary subprocess timeout
-            # should have handled it.
+        if render_semaphore.locked():
+            if ephemeral_path:
+                ephemeral_path.unlink(missing_ok=True)
             return _error(
-                504,
+                503,
                 ErrorCode.RENDER_TIMEOUT,
-                f"Render timed out after {render_timeout}s (watchdog)",
+                f"Server at capacity ({max_concurrent_renders} concurrent renders)",
                 request_id,
                 stage="execution",
             )
-        except FormforgeError as exc:
-            if exc.code == ErrorCode.RENDER_TIMEOUT:
-                status = 504
-            elif exc.code in (ErrorCode.DATA_CONTRACT, ErrorCode.ZUGFERD_ERROR):
-                status = 422
-            elif exc.code == ErrorCode.INVALID_DATA:
-                status = 400
-            else:
-                status = 500
-            error_data = exc.to_dict(include_debug=use_debug)
-            error_data["request_id"] = request_id
-            return JSONResponse(
-                error_data,
-                status_code=status,
-                headers={"X-Request-ID": request_id},
+        try:
+            try:
+                async with render_semaphore:
+                    result = await asyncio.wait_for(
+                        asyncio.to_thread(
+                            _server_render,
+                            template_path,
+                            data,
+                            debug=use_debug,
+                            validate=req_validate,
+                            zugferd=req_zugferd,
+                            provenance=req_provenance,
+                            font_paths=resolved_fonts,
+                            timeout=render_timeout,
+                        ),
+                        timeout=render_timeout + 5,  # watchdog — subprocess kill is primary
+                    )
+            except asyncio.TimeoutError:
+                return _error(
+                    504,
+                    ErrorCode.RENDER_TIMEOUT,
+                    f"Render timed out after {render_timeout}s (watchdog)",
+                    request_id,
+                    stage="execution",
+                )
+            except FormforgeError as exc:
+                if exc.code == ErrorCode.RENDER_TIMEOUT:
+                    status = 504
+                elif exc.code in (ErrorCode.DATA_CONTRACT, ErrorCode.ZUGFERD_ERROR):
+                    status = 422
+                elif exc.code == ErrorCode.INVALID_DATA:
+                    status = 400
+                else:
+                    status = 500
+                error_data = exc.to_dict(include_debug=use_debug)
+                error_data["request_id"] = request_id
+                return JSONResponse(
+                    error_data,
+                    status_code=status,
+                    headers={"X-Request-ID": request_id},
+                )
+
+            headers = {
+                "Content-Disposition": "inline",
+                "X-Request-ID": request_id,
+            }
+            if result.trace_id:
+                headers["X-Trace-ID"] = result.trace_id
+
+            return Response(
+                content=result.pdf_bytes,
+                media_type="application/pdf",
+                headers=headers,
             )
-
-        headers = {
-            "Content-Disposition": "inline",
-            "X-Request-ID": request_id,
-        }
-        if result.trace_id:
-            headers["X-Trace-ID"] = result.trace_id
-
-        return Response(
-            content=result.pdf_bytes,
-            media_type="application/pdf",
-            headers=headers,
-        )
+        finally:
+            if ephemeral_path:
+                ephemeral_path.unlink(missing_ok=True)
 
     async def preflight_endpoint(request: Request) -> JSONResponse:
         """Pre-render readiness check — no rendering, just validation."""
@@ -321,25 +390,45 @@ def create_app(
         if req_zugferd is not None and req_zugferd not in ("en16931", "xrechnung"):
             return _error(400, ErrorCode.INVALID_DATA, "'zugferd' must be 'en16931' or 'xrechnung'", request_id, stage="execution")
 
-        # Same path traversal protection as /render
-        template_path = (templates_dir / template_name).resolve()
-        if not str(template_path).startswith(str(templates_dir)):
-            return _error(400, ErrorCode.INVALID_DATA, "Invalid template path", request_id, stage="execution")
-        if not template_path.exists():
-            return _error(404, ErrorCode.TEMPLATE_NOT_FOUND, f"Template not found: {template_name}", request_id, stage="execution")
+        # Ephemeral template source support
+        template_source = payload.get("template_source")
+        ephemeral_path = None
+        if template_source is not None:
+            if not isinstance(template_source, str):
+                return _error(400, ErrorCode.INVALID_DATA, "'template_source' must be a string", request_id, stage="execution")
+            if len(template_source.encode("utf-8")) > MAX_TEMPLATE_SOURCE_SIZE:
+                return _error(400, ErrorCode.INVALID_DATA, f"'template_source' exceeds {MAX_TEMPLATE_SOURCE_SIZE // 1024}KB limit", request_id, stage="execution")
+            base_path = (templates_dir / template_name).resolve()
+            if not str(base_path).startswith(str(templates_dir)):
+                return _error(400, ErrorCode.INVALID_DATA, "Invalid template path", request_id, stage="execution")
+            if not base_path.exists():
+                return _error(404, ErrorCode.TEMPLATE_NOT_FOUND, f"Base template not found: {template_name}", request_id, stage="execution")
+            ephemeral_path = _write_ephemeral_template(template_name, template_source)
+            template_path = ephemeral_path
+        else:
+            # Same path traversal protection as /render
+            template_path = (templates_dir / template_name).resolve()
+            if not str(template_path).startswith(str(templates_dir)):
+                return _error(400, ErrorCode.INVALID_DATA, "Invalid template path", request_id, stage="execution")
+            if not template_path.exists():
+                return _error(404, ErrorCode.TEMPLATE_NOT_FOUND, f"Template not found: {template_name}", request_id, stage="execution")
 
-        verdict = preflight(template_path, data, zugferd=req_zugferd)
-        return JSONResponse(
-            {
-                "ready": verdict.ready,
-                "errors": [asdict(e) for e in verdict.errors],
-                "warnings": [asdict(e) for e in verdict.warnings],
-                "profile_eligible": verdict.profile_eligible,
-                "stages_checked": verdict.stages_checked,
-                "checked_at": verdict.checked_at,
-            },
-            headers={"X-Request-ID": request_id},
-        )
+        try:
+            verdict = preflight(template_path, data, zugferd=req_zugferd)
+            return JSONResponse(
+                {
+                    "ready": verdict.ready,
+                    "errors": [asdict(e) for e in verdict.errors],
+                    "warnings": [asdict(e) for e in verdict.warnings],
+                    "profile_eligible": verdict.profile_eligible,
+                    "stages_checked": verdict.stages_checked,
+                    "checked_at": verdict.checked_at,
+                },
+                headers={"X-Request-ID": request_id},
+            )
+        finally:
+            if ephemeral_path:
+                ephemeral_path.unlink(missing_ok=True)
 
     async def request_id_middleware(request: Request, call_next):
         request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
@@ -364,6 +453,7 @@ def create_app(
         Route("/health", health, methods=["GET"]),
         Route("/render", render_endpoint, methods=["POST"]),
         Route("/preflight", preflight_endpoint, methods=["POST"]),
+        Route("/template-source", template_source_endpoint, methods=["GET"]),
     ]
 
     # Always mount trace API (returns 503 if history not enabled).
@@ -392,6 +482,7 @@ def create_app(
 
     # Store trace_store on app state for dashboard API access
     app.state.trace_store = trace_store
+    app.state.render_semaphore = render_semaphore
 
     return app
 

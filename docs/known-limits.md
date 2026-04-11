@@ -15,11 +15,11 @@ Supported:
 - German domestic B2B invoices
 - EUR currency only
 - Single or mixed VAT rates per invoice (e.g., 7% + 19%)
-- Invoice type code 380 (standard VAT invoice)
+- Invoice type codes 380 (standard VAT invoice) and 381 (credit note)
+- Credit notes with referenced_invoice (BT-25)
 - SEPA credit transfer and direct debit payment means
 
 Not supported (fails loudly at validation time):
-- Credit notes (type 381)
 - Reverse charge invoices
 - Intra-community supply
 - Non-EUR currencies
@@ -41,17 +41,24 @@ One-time manual validation against the Mustang reference validator has passed fo
 
 The `render()` function validates invoice data fields (required fields, currency, country, tax rates) but does not run XSD or Schematron validation on the generated XML. `preflight()` runs XSD validation when the `facturx` library is available. Schematron validation runs only in the test suite.
 
-### Font fallback is silent
+### Font fallback is silent — verified gap
 
-Typst silently falls back to a default font when a requested font family is unavailable. No error is raised. The PDF is valid but may use the wrong font.
+Typst silently falls back to a default font when a requested font family is unavailable. No error is raised. The PDF is valid but visually different.
+
+This has been measured (see `benchmarks/font_swap_results.md`):
+- Render succeeds silently with wrong font
+- Page count stays the same
+- File size stays the same (0% difference)
+- Output bytes are different (visual change)
+- Current drift detection does NOT catch it
 
 Implications:
-- A typo in a font name produces a valid PDF with the wrong font and zero errors
+- A typo in a font name produces a valid, deliverable PDF with the wrong font and zero errors
 - `ErrorCode.MISSING_FONT` only fires for explicit Typst font errors (e.g., corrupted font files), which are rare
-- Missing-font detection is inherently incomplete because silent fallback usually wins
+- Drift detection catches measurable output changes (page count, file size) but NOT silent font substitution
 - Currently observed default fallback: Libertinus (not guaranteed by upstream Typst)
 
-Mitigation: Use bundled fonts (Inter) or explicitly supplied fonts via `font_paths`. Do not rely on system font availability.
+Mitigation: Use bundled fonts (Inter) or explicitly supplied fonts via `font_paths`. Run `formforge doctor` to verify template font availability before deployment. Do not rely on system font availability.
 
 ### Template escaping has boundaries
 
@@ -116,11 +123,12 @@ WeasyPrint comparison (2.3x faster) was measured on the same hardware for a simp
 
 ## For Operators
 
-### No rate limiting
+### No rate limiting (but has backpressure)
 
-Formforge's HTTP server has no built-in rate limiting, IP throttling, or concurrent request limits. It has:
+Formforge's HTTP server has no built-in rate limiting or IP throttling. It does have:
+- Render concurrency limit: ``--max-concurrent`` (default 8), returns 503 when at capacity
 - 1MB request body size limit
-- Configurable render timeout (default 30s, subprocess kill)
+- Configurable render timeout: ``--render-timeout`` (default 30s, subprocess kill)
 - Request validation (required fields, types, path traversal)
 
 For production deployment, use a reverse proxy (nginx, AWS WAF, Cloudflare) for rate limiting.
