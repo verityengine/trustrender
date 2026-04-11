@@ -876,9 +876,9 @@ function HeroReveal() {
       {/* Nav */}
       <nav className="max-w-[1280px] mx-auto px-6 md:px-10 py-5 flex items-center justify-between relative z-10">
         <div className="text-panel"><AnimatedLogo animate /></div>
-        <div className="flex items-center gap-5">
-          <a href="#app" className="text-[13px] text-panel/60 hover:text-panel transition-colors hidden md:block">Playground</a>
-          <a href="https://github.com/verityengine/formforge" className="text-[13px] px-4 py-2 rounded bg-panel/10 hover:bg-panel/15 text-panel transition-colors">GitHub</a>
+        <div className="flex items-center gap-4">
+          <a href="#app" className="text-[14px] font-semibold px-5 py-2.5 rounded-lg bg-rust hover:bg-rust-light text-white transition-colors hidden md:inline-block nav-pulse">Try the playground</a>
+          <a href="https://github.com/verityengine/formforge" className="text-[14px] font-medium px-5 py-2.5 rounded-lg bg-panel/10 hover:bg-panel/15 text-panel transition-colors">GitHub</a>
         </div>
       </nav>
 

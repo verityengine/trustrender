@@ -60,6 +60,11 @@ body {
   50% { transform: scale(1.5); opacity: 0; }
   100% { transform: scale(0.8); opacity: 0; }
 }
+@keyframes nav-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(196, 98, 42, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(196, 98, 42, 0); }
+}
+.nav-pulse { animation: nav-pulse 2.5s ease-in-out infinite; }
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
