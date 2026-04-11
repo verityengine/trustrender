@@ -1,99 +1,117 @@
 // ZUGFeRD EN 16931 Invoice Template
 // Data: einvoice_data.json (numeric amounts, structured tax, VAT IDs)
 
-#set page(paper: "a4", margin: (top: 1.2in, bottom: 1in, left: 1in, right: 1in))
-#set text(size: 10pt, font: "Inter", lang: "de")
-#set document(title: "{% if invoice_type|default('380') == '381' %}Gutschrift{% else %}Rechnung{% endif %} " + "{{ invoice_number }}")
+#let accent = rgb("#1a1a1a")
+#let muted = luma(110)
+#let rule-color = luma(210)
 
-// --- Header ---
+#set page(
+  paper: "a4",
+  margin: (top: 1.4in, bottom: 1.2in, left: 1in, right: 1in),
+  header: align(right, text(size: 8pt, fill: muted)[{{ seller.name }} · USt-IdNr. {{ seller.vat_id }}]),
+  footer: context align(center, text(size: 8pt, fill: muted)[
+    Seite #counter(page).display("1 von 1", both: true)
+  ]),
+)
+
+#set text(size: 9.5pt, font: "Inter", lang: "de")
+
+// --- Header: Logo + Title ---
 #grid(
   columns: (1fr, 1fr),
-  [
-    #text(size: 22pt, weight: "bold")[{% if invoice_type|default("380") == "381" %}GUTSCHRIFT{% else %}RECHNUNG{% endif %}]
-    #v(4pt)
-    #text(size: 9pt, fill: luma(100))[Nr. {{ invoice_number }}]
+  align(left, image("assets/logo.png", width: 1.2in)),
+  align(right)[
+    #text(size: 22pt, weight: "bold", fill: accent)[{% if invoice_type|default("380") == "381" %}GUTSCHRIFT{% else %}RECHNUNG{% endif %}]
+    #v(6pt)
+    #text(size: 9pt, fill: muted)[Nr. {{ invoice_number }}]
+    #v(2pt)
+    #text(size: 9pt, fill: muted)[Datum: {{ invoice_date }} · Fällig: {{ due_date }}]
 {% if referenced_invoice %}
     #v(2pt)
-    #text(size: 9pt, fill: luma(100))[Bezug: {{ referenced_invoice }}]
+    #text(size: 9pt, fill: muted)[Bezug: {{ referenced_invoice }}]
 {% endif %}
-  ],
-  align(right)[
-    #text(size: 9pt, fill: luma(100))[
-      Rechnungsdatum: {{ invoice_date }} \
-      Fällig: {{ due_date }}
-    ]
   ],
 )
 
-#v(0.3in)
+#v(0.4in)
 
 // --- Seller / Buyer ---
 #grid(
   columns: (1fr, 1fr),
-  gutter: 0.5in,
+  gutter: 0.6in,
   [
-    #text(weight: "bold")[Absender:]
-    #v(4pt)
-    {{ seller.name }} \
+    #text(size: 8pt, weight: "bold", fill: muted)[ABSENDER]
+    #v(6pt)
+    #text(weight: "bold")[{{ seller.name }}] \
     {{ seller.address }} \
     {{ seller.postal_code }} {{ seller.city }} \
-    USt-IdNr.: {{ seller.vat_id }} \
-    {{ seller.email }}
+    #v(4pt)
+    #text(size: 8.5pt, fill: muted)[USt-IdNr.: {{ seller.vat_id }}] \
+    #text(size: 8.5pt, fill: muted)[{{ seller.email }}{% if seller.phone %} · {{ seller.phone }}{% endif %}]
   ],
   [
-    #text(weight: "bold")[Empfänger:]
-    #v(4pt)
-    {{ buyer.name }} \
+    #text(size: 8pt, weight: "bold", fill: muted)[EMPFÄNGER]
+    #v(6pt)
+    #text(weight: "bold")[{{ buyer.name }}] \
     {{ buyer.address }} \
     {{ buyer.postal_code }} {{ buyer.city }} \
-    USt-IdNr.: {{ buyer.vat_id }}
+    #v(4pt)
+    #text(size: 8.5pt, fill: muted)[USt-IdNr.: {{ buyer.vat_id }}]
   ],
 )
 
-#v(0.3in)
+#v(0.4in)
 
 // --- Line Items ---
 #table(
-  columns: (auto, 3fr, 1fr, 1fr, 1fr),
+  columns: (40pt, 1fr, 60pt, 80pt, 80pt),
   stroke: none,
-  inset: (x: 8pt, y: 6pt),
+  inset: (x: 8pt, y: 7pt),
 
   table.header(
-    table.cell(fill: luma(240))[*Pos.*],
-    table.cell(fill: luma(240))[*Beschreibung*],
-    table.cell(fill: luma(240), align(right)[*Menge*]),
-    table.cell(fill: luma(240), align(right)[*Einzelpreis*]),
-    table.cell(fill: luma(240), align(right)[*Betrag*]),
+    table.cell(fill: luma(245))[#text(size: 8pt, weight: "bold")[Pos.]],
+    table.cell(fill: luma(245))[#text(size: 8pt, weight: "bold")[Beschreibung]],
+    table.cell(fill: luma(245), align(right)[#text(size: 8pt, weight: "bold")[Menge]]),
+    table.cell(fill: luma(245), align(right)[#text(size: 8pt, weight: "bold")[Einzelpreis]]),
+    table.cell(fill: luma(245), align(right)[#text(size: 8pt, weight: "bold")[Betrag]]),
   ),
-  table.hline(stroke: 0.5pt),
+  table.hline(stroke: 0.6pt + rule-color),
 {% for item in items %}
-  [{{ loop.index }}], [{{ item.description }}], align(right)[{{ item.quantity }}], align(right)[{{ "%.2f" | format(item.unit_price) }} €], align(right)[{{ "%.2f" | format(item.line_total) }} €],
-  table.hline(stroke: 0.3pt + luma(200)),
+  [{{ loop.index }}],
+  [{{ item.description }}],
+  align(right)[{{ item.quantity }}],
+  align(right)[{{ "%.2f" | format(item.unit_price) }} €],
+  align(right)[{{ "%.2f" | format(item.line_total) }} €],
+  table.hline(stroke: 0.3pt + luma(230)),
 {% endfor %}
 )
 
-#v(0.2in)
+#v(0.3in)
 
 // --- Totals ---
 #align(right)[
   #grid(
-    columns: (auto, 120pt),
-    row-gutter: 6pt,
-    align(right)[Nettobetrag:], align(right)[{{ "%.2f" | format(subtotal) }} €],
+    columns: (auto, 100pt),
+    row-gutter: 8pt,
+    align(right, text(fill: muted)[Nettobetrag:]),
+    align(right)[{{ "%.2f" | format(subtotal) }} €],
 {% for entry in tax_entries %}
-    align(right)[USt. {{ entry.rate }}%:], align(right)[{{ "%.2f" | format(entry.amount) }} €],
+    align(right, text(fill: muted)[USt. {{ entry.rate }}%:]),
+    align(right)[{{ "%.2f" | format(entry.amount) }} €],
 {% endfor %}
-    grid.hline(stroke: 0.5pt),
-    align(right)[#text(weight: "bold", size: 12pt)[Gesamtbetrag:]], align(right)[#text(weight: "bold", size: 12pt)[{{ "%.2f" | format(total) }} €]],
+    grid.hline(stroke: 0.8pt + accent),
+    align(right)[#text(weight: "bold", size: 12pt)[Gesamtbetrag:]],
+    align(right)[#text(weight: "bold", size: 12pt)[{{ "%.2f" | format(total) }} €]],
   )
 ]
 
-#v(0.3in)
+#v(0.5in)
 
-// --- Payment ---
-#line(length: 100%, stroke: 0.5pt + luma(200))
-#v(0.1in)
-#text(size: 9pt, fill: luma(100))[
-  *Bankverbindung:* {{ payment.bank_name }} · IBAN: {{ payment.iban }} · BIC: {{ payment.bic }} \
+// --- Payment & Notes ---
+#line(length: 100%, stroke: 0.4pt + rule-color)
+#v(8pt)
+#text(size: 8.5pt, fill: muted)[
+  #text(weight: "bold")[Bankverbindung:] {{ payment.bank_name }} · IBAN: {{ payment.iban }} · BIC: {{ payment.bic }} \
+  #v(4pt)
   {{ notes }}
 ]
