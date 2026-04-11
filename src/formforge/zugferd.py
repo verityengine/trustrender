@@ -314,14 +314,12 @@ def build_invoice_xml(data: dict, *, profile: str = "en16931") -> bytes:
         # BT-10 Buyer Reference (Leitweg-ID for routing)
         if data.get("buyer_reference"):
             doc.trade.agreement.buyer_reference = data["buyer_reference"]
-        # BT-34 Seller electronic address
+        # BT-34 Seller electronic address (tuple: scheme_id, value)
         if seller_data.get("email"):
-            seller.electronic_address.id = seller_data["email"]
-            seller.electronic_address.scheme_id = "EM"
+            seller.electronic_address.uri_ID = ("EM", seller_data["email"])
         # BT-49 Buyer electronic address
         if buyer_data.get("email"):
-            buyer.electronic_address.id = buyer_data["email"]
-            buyer.electronic_address.scheme_id = "EM"
+            buyer.electronic_address.uri_ID = ("EM", buyer_data["email"])
         # BT-41 Seller contact person name (required by BR-DE-5)
         if seller_data.get("contact_name"):
             seller.contact.person_name = seller_data["contact_name"]
@@ -346,8 +344,12 @@ def build_invoice_xml(data: dict, *, profile: str = "en16931") -> bytes:
     # --- Delivery ---
     # BT-72 actual delivery date (required for EN 16931 unless invoicing period used)
     doc.trade.delivery.event.occurrence = _parse_date(data["invoice_date"])
-    # BT-80 country of delivery
-    doc.trade.delivery.ship_to.address.country_id = seller_data["country"]
+    # BT-80 country of delivery (+ city/postcode for XRechnung BR-DE-10/BR-DE-11)
+    doc.trade.delivery.ship_to.address.country_id = buyer_data.get("country", seller_data["country"])
+    if buyer_data.get("city"):
+        doc.trade.delivery.ship_to.address.city_name = buyer_data["city"]
+    if buyer_data.get("postal_code"):
+        doc.trade.delivery.ship_to.address.postcode = buyer_data["postal_code"]
 
     # --- Settlement ---
     settlement = doc.trade.settlement
