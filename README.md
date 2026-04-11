@@ -308,7 +308,7 @@ The invoice data model uses raw numeric amounts (not pre-formatted strings), exp
 - Profile: EN 16931 (ZUGFeRD / Factur-X)
 - Country: Germany (DE)
 - Currency: EUR
-- Tax: standard VAT, single rate per invoice
+- Tax: standard VAT, single or mixed rates per invoice (e.g., 7% + 19%)
 - Invoice type: domestic B2B standard invoice (type code 380)
 - Payment: SEPA credit transfer, SEPA direct debit
 
@@ -318,7 +318,6 @@ The invoice data model uses raw numeric amounts (not pre-formatted strings), exp
 - Credit notes (type 381)
 - Reverse charge
 - Intra-community / cross-border
-- Mixed tax rates within one invoice
 - Allowances, charges, or discounts
 - Non-EUR currencies
 - Non-DE countries

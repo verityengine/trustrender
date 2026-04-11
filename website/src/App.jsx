@@ -834,7 +834,7 @@ function HeroReveal() {
                 ${mode === 'invalid' ? 'bg-wine text-white border-wine' : 'text-panel/50 border-panel/20 hover:border-panel/40 bg-transparent'}`}>
               See what gets caught
             </button>
-            <span className="ml-3 text-[11px] text-panel/30 font-mono hidden md:inline">
+            <span className="ml-3 text-[11px] text-panel/50 font-mono hidden md:inline">
               {mode === null ? 'choose a payload' : mode === 'valid' ? 'invoice_data.json' : 'bad_data.json'}{mode !== null ? ' \u2192 invoice.j2.typ' : ''}
             </span>
           </div>
@@ -852,7 +852,7 @@ function HeroReveal() {
                   <div className="w-2 h-2 rounded-full bg-panel/15" />
                   <div className="w-2 h-2 rounded-full bg-panel/15" />
                 </div>
-                <span className="text-[10px] font-mono text-panel/30 ml-2">{mode === 'invalid' ? 'bad_data.json' : 'invoice_data.json'}</span>
+                <span className="text-[10px] font-mono text-panel/50 ml-2">{mode === 'invalid' ? 'bad_data.json' : 'invoice_data.json'}</span>
               </div>
               <div className="p-4 max-h-[520px] overflow-y-auto overflow-x-auto" style={{ colorScheme: 'dark' }}>
                 <JsonDark data={mode === 'invalid' ? INVALID : VALID} marks={mode === 'invalid' ? { recipient: 1 } : {}} />
@@ -924,7 +924,7 @@ function HeroReveal() {
                     {phase === 'idle' && (
                       <>
                         <div className="w-12 h-12 mx-auto mb-5 rounded-full border-2 border-panel/10 flex items-center justify-center"><div className="w-3 h-3 rounded-full border-2 border-panel/10" /></div>
-                        <p className="text-[13px] text-panel/30">Awaiting input</p>
+                        <p className="text-[13px] text-panel/50">Awaiting input</p>
                       </>
                     )}
                   </div>
@@ -952,7 +952,7 @@ function TrustLayers() {
     {
       title: 'Compliance',
       desc: 'Pre-render validated invoice path for German domestic invoicing. EN 16931, ZUGFeRD / Factur-X. No Java, no iText, no browser stack.',
-      stats: ['EN 16931 profile', 'Factur-X PDF/A-3b', 'DE / EUR / single rate'],
+      stats: ['EN 16931 profile', 'Factur-X PDF/A-3b', 'DE / EUR / mixed rates'],
       flourish: <ComplianceFlourish />,
       caption: 'Simplified invoice structure \u2014 not a complete EN 16931 field map',
     },
@@ -981,7 +981,7 @@ function TrustLayers() {
                 <div className={`bg-panel rounded-xl border border-rule-light overflow-hidden p-6 md:p-8 ${i % 2 === 1 ? 'md:order-2' : ''}`}
                   style={{ boxShadow: '0 2px 12px rgba(20,18,16,0.05)' }}>
                   {l.flourish}
-                  {l.caption && <p className="text-[10px] text-muted/60 text-center mt-2 italic">{l.caption}</p>}
+                  {l.caption && <p className="text-[10px] text-muted text-center mt-2 italic">{l.caption}</p>}
                 </div>
                 {/* Text */}
                 <div className={i % 2 === 1 ? 'md:order-1' : ''}>
@@ -1862,14 +1862,14 @@ function ComplianceWedge() {
                 Validated e&#8209;invoicing for German B2B
               </h2>
               <p className="text-[14px] text-mid leading-relaxed">
-                Invoice data validated before render. Wrong data is rejected before a document is produced. Output is a PDF/A-3b with embedded CII XML for automated processing. No Java, no iText, no browser. Scoped to German domestic B2B invoicing: DE, EUR, single VAT rate, type 380.
+                Invoice data validated before render. Wrong data is rejected before a document is produced. Output is a PDF/A-3b with embedded CII XML for automated processing. No Java, no iText, no browser. Scoped to German domestic B2B invoicing: DE, EUR, mixed VAT rates, type 380.
               </p>
             </div>
             <div className="md:w-3/5 grid grid-cols-2 gap-4">
               {[
                 { l: 'EN 16931 profile', d: 'Schema-tested CII XML' },
                 { l: 'ZUGFeRD / Factur-X', d: 'CII XML embedded in PDF/A-3b' },
-                { l: 'Scope', d: 'DE domestic, EUR, single VAT rate' },
+                { l: 'Scope', d: 'DE domestic, EUR, mixed VAT rates' },
                 { l: 'Pure Python pipeline', d: 'No Java, no iText, no Chromium' },
               ].map(c => (
                 <div key={c.l} className="bg-panel rounded-lg border border-rule-light p-5" style={{ boxShadow: '0 1px 4px rgba(20,18,16,0.03)' }}>
@@ -1942,8 +1942,8 @@ export default function App() {
       <FinalCTA />
       <footer className="py-5 bg-ink border-t border-panel/10">
         <div className="max-w-[1280px] mx-auto px-6 md:px-10 flex items-center justify-between">
-          <div className="text-panel/30"><AnimatedLogo size="small" /></div>
-          <p className="text-panel/20 text-[10px] font-mono">formforge v0.1</p>
+          <div className="text-panel/50"><AnimatedLogo size="small" /></div>
+          <p className="text-panel/40 text-[10px] font-mono">formforge v0.1</p>
         </div>
       </footer>
     </div>

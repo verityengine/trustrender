@@ -14,7 +14,7 @@ Supported:
 - EN 16931 profile only
 - German domestic B2B invoices
 - EUR currency only
-- Single VAT rate per invoice
+- Single or mixed VAT rates per invoice (e.g., 7% + 19%)
 - Invoice type code 380 (standard VAT invoice)
 - SEPA credit transfer and direct debit payment means
 
@@ -22,7 +22,6 @@ Not supported (fails loudly at validation time):
 - Credit notes (type 381)
 - Reverse charge invoices
 - Intra-community supply
-- Mixed VAT rates within one invoice
 - Non-EUR currencies
 - Non-DE countries
 - Allowances, charges, or discounts (hardcoded to zero in XML; rejected at validation if present in data)

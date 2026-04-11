@@ -7,11 +7,11 @@ Supported scope (v1):
     - Profile: EN 16931 only
     - Country: Germany (DE)
     - Currency: EUR only
-    - Tax: standard VAT (19%) — single rate per invoice
+    - Tax: standard VAT — single or mixed rates per invoice (e.g., 7% + 19%)
     - Invoice type: domestic B2B standard VAT invoice (type code 380)
 
 Explicitly unsupported:
-    - Credit notes, reverse charge, intra-community, mixed tax rates,
+    - Credit notes, reverse charge, intra-community,
       cross-border, non-EUR currencies, non-DE countries
 
 Uses ``drafthorse`` for both XML generation and PDF attachment.
@@ -129,13 +129,13 @@ def validate_zugferd_invoice_data(
 
     # --- Items ---
     items = data.get("items")
+    tax_rates = set()
     if not isinstance(items, list) or not items:
         errors.append(ContractError(
             path="items", message="at least one line item required",
             expected="list", actual="missing" if items is None else "empty",
         ))
     else:
-        tax_rates = set()
         for i, item in enumerate(items):
             if not isinstance(item, dict):
                 errors.append(ContractError(
@@ -154,15 +154,6 @@ def validate_zugferd_invoice_data(
             if "tax_rate" in item:
                 tax_rates.add(item["tax_rate"])
 
-        # Fail on mixed tax rates (unsupported in v1)
-        if len(tax_rates) > 1:
-            errors.append(ContractError(
-                path="items",
-                message=f"mixed tax rates not supported in v1 (found: {sorted(tax_rates)})",
-                expected="single tax rate",
-                actual=f"{len(tax_rates)} rates",
-            ))
-
     # --- Tax entries ---
     tax_entries = data.get("tax_entries")
     if not isinstance(tax_entries, list) or not tax_entries:
@@ -170,6 +161,37 @@ def validate_zugferd_invoice_data(
             path="tax_entries", message="at least one tax entry required",
             expected="list", actual="missing",
         ))
+    else:
+        # Bidirectional consistency: item rates ↔ tax_entries rates
+        entry_rates = {e.get("rate") for e in tax_entries if isinstance(e, dict)}
+
+        # Every item tax rate must have a matching tax_entries entry
+        missing_from_entries = tax_rates - entry_rates
+        if missing_from_entries:
+            errors.append(ContractError(
+                path="tax_entries",
+                message=f"tax_entries missing for item rate(s): {sorted(missing_from_entries)}",
+                expected=f"entry for each rate in items ({sorted(tax_rates)})",
+                actual=f"entries for {sorted(entry_rates)}",
+            ))
+
+        # Every non-zero tax_entries rate must appear in items
+        orphan_rates = entry_rates - tax_rates
+        if orphan_rates:
+            # Check if orphan entries have zero basis — allow if truly zero
+            for entry in tax_entries:
+                if not isinstance(entry, dict):
+                    continue
+                rate = entry.get("rate")
+                if rate in orphan_rates:
+                    basis = entry.get("basis", 0)
+                    if isinstance(basis, (int, float)) and basis != 0:
+                        errors.append(ContractError(
+                            path="tax_entries",
+                            message=f"tax_entries rate {rate}% has non-zero basis but no items use that rate",
+                            expected="matching items or zero basis",
+                            actual=f"basis={basis}",
+                        ))
 
     # --- Totals ---
     for field in ("subtotal", "tax_total", "total"):

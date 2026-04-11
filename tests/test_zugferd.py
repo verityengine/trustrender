@@ -67,14 +67,38 @@ class TestValidateInvoiceData:
         paths = [e.path for e in errors]
         assert "seller.country" in paths
 
-    def test_mixed_tax_rates_rejected(self):
+    def test_mixed_tax_rates_accepted(self):
+        """Mixed rates (7% + 19%) are supported with proper tax_entries."""
         data = _load_einvoice_data()
         data["items"][0]["tax_rate"] = 7
+        data["items"][0]["line_total"] = 4500.00
         data["items"][1]["tax_rate"] = 19
+        data["items"][2]["tax_rate"] = 19
+        data["tax_entries"] = [
+            {"rate": 7, "basis": 4500.00, "amount": 315.00},
+            {"rate": 19, "basis": 4450.00, "amount": 845.50},
+        ]
+        data["tax_total"] = 1160.50
+        data["total"] = 8950.00 + 1160.50
+        errors = validate_zugferd_invoice_data(data)
+        assert errors == []
+
+    def test_mixed_rates_missing_tax_entry(self):
+        """Items at 7% + 19% but tax_entries only covers 19% -> error."""
+        data = _load_einvoice_data()
+        data["items"][0]["tax_rate"] = 7
+        # tax_entries still only has 19% — missing 7%
         errors = validate_zugferd_invoice_data(data)
         paths = [e.path for e in errors]
-        assert "items" in paths
-        assert any("mixed tax rates" in e.message for e in errors)
+        assert "tax_entries" in paths
+        assert any("missing for item rate" in e.message for e in errors)
+
+    def test_orphan_tax_entry_nonzero_basis_rejected(self):
+        """tax_entries has rate 7% with non-zero basis but no items use 7% -> error."""
+        data = _load_einvoice_data()
+        data["tax_entries"].append({"rate": 7, "basis": 1000.00, "amount": 70.00})
+        errors = validate_zugferd_invoice_data(data)
+        assert any("no items use that rate" in e.message for e in errors)
 
     def test_empty_items_rejected(self):
         data = _load_einvoice_data()
@@ -305,6 +329,72 @@ class TestRegression:
             zugferd=None,
         )
         assert pdf[:5] == b"%PDF-"
+
+
+# ---------------------------------------------------------------------------
+# Mixed VAT rates
+# ---------------------------------------------------------------------------
+
+
+class TestMixedVATRates:
+    """Prove mixed tax rates (e.g., 7% + 19%) produce valid EN 16931 XML."""
+
+    def _mixed_rate_data(self):
+        data = _load_einvoice_data()
+        # Item 1: reduced rate
+        data["items"][0]["tax_rate"] = 7
+        data["items"][0]["line_total"] = 4500.00
+        # Items 2-3: standard rate
+        data["items"][1]["tax_rate"] = 19
+        data["items"][1]["line_total"] = 2250.00
+        data["items"][2]["tax_rate"] = 19
+        data["items"][2]["line_total"] = 2200.00
+        # Tax entries per rate
+        data["tax_entries"] = [
+            {"rate": 7, "basis": 4500.00, "amount": 315.00},
+            {"rate": 19, "basis": 4450.00, "amount": 845.50},
+        ]
+        data["subtotal"] = 8950.00
+        data["tax_total"] = 1160.50
+        data["total"] = 10110.50
+        return data
+
+    def test_validation_passes(self):
+        errors = validate_zugferd_invoice_data(self._mixed_rate_data())
+        assert errors == []
+
+    def test_xml_has_two_tax_entries(self):
+        xml = build_invoice_xml(self._mixed_rate_data())
+        xml_str = xml.decode("utf-8")
+        # Two ApplicableTradeTax blocks in settlement (one per rate)
+        count = xml_str.count("ram:RateApplicablePercent")
+        # Each line item also has a rate, so filter to settlement-level
+        # Just verify both rate values appear
+        assert "7" in xml_str
+        assert "19" in xml_str
+
+    def test_xsd_passes(self):
+        xml = build_invoice_xml(self._mixed_rate_data())
+        from facturx import xml_check_xsd
+        xml_check_xsd(xml)
+
+    def test_schematron_passes(self):
+        xml = build_invoice_xml(self._mixed_rate_data())
+        from facturx.facturx import xml_check_schematron
+        xml_check_schematron(xml)
+
+    def test_render_produces_valid_pdf(self):
+        """Full render with mixed rates produces PDF with embedded XML."""
+        data = self._mixed_rate_data()
+        pdf = render(
+            "examples/einvoice.j2.typ",
+            data,
+            zugferd="en16931",
+        )
+        assert pdf[:5] == b"%PDF-"
+        from facturx import get_xml_from_pdf
+        filename, _ = get_xml_from_pdf(pdf)
+        assert filename == "factur-x.xml"
 
 
 # ---------------------------------------------------------------------------

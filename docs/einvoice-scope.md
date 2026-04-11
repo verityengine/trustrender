@@ -15,7 +15,7 @@ Single authoritative reference for what Formforge supports, rejects, and does no
 | Country | Germany (DE) — seller and delivery |
 | Currency | EUR |
 | Tax category | Standard rate ("S") |
-| Tax rates | Single rate per invoice (e.g., 19%) |
+| Tax rates | Single or mixed rates per invoice (e.g., 7% + 19%) |
 | Payment means | SEPA credit transfer (code 58), SEPA direct debit (code 59) |
 | Line items | Description, quantity, unit, unit_price, tax_rate, line_total |
 | Totals | subtotal, tax_total, total (pre-computed, numeric) |
@@ -28,7 +28,8 @@ Single authoritative reference for what Formforge supports, rejects, and does no
 |----------|---------------|
 | Non-EUR currency (e.g., USD, GBP) | `ContractError` on `currency` field |
 | Non-DE country | `ContractError` on `seller.country` |
-| Mixed tax rates within one invoice | `ContractError` on `items` — lists found rates |
+| Missing tax_entries for an item rate | `ContractError` on `tax_entries` — bidirectional consistency check |
+| Orphan tax_entries rate with non-zero basis | `ContractError` on `tax_entries` — rate not used by any item |
 | Missing required fields (invoice_number, seller.vat_id, buyer.name, etc.) | `ContractError` per missing field |
 | Missing payment details | `ContractError` on `payment` |
 | Non-numeric totals | `ContractError` on `subtotal`, `tax_total`, or `total` |
@@ -81,5 +82,6 @@ Code paths exist for XRechnung (guideline ID, Leitweg-ID/BT-10, BR-DE-5 seller c
 | PDF/A-3b with embedded XML | Tested (round-trip extraction verified), Mustang-validated (one-time manual) |
 | Field validation rejects unsupported shapes | Tested (10 validation tests) |
 | Allowance/charge rejection | Tested |
+| Mixed VAT rates (7% + 19%) | Schema-tested (XSD + Schematron pass), render integration tested |
 | XRechnung | Schematron fails — not proven |
-| Credit notes, reverse charge, mixed VAT | No code, no tests |
+| Credit notes, reverse charge | No code, no tests |
