@@ -1,10 +1,26 @@
 # TrustRender
 
-Generate structured business PDFs from data + templates. No browser, no Chromium.
+Structured business PDFs from code. Pre-render validated. No browser. No Chromium.
+
+## Why TrustRender
+
+- **Pre-render validation** — catches bad payloads before they reach the renderer
+- **Compliance support** — EN 16931 / ZUGFeRD for the supported e-invoice path
+- **Provenance and hashing** — records template, data, and output fingerprints for traceability
+- **Operationally lean** — no browser or Chromium dependency
 
 TrustRender renders invoices, statements, receipts, and similar structured documents using [Typst](https://typst.app/) as the layout engine and Jinja2 for data binding. It ships as a Python library, CLI, and HTTP server.
 
-**Not** an HTML-to-PDF converter, headless browser, visual editor, or multi-format platform. It does one thing: structured business PDFs from code.
+### Non-goals
+
+TrustRender is not:
+
+- arbitrary HTML-to-PDF conversion
+- a browser or headless renderer
+- a visual or WYSIWYG editor
+- a multi-format converter
+
+It does one thing: structured business PDFs from code.
 
 ## Install
 
