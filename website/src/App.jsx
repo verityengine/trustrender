@@ -811,7 +811,7 @@ function HeroReveal() {
             Bad payloads never become broken documents.
           </h1>
           <p className="text-[16px] md:text-[18px] text-panel/45 max-w-xl mx-auto mt-6 leading-relaxed">
-            The trust layer for structured business documents. Readiness checks, compliance validation, and provenance tracking — before anything ships.
+            Validate document data before render. Catch missing fields, broken paths, and structural errors before a bad invoice reaches a customer.
           </p>
           {/* Scroll indicator */}
           <div className="mt-8 flex justify-center">
@@ -827,12 +827,12 @@ function HeroReveal() {
             <button onClick={() => toggle('valid')}
               className={`text-[13px] px-6 py-2.5 rounded-full border-2 transition-all font-medium cursor-pointer
                 ${mode === 'valid' ? 'bg-rust text-white border-rust' : 'text-panel/50 border-panel/20 hover:border-panel/40 bg-transparent'}`}>
-              Valid payload
+              See it pass
             </button>
             <button onClick={() => toggle('invalid')}
               className={`text-[13px] px-6 py-2.5 rounded-full border-2 transition-all font-medium cursor-pointer
                 ${mode === 'invalid' ? 'bg-wine text-white border-wine' : 'text-panel/50 border-panel/20 hover:border-panel/40 bg-transparent'}`}>
-              Invalid payload
+              See what gets caught
             </button>
             <span className="ml-3 text-[11px] text-panel/30 font-mono hidden md:inline">
               {mode === null ? 'choose a payload' : mode === 'valid' ? 'invoice_data.json' : 'bad_data.json'}{mode !== null ? ' \u2192 invoice.j2.typ' : ''}
@@ -1862,7 +1862,7 @@ function ComplianceWedge() {
                 Validated e&#8209;invoicing for German B2B
               </h2>
               <p className="text-[14px] text-mid leading-relaxed">
-                Pre-render validated invoice data, standards-conformant PDF/A-3b output. No Java, no iText, no browser stack. Currently: DE domestic, EUR, single VAT rate, standard invoices (type 380).
+                Invoice data validated before render. Wrong data is rejected before a document is produced. Output is a PDF/A-3b with embedded CII XML for automated processing. No Java, no iText, no browser. Scoped to German domestic B2B invoicing: DE, EUR, single VAT rate, type 380.
               </p>
             </div>
             <div className="md:w-3/5 grid grid-cols-2 gap-4">
