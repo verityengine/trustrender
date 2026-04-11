@@ -1024,7 +1024,7 @@ function TrustLayers() {
     {
       title: 'Readiness',
       desc: 'Structural contract inferred from your template. Missing fields, wrong types, null values — intercepted at the data layer before render.',
-      stats: ['758 automated tests', '500 soak renders, 0 errors', '56ms avg latency'],
+      stats: ['787 automated tests', '500 soak renders, 0 errors', '56ms avg latency'],
       flourish: <ReadinessFlourish />,
     },
     {
