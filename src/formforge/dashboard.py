@@ -85,12 +85,12 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#0e0d0c; --surface:#1a1816; --panel:#221f1c; --border:#3a3835;
-  --ink:#e4ded4; --ink2:#c9c2b6; --muted:#8a847d; --mid:#6b6560;
-  --rust:#c4622a; --rust-dim:rgba(196,98,42,.10);
-  --sage:#2d6e56; --sage-dim:rgba(45,110,86,.10);
-  --wine:#9e3320; --wine-dim:rgba(158,51,32,.10);
-  --blue:#2f6e8a; --blue-dim:rgba(47,110,138,.10);
+  --bg:#1c1b19; --surface:#242320; --panel:#2c2a27; --border:#3d3a36;
+  --ink:#ddd8d0; --ink2:#b8b2a8; --muted:#8a847a; --mid:#6b655c;
+  --accent:#a07850; --accent-dim:rgba(160,120,80,.08);
+  --ok:#5a8a6a; --ok-dim:rgba(90,138,106,.08);
+  --err:#b05545; --err-dim:rgba(176,85,69,.08);
+  --info:#6a8a9a; --info-dim:rgba(106,138,154,.08);
   --display:'DM Serif Display',Georgia,serif;
   --sans:'Inter',system-ui,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,monospace;
@@ -106,7 +106,7 @@ header h1{font-family:var(--display);font-size:20px;font-weight:400;color:var(--
 header .meta{display:flex;align-items:center;gap:12px}
 header .meta span{font-size:11px;color:var(--muted);font-family:var(--mono)}
 header button{background:none;border:1px solid var(--border);color:var(--muted);padding:5px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-family:var(--sans)}
-header button:hover{border-color:var(--rust);color:var(--rust)}
+header button:hover{border-color:var(--accent);color:var(--accent)}
 
 /* Summary strip */
 .strip{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--surface)}
@@ -114,8 +114,8 @@ header button:hover{border-color:var(--rust);color:var(--rust)}
 .strip .stat:last-child{border-right:none}
 .strip .stat .label{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:4px}
 .strip .stat .val{font-size:22px;font-weight:600;font-family:var(--mono);color:var(--ink)}
-.strip .stat .val.sage{color:var(--sage)}
-.strip .stat .val.wine{color:var(--wine)}
+.strip .stat .val.sage{color:var(--ok)}
+.strip .stat .val.wine{color:var(--err)}
 
 /* Split view */
 .split{display:flex;flex:1;overflow:hidden}
@@ -126,25 +126,25 @@ header button:hover{border-color:var(--rust);color:var(--rust)}
 .filters{display:flex;gap:0;padding:0;border-bottom:1px solid var(--border)}
 .filters button{flex:1;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);padding:10px 0;font-size:12px;font-family:var(--sans);cursor:pointer;letter-spacing:.3px}
 .filters button:hover{color:var(--ink2)}
-.filters button.active{color:var(--rust);border-bottom-color:var(--rust)}
+.filters button.active{color:var(--accent);border-bottom-color:var(--accent)}
 
 /* Event list */
 .events{flex:1;overflow-y:auto}
 .event{padding:14px 20px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
 .event:hover{background:var(--surface)}
-.event.selected{background:var(--panel);border-left:3px solid var(--rust)}
+.event.selected{background:var(--panel);border-left:3px solid var(--accent)}
 .event .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 .event .template{font-size:13px;font-weight:500;color:var(--ink)}
 .event .time{font-size:11px;font-family:var(--mono);color:var(--muted)}
 .event .bottom{display:flex;align-items:center;gap:8px}
 .event .badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:3px;letter-spacing:.3px}
-.event .badge.ok{background:var(--sage-dim);color:var(--sage)}
-.event .badge.fail{background:var(--wine-dim);color:var(--wine)}
+.event .badge.ok{background:var(--ok-dim);color:var(--ok)}
+.event .badge.fail{background:var(--err-dim);color:var(--err)}
 .event .pill{font-size:10px;padding:2px 6px;border-radius:3px;font-family:var(--mono)}
-.event .pill.zugferd{background:var(--blue-dim);color:var(--blue)}
-.event .pill.prov{background:var(--rust-dim);color:var(--rust)}
+.event .pill.zugferd{background:var(--info-dim);color:var(--info)}
+.event .pill.prov{background:var(--accent-dim);color:var(--accent)}
 .event .dur{font-size:11px;color:var(--muted);font-family:var(--mono);margin-left:auto}
-.event .error-line{margin-top:6px;font-size:11px;color:var(--wine);font-family:var(--mono);padding-left:2px}
+.event .error-line{margin-top:6px;font-size:11px;color:var(--err);font-family:var(--mono);padding-left:2px}
 
 /* Detail pane */
 .detail-empty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--mid);font-size:14px}
@@ -153,23 +153,23 @@ header button:hover{border-color:var(--rust);color:var(--rust)}
 .detail .fields{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px}
 .detail .field .label{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:3px}
 .detail .field .val{font-size:13px;color:var(--ink2);font-family:var(--mono)}
-.detail .field .val.ok{color:var(--sage)}
-.detail .field .val.fail{color:var(--wine)}
+.detail .field .val.ok{color:var(--ok)}
+.detail .field .val.fail{color:var(--err)}
 
 /* Stage pipeline */
 .pipeline{margin-bottom:28px}
 .pipeline h3{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:12px}
 .stage{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:8px}
 .stage .icon{font-size:15px;margin-top:1px;width:18px;flex-shrink:0}
-.stage .icon.pass{color:var(--sage)}
-.stage .icon.fail{color:var(--wine)}
+.stage .icon.pass{color:var(--ok)}
+.stage .icon.fail{color:var(--err)}
 .stage .icon.skip{color:var(--mid)}
 .stage .body{flex:1;min-width:0}
 .stage .name{font-size:13px;font-family:var(--mono);font-weight:500;color:var(--ink)}
 .stage .row{display:flex;gap:12px;margin-top:4px}
 .stage .row span{font-size:11px;color:var(--muted);font-family:var(--mono)}
 .stage .errors{margin-top:6px}
-.stage .errors div{font-size:11px;color:var(--wine);font-family:var(--mono);padding:2px 0}
+.stage .errors div{font-size:11px;color:var(--err);font-family:var(--mono);padding:2px 0}
 
 /* Hashes */
 .hashes{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px}

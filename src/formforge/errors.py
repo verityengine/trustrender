@@ -20,6 +20,7 @@ Error codes
     RENDER_TIMEOUT       Render exceeded the time limit
     BACKEND_ERROR        Unexpected failure in the render backend
     ZUGFERD_ERROR        ZUGFeRD post-processing or XML generation failed
+    SEMANTIC_VALIDATION  Semantic data issue (arithmetic, dates, completeness)
 
 Stages
 ~~~~~~
@@ -51,6 +52,7 @@ class ErrorCode(str, Enum):
     RENDER_TIMEOUT = "RENDER_TIMEOUT"
     BACKEND_ERROR = "BACKEND_ERROR"
     ZUGFERD_ERROR = "ZUGFERD_ERROR"
+    SEMANTIC_VALIDATION = "SEMANTIC_VALIDATION"
 
 
 class FormforgeError(Exception):

@@ -228,21 +228,47 @@ def _check_compliance(
 # Public API
 # ---------------------------------------------------------------------------
 
+def _check_semantic(
+    data: dict,
+    semantic_hints: object | None,
+    issues: list[ReadinessIssue],
+) -> None:
+    """Stage 5: Semantic validation — does the data make business sense?"""
+    if semantic_hints is None:
+        return
+
+    from .semantic import validate_semantics
+
+    report = validate_semantics(data, hints=semantic_hints)
+    for si in report.issues:
+        issues.append(ReadinessIssue(
+            stage="semantic",
+            check=si.category,
+            severity=si.severity,
+            path=si.path,
+            message=si.message,
+        ))
+
+
 def preflight(
     template: str | os.PathLike,
     data: dict,
     *,
     zugferd: str | None = None,
+    semantic_hints: object | None = None,
 ) -> ReadinessVerdict:
     """Run all readiness checks without rendering.
 
     Combines payload validation, template checks, environment checks,
-    and compliance eligibility into a single structured verdict.
+    compliance eligibility, and optional semantic validation into a
+    single structured verdict.
 
     Args:
         template: Path to a ``.j2.typ`` or ``.typ`` template file.
         data: Template data as a dict.
         zugferd: If set, also run compliance checks for this profile.
+        semantic_hints: SemanticHints instance for semantic validation.
+            If None, semantic checks are skipped.
 
     Returns:
         ReadinessVerdict with ``ready=True`` if no errors.
@@ -288,6 +314,11 @@ def preflight(
     if zugferd:
         _check_compliance(data, zugferd, all_issues, eligible)
         stages.append("compliance")
+
+    # Stage 5: Semantic (opt-in)
+    if semantic_hints is not None:
+        _check_semantic(data, semantic_hints, all_issues)
+        stages.append("semantic")
 
     errors = [i for i in all_issues if i.severity == "error"]
     warnings = [i for i in all_issues if i.severity == "warning"]

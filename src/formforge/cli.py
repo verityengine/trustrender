@@ -6,7 +6,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import FormforgeError, __version__, render
+from . import AuditResult, FormforgeError, __version__, audit, render
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -86,6 +86,86 @@ def main(argv: list[str] | None = None) -> int:
         choices=["en16931", "xrechnung"],
         help="Check compliance eligibility for this profile",
     )
+    preflight_cmd.add_argument(
+        "--semantic",
+        action="store_true",
+        help="Run semantic validation (arithmetic, dates, completeness)",
+    )
+
+    audit_cmd = sub.add_parser("audit", help="Render with full audit trail")
+    audit_cmd.add_argument("template", help="Path to template (.j2.typ or .typ)")
+    audit_cmd.add_argument("data", help="Path to JSON data file")
+    audit_cmd.add_argument("-o", "--output", help="Output PDF path")
+    audit_cmd.add_argument(
+        "--baseline-dir",
+        help="Baseline directory for drift detection",
+    )
+    audit_cmd.add_argument(
+        "--save-baseline",
+        action="store_true",
+        help="Save current render as new baseline",
+    )
+    audit_cmd.add_argument(
+        "--semantic",
+        action="store_true",
+        help="Run semantic validation (arithmetic, dates, completeness)",
+    )
+    audit_cmd.add_argument(
+        "--validate",
+        action="store_true",
+        help="Validate data against template contract before rendering",
+    )
+    audit_cmd.add_argument(
+        "--font-path",
+        action="append",
+        dest="font_paths",
+        help="Additional font directory (can be repeated)",
+    )
+    audit_cmd.add_argument(
+        "--zugferd",
+        choices=["en16931", "xrechnung"],
+        help="Generate ZUGFeRD-compliant PDF",
+    )
+    audit_cmd.add_argument(
+        "--provenance",
+        action="store_true",
+        help="Embed cryptographic generation proof",
+    )
+    audit_cmd.add_argument(
+        "--json",
+        action="store_true",
+        dest="as_json",
+        help="Output audit result as JSON",
+    )
+
+    baseline_cmd = sub.add_parser("baseline", help="Manage render baselines")
+    baseline_sub = baseline_cmd.add_subparsers(dest="baseline_action")
+
+    baseline_save = baseline_sub.add_parser("save", help="Save a new baseline")
+    baseline_save.add_argument("template", help="Path to template")
+    baseline_save.add_argument("data", help="Path to JSON data file")
+    baseline_save.add_argument(
+        "--baseline-dir",
+        required=True,
+        help="Baseline directory",
+    )
+    baseline_save.add_argument("--font-path", action="append", dest="font_paths")
+    baseline_save.add_argument("--validate", action="store_true")
+    baseline_save.add_argument("--zugferd", choices=["en16931", "xrechnung"])
+    baseline_save.add_argument("--provenance", action="store_true")
+
+    baseline_check = baseline_sub.add_parser("check", help="Check against baseline")
+    baseline_check.add_argument("template", help="Path to template")
+    baseline_check.add_argument("data", help="Path to JSON data file")
+    baseline_check.add_argument(
+        "--baseline-dir",
+        required=True,
+        help="Baseline directory",
+    )
+    baseline_check.add_argument("--font-path", action="append", dest="font_paths")
+    baseline_check.add_argument("--validate", action="store_true")
+    baseline_check.add_argument("--zugferd", choices=["en16931", "xrechnung"])
+    baseline_check.add_argument("--provenance", action="store_true")
 
     history_cmd = sub.add_parser("history", help="View render history and lineage")
     history_cmd.add_argument("--template", help="Filter by template name")
@@ -118,6 +198,12 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "preflight":
         return _run_preflight(args)
+
+    if args.command == "audit":
+        return _run_audit(args)
+
+    if args.command == "baseline":
+        return _run_baseline(args)
 
     if args.command == "history":
         return _run_history(args)
@@ -235,6 +321,173 @@ def _run_trace(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_audit(args: argparse.Namespace) -> int:
+    """Render with full audit: fingerprint, drift, semantic."""
+    import json as json_mod
+
+    from .semantic import INVOICE_HINTS
+
+    template_path = Path(args.template)
+    data_path = Path(args.data)
+
+    if not data_path.exists():
+        print(f"error: Data file not found: {data_path}", file=sys.stderr)
+        return 1
+
+    with open(data_path) as f:
+        data = json_mod.load(f)
+
+    semantic_hints = INVOICE_HINTS if args.semantic else None
+
+    try:
+        result = audit(
+            template_path,
+            data,
+            output=args.output,
+            font_paths=args.font_paths,
+            validate=args.validate,
+            zugferd=args.zugferd,
+            provenance=args.provenance,
+            baseline_dir=args.baseline_dir,
+            save_baseline=args.save_baseline,
+            semantic_hints=semantic_hints,
+        )
+    except FormforgeError as exc:
+        print(_format_error(exc), file=sys.stderr)
+        return 1
+
+    if args.as_json:
+        report = {
+            "fingerprint": result.fingerprint.to_dict(),
+            "change_set": result.change_set.to_dict() if result.change_set else None,
+            "drift_result": result.drift_result.to_dict() if result.drift_result else None,
+            "semantic_report": result.semantic_report.to_dict() if result.semantic_report else None,
+            "pdf_size": len(result.pdf_bytes),
+        }
+        print(json_mod.dumps(report, indent=2))
+        return 0
+
+    # Human-readable output
+    fp = result.fingerprint
+    print(f"Audit: {template_path.name}")
+    print(f"  Fingerprint: {fp.fingerprint[:40]}...")
+    print(f"  PDF size: {len(result.pdf_bytes):,} bytes")
+    if args.output:
+        print(f"  Output: {args.output}")
+
+    if result.change_set is not None:
+        cs = result.change_set
+        if cs.has_changes:
+            cats = ", ".join(cs.change_categories)
+            print(f"\n  Changes detected: {cats}")
+            for c in cs.data_changes[:10]:
+                print(f"    data: {c.path} ({c.change_type})")
+            for c in cs.template_changes[:5]:
+                print(f"    template: {c.path} ({c.change_type})")
+            for c in cs.asset_changes[:5]:
+                print(f"    asset: {c.path} ({c.change_type})")
+        else:
+            print("\n  No input changes detected")
+
+    if result.drift_result is not None:
+        dr = result.drift_result
+        status = "PASS" if dr.passed else "DRIFT"
+        print(f"\n  Drift: {status}")
+        for f in dr.findings:
+            marker = "✗" if f.severity == "error" else "⚠" if f.severity == "warning" else "○"
+            print(f"    {marker} [{f.check_name}] {f.message}")
+    elif args.baseline_dir:
+        print("\n  Drift: no baseline found")
+
+    if result.semantic_report is not None:
+        sr = result.semantic_report
+        if sr.issues:
+            print(f"\n  Semantic: {len(sr.issues)} issue(s)")
+            for si in sr.issues:
+                marker = "✗" if si.severity == "error" else "⚠"
+                print(f"    {marker} [{si.category}] {si.path}: {si.message}")
+        else:
+            print(f"\n  Semantic: clean ({len(sr.checks_run)} checks)")
+
+    if args.save_baseline:
+        print(f"\n  Baseline saved to {args.baseline_dir}")
+
+    return 0
+
+
+def _run_baseline(args: argparse.Namespace) -> int:
+    """Manage render baselines."""
+    import json as json_mod
+
+    if args.baseline_action is None:
+        print("error: specify 'save' or 'check'", file=sys.stderr)
+        return 1
+
+    template_path = Path(args.template)
+    data_path = Path(args.data)
+
+    if not data_path.exists():
+        print(f"error: Data file not found: {data_path}", file=sys.stderr)
+        return 1
+
+    with open(data_path) as f:
+        data = json_mod.load(f)
+
+    if args.baseline_action == "save":
+        try:
+            result = audit(
+                template_path,
+                data,
+                font_paths=args.font_paths,
+                validate=args.validate,
+                zugferd=args.zugferd,
+                provenance=args.provenance,
+                baseline_dir=args.baseline_dir,
+                save_baseline=True,
+            )
+            print(f"Baseline saved: {template_path.name}")
+            print(f"  PDF size: {len(result.pdf_bytes):,} bytes")
+            print(f"  Fingerprint: {result.fingerprint.fingerprint[:40]}...")
+            return 0
+        except FormforgeError as exc:
+            print(_format_error(exc), file=sys.stderr)
+            return 1
+
+    if args.baseline_action == "check":
+        try:
+            result = audit(
+                template_path,
+                data,
+                font_paths=args.font_paths,
+                validate=args.validate,
+                zugferd=args.zugferd,
+                provenance=args.provenance,
+                baseline_dir=args.baseline_dir,
+            )
+        except FormforgeError as exc:
+            print(_format_error(exc), file=sys.stderr)
+            return 1
+
+        if result.drift_result is None:
+            print(f"No baseline found for {template_path.name}")
+            print(f"  Run 'formforge baseline save' first")
+            return 1
+
+        dr = result.drift_result
+        status = "PASS" if dr.passed else "DRIFT DETECTED"
+        print(f"Baseline check: {status}")
+        for f in dr.findings:
+            marker = "✗" if f.severity == "error" else "⚠" if f.severity == "warning" else "○"
+            print(f"  {marker} [{f.check_name}] {f.message}")
+
+        if dr.passed and not dr.findings:
+            print("  All checks passed")
+
+        return 0 if dr.passed else 1
+
+    return 1
+
+
 def _run_preflight(args: argparse.Namespace) -> int:
     import json
 
@@ -250,7 +503,12 @@ def _run_preflight(args: argparse.Namespace) -> int:
     with open(data_path) as f:
         data = json.load(f)
 
-    verdict = preflight(template_path, data, zugferd=args.zugferd)
+    semantic_hints = None
+    if args.semantic:
+        from .semantic import INVOICE_HINTS
+        semantic_hints = INVOICE_HINTS
+
+    verdict = preflight(template_path, data, zugferd=args.zugferd, semantic_hints=semantic_hints)
 
     # Header
     status = "PASS" if verdict.ready else "FAIL"
