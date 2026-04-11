@@ -42,6 +42,20 @@ trustrender doctor --smoke
 
 Checks Python version, backends, fonts, and runs a real render + server health check.
 
+## Security
+
+**`trustrender serve` has no built-in authentication, authorization, TLS, or rate limiting.** It is designed to run as a backend service behind a reverse proxy. Do not expose the server port to the public internet.
+
+If you deploy TrustRender as an HTTP server:
+
+- Place it behind a reverse proxy (Nginx, Caddy, Traefik, cloud load balancer) that handles TLS termination and authentication.
+- The `/render` endpoint accepts template source code via the `template_source` field. Without authentication, any client that can reach the server can submit arbitrary templates for rendering.
+- The `/template-source` endpoint returns raw template file contents. Restrict access if templates contain business logic you consider sensitive.
+- Backpressure (503 when at concurrency limit) is the only built-in traffic control. It is not a substitute for rate limiting.
+- The server binds to `127.0.0.1` by default. Passing `--host 0.0.0.0` opens it to all interfaces — do this only behind a proxy.
+
+TrustRender is a rendering engine, not a security boundary. Treat it like a database: powerful, essential, and never internet-facing without a gateway.
+
 ## Quick start
 
 **Python:**
@@ -88,9 +102,9 @@ No Chromium, no Puppeteer, no headless browser. Typst compiles directly to PDF. 
 
 Measured: 1,000-row invoice renders in 211ms (33 pages). Server throughput: 53.8 RPS. Peak RSS: 69.5 MB.
 
-### EN 16931 e-invoicing
+### EN 16931 e-invoicing (narrow scope)
 
-Generates ZUGFeRD / Factur-X compliant invoices for German domestic B2B. PDF/A-3b output with embedded CII XML, validated by XSD and Schematron before embedding.
+Supports a narrow subset of EN 16931 e-invoicing: **domestic German B2B invoices with standard VAT, in EUR, via SEPA payment only.** Reverse charge, cross-border, allowances/discounts, and non-EUR currencies are not supported. This is not full German e-invoicing mandate coverage. PDF/A-3b output with embedded CII XML, validated by XSD and Schematron before embedding.
 
 ```
 trustrender render einvoice.j2.typ data.json -o invoice.pdf --zugferd en16931

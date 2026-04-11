@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "trustrender"
 version = "0.1.0"
 description = "Fast, code-first PDF generation from structured data. No browser, no Chromium."
+license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
     "typst>=0.14",
@@ -13,7 +14,15 @@ dependencies = [
     "starlette>=0.40",
     "uvicorn>=0.30",
     "drafthorse>=2024.0",
+    "pypdf>=4.0",
 ]
+
+[project.urls]
+Homepage = "https://trustrender.dev"
+Documentation = "https://trustrender.dev"
+Source = "https://github.com/verityengine/trustrender"
+Issues = "https://github.com/verityengine/trustrender/issues"
+Changelog = "https://github.com/verityengine/trustrender/releases"
 
 [project.scripts]
 trustrender = "trustrender.cli:main"

@@ -2303,9 +2303,9 @@ function ComplianceWedge() {
             </div>
             <div className="divide-y divide-rule-light">
               {[
-                { standard: 'ZUGFeRD / Factur-X (EN 16931)', status: 'Production-ready', icon: '\u2705', detail: 'XSD-validated, schema-tested, Mustang-verified' },
-                { standard: 'Credit notes (type 381)', status: 'Production-ready', icon: '\u2705', detail: 'Same pipeline, same validation' },
-                { standard: 'Mixed VAT rates (7% + 19%)', status: 'Production-ready', icon: '\u2705', detail: 'Per-item tax rates, multiple tax entries' },
+                { standard: 'ZUGFeRD / Factur-X (EN 16931)', status: 'Supported (narrow scope)', icon: '\u2705', detail: 'DE domestic, EUR, standard VAT only. No reverse charge or cross-border.' },
+                { standard: 'Credit notes (type 381)', status: 'Supported', icon: '\u2705', detail: 'Same pipeline, same validation' },
+                { standard: 'Mixed VAT rates (7% + 19%)', status: 'Supported', icon: '\u2705', detail: 'Per-item tax rates, multiple tax entries' },
               ].map(r => (
                 <div key={r.standard} className="px-6 py-4 flex items-center gap-4">
                   <span className="text-[16px] w-8 text-center">{r.icon}</span>
