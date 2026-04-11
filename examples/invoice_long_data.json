@@ -1,0 +1,375 @@
+{
+  "invoice_number": "INV-2026-0099",
+  "invoice_date": "April 10, 2026",
+  "due_date": "May 10, 2026",
+  "payment_terms": "Net 30",
+  "sender": {
+    "name": "Acme Corporation",
+    "address_line1": "123 Business Ave, Suite 400",
+    "address_line2": "San Francisco, CA 94105",
+    "email": "billing@acme.com"
+  },
+  "recipient": {
+    "name": "Contoso Ltd.",
+    "address_line1": "456 Enterprise Blvd",
+    "address_line2": "New York, NY 10001",
+    "email": "accounts@contoso.com"
+  },
+  "items": [
+    {
+      "num": 1,
+      "description": "Website redesign \u2014 full responsive layout",
+      "qty": 10,
+      "unit_price": "$250.00",
+      "amount": "$2,500.00"
+    },
+    {
+      "num": 2,
+      "description": "API integration with payment gateway",
+      "qty": 1,
+      "unit_price": "$1,200.00",
+      "amount": "$1,200.00"
+    },
+    {
+      "num": 3,
+      "description": "Cloud infrastructure setup (AWS)",
+      "qty": 2,
+      "unit_price": "$750.00",
+      "amount": "$1,500.00"
+    },
+    {
+      "num": 4,
+      "description": "Database migration and optimization",
+      "qty": 2,
+      "unit_price": "$250.00",
+      "amount": "$500.00"
+    },
+    {
+      "num": 5,
+      "description": "Custom reporting dashboard",
+      "qty": 10,
+      "unit_price": "$250.00",
+      "amount": "$2,500.00"
+    },
+    {
+      "num": 6,
+      "description": "Mobile app UI/UX design",
+      "qty": 8,
+      "unit_price": "$2,000.00",
+      "amount": "$16,000.00"
+    },
+    {
+      "num": 7,
+      "description": "Security audit and penetration testing",
+      "qty": 1,
+      "unit_price": "$150.00",
+      "amount": "$150.00"
+    },
+    {
+      "num": 8,
+      "description": "CI/CD pipeline configuration",
+      "qty": 1,
+      "unit_price": "$750.00",
+      "amount": "$750.00"
+    },
+    {
+      "num": 9,
+      "description": "Load testing and performance tuning",
+      "qty": 2,
+      "unit_price": "$150.00",
+      "amount": "$300.00"
+    },
+    {
+      "num": 10,
+      "description": "Technical documentation package",
+      "qty": 8,
+      "unit_price": "$750.00",
+      "amount": "$6,000.00"
+    },
+    {
+      "num": 11,
+      "description": "Email notification system",
+      "qty": 10,
+      "unit_price": "$2,000.00",
+      "amount": "$20,000.00"
+    },
+    {
+      "num": 12,
+      "description": "User authentication module",
+      "qty": 2,
+      "unit_price": "$3,500.00",
+      "amount": "$7,000.00"
+    },
+    {
+      "num": 13,
+      "description": "Data export and reporting tools",
+      "qty": 8,
+      "unit_price": "$1,200.00",
+      "amount": "$9,600.00"
+    },
+    {
+      "num": 14,
+      "description": "Third-party SSO integration",
+      "qty": 1,
+      "unit_price": "$500.00",
+      "amount": "$500.00"
+    },
+    {
+      "num": 15,
+      "description": "Automated backup system",
+      "qty": 10,
+      "unit_price": "$2,000.00",
+      "amount": "$20,000.00"
+    },
+    {
+      "num": 16,
+      "description": "Monitoring and alerting setup",
+      "qty": 3,
+      "unit_price": "$1,200.00",
+      "amount": "$3,600.00"
+    },
+    {
+      "num": 17,
+      "description": "Frontend component library",
+      "qty": 2,
+      "unit_price": "$750.00",
+      "amount": "$1,500.00"
+    },
+    {
+      "num": 18,
+      "description": "Search and filtering engine",
+      "qty": 3,
+      "unit_price": "$250.00",
+      "amount": "$750.00"
+    },
+    {
+      "num": 19,
+      "description": "Webhook integration layer",
+      "qty": 1,
+      "unit_price": "$2,000.00",
+      "amount": "$2,000.00"
+    },
+    {
+      "num": 20,
+      "description": "Admin dashboard development",
+      "qty": 1,
+      "unit_price": "$1,500.00",
+      "amount": "$1,500.00"
+    },
+    {
+      "num": 21,
+      "description": "Website redesign \u2014 full responsive layout",
+      "qty": 3,
+      "unit_price": "$1,200.00",
+      "amount": "$3,600.00"
+    },
+    {
+      "num": 22,
+      "description": "API integration with payment gateway",
+      "qty": 1,
+      "unit_price": "$3,500.00",
+      "amount": "$3,500.00"
+    },
+    {
+      "num": 23,
+      "description": "Cloud infrastructure setup (AWS)",
+      "qty": 8,
+      "unit_price": "$250.00",
+      "amount": "$2,000.00"
+    },
+    {
+      "num": 24,
+      "description": "Database migration and optimization",
+      "qty": 5,
+      "unit_price": "$250.00",
+      "amount": "$1,250.00"
+    },
+    {
+      "num": 25,
+      "description": "Custom reporting dashboard",
+      "qty": 8,
+      "unit_price": "$1,200.00",
+      "amount": "$9,600.00"
+    },
+    {
+      "num": 26,
+      "description": "Mobile app UI/UX design",
+      "qty": 10,
+      "unit_price": "$1,500.00",
+      "amount": "$15,000.00"
+    },
+    {
+      "num": 27,
+      "description": "Security audit and penetration testing",
+      "qty": 8,
+      "unit_price": "$750.00",
+      "amount": "$6,000.00"
+    },
+    {
+      "num": 28,
+      "description": "CI/CD pipeline configuration",
+      "qty": 10,
+      "unit_price": "$250.00",
+      "amount": "$2,500.00"
+    },
+    {
+      "num": 29,
+      "description": "Load testing and performance tuning",
+      "qty": 1,
+      "unit_price": "$750.00",
+      "amount": "$750.00"
+    },
+    {
+      "num": 30,
+      "description": "Technical documentation package",
+      "qty": 3,
+      "unit_price": "$250.00",
+      "amount": "$750.00"
+    },
+    {
+      "num": 31,
+      "description": "Email notification system",
+      "qty": 2,
+      "unit_price": "$250.00",
+      "amount": "$500.00"
+    },
+    {
+      "num": 32,
+      "description": "User authentication module",
+      "qty": 5,
+      "unit_price": "$1,200.00",
+      "amount": "$6,000.00"
+    },
+    {
+      "num": 33,
+      "description": "Data export and reporting tools",
+      "qty": 5,
+      "unit_price": "$1,500.00",
+      "amount": "$7,500.00"
+    },
+    {
+      "num": 34,
+      "description": "Third-party SSO integration",
+      "qty": 2,
+      "unit_price": "$1,500.00",
+      "amount": "$3,000.00"
+    },
+    {
+      "num": 35,
+      "description": "Automated backup system",
+      "qty": 3,
+      "unit_price": "$750.00",
+      "amount": "$2,250.00"
+    },
+    {
+      "num": 36,
+      "description": "Monitoring and alerting setup",
+      "qty": 10,
+      "unit_price": "$1,200.00",
+      "amount": "$12,000.00"
+    },
+    {
+      "num": 37,
+      "description": "Frontend component library",
+      "qty": 10,
+      "unit_price": "$250.00",
+      "amount": "$2,500.00"
+    },
+    {
+      "num": 38,
+      "description": "Search and filtering engine",
+      "qty": 8,
+      "unit_price": "$500.00",
+      "amount": "$4,000.00"
+    },
+    {
+      "num": 39,
+      "description": "Webhook integration layer",
+      "qty": 8,
+      "unit_price": "$750.00",
+      "amount": "$6,000.00"
+    },
+    {
+      "num": 40,
+      "description": "Admin dashboard development",
+      "qty": 2,
+      "unit_price": "$3,500.00",
+      "amount": "$7,000.00"
+    },
+    {
+      "num": 41,
+      "description": "Website redesign \u2014 full responsive layout",
+      "qty": 5,
+      "unit_price": "$1,200.00",
+      "amount": "$6,000.00"
+    },
+    {
+      "num": 42,
+      "description": "API integration with payment gateway",
+      "qty": 10,
+      "unit_price": "$750.00",
+      "amount": "$7,500.00"
+    },
+    {
+      "num": 43,
+      "description": "Cloud infrastructure setup (AWS)",
+      "qty": 10,
+      "unit_price": "$1,500.00",
+      "amount": "$15,000.00"
+    },
+    {
+      "num": 44,
+      "description": "Database migration and optimization",
+      "qty": 1,
+      "unit_price": "$750.00",
+      "amount": "$750.00"
+    },
+    {
+      "num": 45,
+      "description": "Custom reporting dashboard",
+      "qty": 1,
+      "unit_price": "$1,500.00",
+      "amount": "$1,500.00"
+    },
+    {
+      "num": 46,
+      "description": "Mobile app UI/UX design",
+      "qty": 5,
+      "unit_price": "$1,200.00",
+      "amount": "$6,000.00"
+    },
+    {
+      "num": 47,
+      "description": "Security audit and penetration testing",
+      "qty": 1,
+      "unit_price": "$750.00",
+      "amount": "$750.00"
+    },
+    {
+      "num": 48,
+      "description": "CI/CD pipeline configuration",
+      "qty": 8,
+      "unit_price": "$1,500.00",
+      "amount": "$12,000.00"
+    },
+    {
+      "num": 49,
+      "description": "Load testing and performance tuning",
+      "qty": 2,
+      "unit_price": "$3,500.00",
+      "amount": "$7,000.00"
+    },
+    {
+      "num": 50,
+      "description": "Technical documentation package",
+      "qty": 5,
+      "unit_price": "$3,500.00",
+      "amount": "$17,500.00"
+    }
+  ],
+  "subtotal": "$267,550.00",
+  "tax_rate": "8.5%",
+  "tax_amount": "$22,741.00",
+  "total": "$290,291.00",
+  "notes": "Payment is due within 30 days of invoice date. Please include the invoice number with your payment."
+}
