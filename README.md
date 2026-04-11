@@ -600,7 +600,13 @@ Server error responses include `error`, `message`, `stage`, and `request_id`. Wi
 - `formforge check` CLI for template introspection and data validation
 - ZUGFeRD / Factur-X: EN 16931 e-invoice generation for DE domestic B2B (PDF/A-3b + embedded CII XML, schema-tested)
 - Generation proof: cryptographic provenance embedded in PDF metadata, verifiable without re-rendering
-- 816 tests passing (unit, integration, contract, include inference, semantic, ZUGFeRD, credit note, provenance, audit, ugly-data pressure, font verification, diagnostics)
+- Output fingerprinting: SHA-256 of final PDF bytes stored in render trace (input + output hash chain)
+- Bundled playground: `formforge serve` serves interactive dev sandbox at `/` — edit data, edit templates, preflight, render, inspect traces
+- Ops dashboard: production monitoring UI at `/dashboard` — aggregate stats, trace detail, identity hashes
+- Ephemeral template editing: browser-based template editor sends source for preflight/render without saving to disk
+- `formforge doctor --smoke`: environment diagnostics + render/server smoke test in one command
+- Benchmarked: 1,000-row invoice renders in 211ms (33 pages, 0.21ms/row), 53.8 RPS server throughput, 69.5 MB peak RSS
+- 787 tests passing (unit, integration, contract, include inference, semantic, ZUGFeRD, credit note, provenance, audit, ugly-data pressure, font verification, diagnostics)
 
 ## Development
 
