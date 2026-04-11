@@ -85,12 +85,12 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#1c1b19; --surface:#242320; --panel:#2c2a27; --border:#3d3a36;
-  --ink:#ddd8d0; --ink2:#b8b2a8; --muted:#8a847a; --mid:#6b655c;
-  --accent:#a07850; --accent-dim:rgba(160,120,80,.08);
-  --ok:#5a8a6a; --ok-dim:rgba(90,138,106,.08);
-  --err:#b05545; --err-dim:rgba(176,85,69,.08);
-  --info:#6a8a9a; --info-dim:rgba(106,138,154,.08);
+  --bg:#11100e; --surface:#171512; --panel:#1d1a16; --border:#2b251e;
+  --ink:#f3ede4; --ink2:#b8ab98; --muted:#877a69; --mid:#5e5345;
+  --accent:#b86a3a; --accent-hover:#cb7a47; --accent-dim:rgba(184,106,58,.10);
+  --ok:#5f8f73; --ok-dim:rgba(95,143,115,.08);
+  --err:#b45849; --err-dim:rgba(180,88,73,.08);
+  --info:#7a9aaa; --info-dim:rgba(122,154,170,.08);
   --display:'DM Serif Display',Georgia,serif;
   --sans:'Inter',system-ui,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,monospace;
@@ -106,7 +106,7 @@ header h1{font-family:var(--display);font-size:20px;font-weight:400;color:var(--
 header .meta{display:flex;align-items:center;gap:12px}
 header .meta span{font-size:11px;color:var(--muted);font-family:var(--mono)}
 header button{background:none;border:1px solid var(--border);color:var(--muted);padding:5px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-family:var(--sans)}
-header button:hover{border-color:var(--accent);color:var(--accent)}
+header button:hover{border-color:var(--accent-hover);color:var(--accent-hover)}
 
 /* Summary strip */
 .strip{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--surface)}
@@ -132,7 +132,7 @@ header button:hover{border-color:var(--accent);color:var(--accent)}
 .events{flex:1;overflow-y:auto}
 .event{padding:14px 20px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
 .event:hover{background:var(--surface)}
-.event.selected{background:var(--panel);border-left:3px solid var(--accent)}
+.event.selected{background:var(--panel);border-left:2px solid var(--accent);box-shadow:inset 0 0 0 1px rgba(184,106,58,.06)}
 .event .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 .event .template{font-size:13px;font-weight:500;color:var(--ink)}
 .event .time{font-size:11px;font-family:var(--mono);color:var(--muted)}
