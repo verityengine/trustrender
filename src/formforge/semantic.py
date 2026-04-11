@@ -43,7 +43,7 @@ from typing import Literal
 class SemanticIssue:
     """A semantic problem in the payload beyond structural correctness."""
 
-    category: Literal["date_format", "arithmetic", "completeness", "numeric_coercion"]
+    category: Literal["date_format", "arithmetic", "completeness", "numeric_coercion", "text_anomaly"]
     severity: Literal["error", "warning"]
     path: str                   # "items[3].line_total"
     message: str
@@ -118,6 +118,10 @@ class SemanticHints:
     # Warnings only — does not block rendering.
     reconciliations: list[tuple[list[str], str]] | None = None
 
+    # Text fields to scan for control characters and zero-width characters.
+    # Focus on user-visible identity fields: names, titles, identifiers.
+    text_check_fields: list[str] | None = None
+
 
 # Default hints for common invoice-like documents
 INVOICE_HINTS = SemanticHints(
@@ -127,6 +131,7 @@ INVOICE_HINTS = SemanticHints(
     date_fields=["invoice_date", "due_date"],
     numeric_fields=["items[].quantity", "items[].unit_price", "items[].line_total"],
     nonempty_fields=["invoice_number"],
+    text_check_fields=["invoice_number", "sender.name", "recipient.name", "items[].description"],
 )
 
 RECEIPT_HINTS = SemanticHints(
@@ -140,6 +145,7 @@ RECEIPT_HINTS = SemanticHints(
         "amount_tendered", "change_due",
     ],
     nonempty_fields=["receipt_number", "company.name"],
+    text_check_fields=["receipt_number", "company.name", "items[].name"],
 )
 
 STATEMENT_HINTS = SemanticHints(
@@ -160,6 +166,26 @@ STATEMENT_HINTS = SemanticHints(
         # opening + charges + payments = closing
         (["opening_balance", "total_charges", "total_payments"], "closing_balance"),
     ],
+    text_check_fields=["customer.name", "customer.account_number"],
+)
+
+LETTER_HINTS = SemanticHints(
+    date_fields=["date"],
+    nonempty_fields=[
+        "sender.name", "recipient.name", "subject",
+        "salutation", "closing", "signature_name",
+    ],
+    text_check_fields=["sender.name", "recipient.name", "subject", "signature_name"],
+)
+
+REPORT_HINTS = SemanticHints(
+    date_fields=["date"],
+    nonempty_fields=["title", "company.name", "executive_summary", "prepared_by"],
+    numeric_fields=[
+        "spend_by_service[].q1_spend",
+        "spend_by_service[].q4_spend",
+    ],
+    text_check_fields=["title", "company.name", "executive_summary", "prepared_by"],
 )
 
 
@@ -185,9 +211,18 @@ def _resolve_path(data: dict, path: str) -> object | None:
 
 
 def _try_parse_number(value: object) -> float | None:
-    """Try to parse a value as a number. Returns None if not numeric."""
+    """Try to parse a value as a number. Returns None if not numeric.
+
+    Rejects non-finite values (Infinity, -Infinity, NaN) — these are
+    mathematically valid floats but not valid business amounts.
+    """
+    import math
+
     if isinstance(value, (int, float)):
-        return float(value)
+        result = float(value)
+        if not math.isfinite(result):
+            return None
+        return result
     if isinstance(value, str):
         # Strip currency symbols and whitespace
         cleaned = re.sub(r'[€$£¥\s,]', '', value)
@@ -195,9 +230,12 @@ def _try_parse_number(value: object) -> float | None:
         if cleaned.startswith('(') and cleaned.endswith(')'):
             cleaned = '-' + cleaned[1:-1]
         try:
-            return float(cleaned)
+            result = float(cleaned)
         except ValueError:
             return None
+        if not math.isfinite(result):
+            return None
+        return result
     return None
 
 
@@ -438,6 +476,122 @@ def _check_reconciliation(
 
 
 # ---------------------------------------------------------------------------
+# Control / zero-width character detection
+# ---------------------------------------------------------------------------
+
+# Control characters that are never valid in business document text.
+# Excludes tab (U+0009), newline (U+000A), carriage return (U+000D).
+_CONTROL_CHARS = frozenset(chr(c) for c in range(0x0000, 0x0020) if c not in (0x09, 0x0A, 0x0D))
+
+# Zero-width and invisible formatting characters.
+_ZERO_WIDTH_CHARS = {
+    "\u200B": "zero-width space",
+    "\u200C": "zero-width non-joiner",
+    "\u200D": "zero-width joiner",
+    "\uFEFF": "byte order mark (BOM)",
+    "\u2060": "word joiner",
+}
+
+# Human-readable names for common control characters.
+_CONTROL_NAMES = {
+    "\x00": "null byte",
+    "\x01": "SOH control character",
+    "\x02": "STX control character",
+    "\x03": "ETX control character",
+    "\x04": "EOT control character",
+    "\x05": "ENQ control character",
+    "\x06": "ACK control character",
+    "\x07": "bell character",
+    "\x08": "backspace character",
+    "\x0B": "vertical tab",
+    "\x0C": "form feed",
+    "\x0E": "shift out",
+    "\x0F": "shift in",
+    "\x1B": "escape character",
+    "\x7F": "delete character",
+}
+
+
+def _describe_char(ch: str) -> str:
+    """Return a human-readable name for a problematic character."""
+    if ch in _CONTROL_NAMES:
+        return _CONTROL_NAMES[ch]
+    if ch in _ZERO_WIDTH_CHARS:
+        return _ZERO_WIDTH_CHARS[ch]
+    cp = ord(ch)
+    if cp < 0x20:
+        return f"control character U+{cp:04X}"
+    return f"U+{cp:04X}"
+
+
+def _scan_text(value: str) -> list[str]:
+    """Scan a string for control and zero-width characters.
+
+    Returns list of human-readable descriptions of problems found.
+    """
+    problems: list[str] = []
+    seen: set[str] = set()
+    for ch in value:
+        if ch in seen:
+            continue
+        if ch in _CONTROL_CHARS or ch == "\x7F":
+            seen.add(ch)
+            problems.append(f"contains {_describe_char(ch)}")
+        elif ch in _ZERO_WIDTH_CHARS:
+            seen.add(ch)
+            problems.append(f"contains {_describe_char(ch)}")
+    return problems
+
+
+def _check_text_anomalies(
+    data: dict,
+    hints: SemanticHints,
+    issues: list[SemanticIssue],
+) -> None:
+    """Check text fields for control characters and zero-width characters."""
+    if not hints.text_check_fields:
+        return
+
+    for field_spec in hints.text_check_fields:
+        # Handle array fields: "items[].description"
+        if "[]." in field_spec:
+            array_path, item_field = field_spec.split("[].", 1)
+            items = _resolve_path(data, array_path)
+            if not isinstance(items, list):
+                continue
+            for i, item in enumerate(items):
+                if not isinstance(item, dict):
+                    continue
+                val = item.get(item_field)
+                if not isinstance(val, str):
+                    continue
+                for problem in _scan_text(val):
+                    issues.append(SemanticIssue(
+                        category="text_anomaly",
+                        severity="warning",
+                        path=f"{array_path}[{i}].{item_field}",
+                        message=problem,
+                        expected="clean text",
+                        actual=repr(val[:80]),
+                        deterministic=True,
+                    ))
+        else:
+            val = _resolve_path(data, field_spec)
+            if not isinstance(val, str):
+                continue
+            for problem in _scan_text(val):
+                issues.append(SemanticIssue(
+                    category="text_anomaly",
+                    severity="warning",
+                    path=field_spec,
+                    message=problem,
+                    expected="clean text",
+                    actual=repr(val[:80]),
+                    deterministic=True,
+                ))
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -475,5 +629,8 @@ def validate_semantics(
 
     _check_reconciliation(data, hints, issues)
     checks_run.append("balance_reconciliation")
+
+    _check_text_anomalies(data, hints, issues)
+    checks_run.append("text_anomaly")
 
     return SemanticReport(issues=issues, checks_run=checks_run)

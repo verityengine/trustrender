@@ -6,6 +6,10 @@ import pytest
 
 from formforge.semantic import (
     INVOICE_HINTS,
+    LETTER_HINTS,
+    RECEIPT_HINTS,
+    REPORT_HINTS,
+    STATEMENT_HINTS,
     SemanticHints,
     SemanticIssue,
     SemanticReport,
@@ -251,7 +255,7 @@ class TestNoHints:
     def test_empty_hints_runs_checks(self):
         report = validate_semantics({"anything": "value"}, hints=SemanticHints())
         assert len(report.issues) == 0
-        assert len(report.checks_run) == 5  # All 5 checks run, just nothing to find
+        assert len(report.checks_run) == 6  # All 6 checks run, just nothing to find
 
 
 class TestInvoiceHints:
@@ -474,15 +478,314 @@ class TestHintAutoDetection:
         assert hints is not None
         assert hints.reconciliations is not None
 
-    def test_unknown_returns_none(self):
+    def test_letter_detected(self):
         from formforge.cli import _resolve_hints
         hints = _resolve_hints("letter.j2.typ")
-        assert hints is None
+        assert hints is not None
+        assert "sender.name" in hints.nonempty_fields
 
-    def test_report_returns_none(self):
+    def test_report_detected(self):
         from formforge.cli import _resolve_hints
         hints = _resolve_hints("report.j2.typ")
+        assert hints is not None
+        assert "title" in hints.nonempty_fields
+
+    def test_unknown_returns_none(self):
+        from formforge.cli import _resolve_hints
+        hints = _resolve_hints("custom_widget.j2.typ")
         assert hints is None
+
+
+class TestLetterHints:
+    def test_letter_valid_data_passes(self):
+        """Real letter fixture passes LETTER_HINTS without issues."""
+        import json
+        from pathlib import Path
+
+        examples = Path(__file__).parent.parent / "examples"
+        data = json.loads((examples / "letter_data.json").read_text())
+        report = validate_semantics(data, hints=LETTER_HINTS)
+        assert len(report.issues) == 0
+
+    def test_letter_bad_date_warns(self):
+        data = {
+            "sender": {"name": "A"},
+            "recipient": {"name": "B"},
+            "date": "not-a-date",
+            "subject": "Test",
+            "salutation": "Dear",
+            "closing": "Regards",
+            "signature_name": "Sig",
+        }
+        report = validate_semantics(data, hints=LETTER_HINTS)
+        dates = [i for i in report.issues if i.category == "date_format"]
+        assert len(dates) == 1
+        assert dates[0].severity == "warning"
+
+    def test_letter_empty_sender_name_warns(self):
+        data = {
+            "sender": {"name": ""},
+            "recipient": {"name": "B"},
+            "date": "April 10, 2026",
+            "subject": "Test",
+            "salutation": "Dear",
+            "closing": "Regards",
+            "signature_name": "Sig",
+        }
+        report = validate_semantics(data, hints=LETTER_HINTS)
+        comp = [i for i in report.issues if i.category == "completeness"]
+        assert any(i.path == "sender.name" for i in comp)
+
+    def test_letter_empty_subject_warns(self):
+        data = {
+            "sender": {"name": "A"},
+            "recipient": {"name": "B"},
+            "date": "April 10, 2026",
+            "subject": "",
+            "salutation": "Dear",
+            "closing": "Regards",
+            "signature_name": "Sig",
+        }
+        report = validate_semantics(data, hints=LETTER_HINTS)
+        comp = [i for i in report.issues if i.category == "completeness"]
+        assert any(i.path == "subject" for i in comp)
+
+
+class TestReportHints:
+    def test_report_valid_data_passes(self):
+        """Real report fixture passes REPORT_HINTS without issues."""
+        import json
+        from pathlib import Path
+
+        examples = Path(__file__).parent.parent / "examples"
+        data = json.loads((examples / "report_data.json").read_text())
+        report = validate_semantics(data, hints=REPORT_HINTS)
+        assert len(report.issues) == 0
+
+    def test_report_bad_date_warns(self):
+        data = {
+            "company": {"name": "Acme"},
+            "title": "Q1 Review",
+            "date": "garbage",
+            "executive_summary": "Summary text",
+            "prepared_by": "Jane",
+        }
+        report = validate_semantics(data, hints=REPORT_HINTS)
+        dates = [i for i in report.issues if i.category == "date_format"]
+        assert len(dates) == 1
+
+    def test_report_empty_title_warns(self):
+        data = {
+            "company": {"name": "Acme"},
+            "title": "",
+            "date": "April 10, 2026",
+            "executive_summary": "Summary text",
+            "prepared_by": "Jane",
+        }
+        report = validate_semantics(data, hints=REPORT_HINTS)
+        comp = [i for i in report.issues if i.category == "completeness"]
+        assert any(i.path == "title" for i in comp)
+
+    def test_report_non_numeric_spend_warns(self):
+        data = {
+            "company": {"name": "Acme"},
+            "title": "Q1 Review",
+            "date": "April 10, 2026",
+            "executive_summary": "Summary text",
+            "prepared_by": "Jane",
+            "spend_by_service": [
+                {"service": "Compute", "q1_spend": "free", "q4_spend": "$10,000"},
+            ],
+        }
+        report = validate_semantics(data, hints=REPORT_HINTS)
+        num = [i for i in report.issues if i.category == "numeric_coercion"]
+        assert len(num) >= 1
+        assert any("q1_spend" in i.path for i in num)
+
+
+class TestTextAnomalyDetection:
+    def test_null_byte_warns(self):
+        data = {"name": "Acme\x00Corp"}
+        hints = SemanticHints(text_check_fields=["name"])
+        report = validate_semantics(data, hints=hints)
+        anomalies = [i for i in report.issues if i.category == "text_anomaly"]
+        assert len(anomalies) == 1
+        assert "null byte" in anomalies[0].message
+        assert anomalies[0].severity == "warning"
+        assert anomalies[0].deterministic is True
+
+    def test_form_feed_warns(self):
+        data = {"name": "Acme\x0cCorp"}
+        hints = SemanticHints(text_check_fields=["name"])
+        report = validate_semantics(data, hints=hints)
+        anomalies = [i for i in report.issues if i.category == "text_anomaly"]
+        assert len(anomalies) == 1
+        assert "form feed" in anomalies[0].message
+
+    def test_zero_width_space_warns(self):
+        data = {"name": "Acme\u200BCorp"}
+        hints = SemanticHints(text_check_fields=["name"])
+        report = validate_semantics(data, hints=hints)
+        anomalies = [i for i in report.issues if i.category == "text_anomaly"]
+        assert len(anomalies) == 1
+        assert "zero-width space" in anomalies[0].message
+
+    def test_bom_warns(self):
+        data = {"name": "\uFEFFAcme Corp"}
+        hints = SemanticHints(text_check_fields=["name"])
+        report = validate_semantics(data, hints=hints)
+        anomalies = [i for i in report.issues if i.category == "text_anomaly"]
+        assert len(anomalies) == 1
+        assert "BOM" in anomalies[0].message
+
+    def test_word_joiner_warns(self):
+        data = {"name": "Acme\u2060Corp"}
+        hints = SemanticHints(text_check_fields=["name"])
+        report = validate_semantics(data, hints=hints)
+        anomalies = [i for i in report.issues if i.category == "text_anomaly"]
+        assert len(anomalies) == 1
+        assert "word joiner" in anomalies[0].message
+
+    def test_tab_allowed(self):
+        data = {"name": "Acme\tCorp"}
+        hints = SemanticHints(text_check_fields=["name"])
+        report = validate_semantics(data, hints=hints)
+        anomalies = [i for i in report.issues if i.category == "text_anomaly"]
+        assert len(anomalies) == 0
+
+    def test_newline_allowed(self):
+        data = {"name": "Acme\nCorp"}
+        hints = SemanticHints(text_check_fields=["name"])
+        report = validate_semantics(data, hints=hints)
+        anomalies = [i for i in report.issues if i.category == "text_anomaly"]
+        assert len(anomalies) == 0
+
+    def test_carriage_return_allowed(self):
+        data = {"name": "Acme\rCorp"}
+        hints = SemanticHints(text_check_fields=["name"])
+        report = validate_semantics(data, hints=hints)
+        anomalies = [i for i in report.issues if i.category == "text_anomaly"]
+        assert len(anomalies) == 0
+
+    def test_normal_text_clean(self):
+        data = {"name": "Acme Corporation LLC"}
+        hints = SemanticHints(text_check_fields=["name"])
+        report = validate_semantics(data, hints=hints)
+        anomalies = [i for i in report.issues if i.category == "text_anomaly"]
+        assert len(anomalies) == 0
+
+    def test_unhinted_field_not_scanned(self):
+        """Control chars in a field NOT in text_check_fields produce no warning."""
+        data = {"name": "Acme\x00Corp", "other": "clean"}
+        hints = SemanticHints(text_check_fields=["other"])
+        report = validate_semantics(data, hints=hints)
+        anomalies = [i for i in report.issues if i.category == "text_anomaly"]
+        assert len(anomalies) == 0
+
+    def test_array_path_scanned(self):
+        """Array field paths like items[].description are scanned."""
+        data = {
+            "items": [
+                {"description": "Normal item"},
+                {"description": "Bad\x00item"},
+                {"description": "Another normal"},
+            ],
+        }
+        hints = SemanticHints(text_check_fields=["items[].description"])
+        report = validate_semantics(data, hints=hints)
+        anomalies = [i for i in report.issues if i.category == "text_anomaly"]
+        assert len(anomalies) == 1
+        assert anomalies[0].path == "items[1].description"
+        assert "null byte" in anomalies[0].message
+
+    def test_dot_path_resolved(self):
+        """Nested dot paths like sender.name are resolved."""
+        data = {"sender": {"name": "Acme\u200BCorp"}}
+        hints = SemanticHints(text_check_fields=["sender.name"])
+        report = validate_semantics(data, hints=hints)
+        anomalies = [i for i in report.issues if i.category == "text_anomaly"]
+        assert len(anomalies) == 1
+        assert "zero-width space" in anomalies[0].message
+
+    def test_multiple_anomalies_in_one_field(self):
+        """Multiple different problematic chars produce separate warnings."""
+        data = {"name": "A\x00B\u200CC"}
+        hints = SemanticHints(text_check_fields=["name"])
+        report = validate_semantics(data, hints=hints)
+        anomalies = [i for i in report.issues if i.category == "text_anomaly"]
+        assert len(anomalies) == 2
+
+    def test_non_string_field_skipped(self):
+        """Non-string values in text_check_fields are silently skipped."""
+        data = {"name": 12345}
+        hints = SemanticHints(text_check_fields=["name"])
+        report = validate_semantics(data, hints=hints)
+        anomalies = [i for i in report.issues if i.category == "text_anomaly"]
+        assert len(anomalies) == 0
+
+    def test_text_anomaly_in_checks_run(self):
+        """text_anomaly check is listed in checks_run."""
+        report = validate_semantics({"x": "clean"}, hints=SemanticHints())
+        assert "text_anomaly" in report.checks_run
+
+
+class TestStrictPartialContracts:
+    def test_strict_blocks_partial_contract(self):
+        """strict=True promotes partial-contract warnings to errors."""
+        import tempfile
+        from pathlib import Path
+        from formforge.readiness import preflight
+
+        # Create a template with a dynamic include
+        with tempfile.NamedTemporaryFile(suffix=".j2.typ", mode="w", delete=False) as f:
+            f.write('{% include some_var %}\n{{ title }}')
+            f.flush()
+            template_path = Path(f.name)
+
+        try:
+            verdict = preflight(template_path, {"title": "Test"}, strict=True)
+            assert not verdict.ready
+            partial_errors = [
+                i for i in verdict.errors if i.check == "partial_contract"
+            ]
+            assert len(partial_errors) >= 1
+        finally:
+            template_path.unlink()
+
+    def test_default_allows_partial_contract(self):
+        """Default (strict=False) keeps partial contracts as warnings."""
+        import tempfile
+        from pathlib import Path
+        from formforge.readiness import preflight
+
+        with tempfile.NamedTemporaryFile(suffix=".j2.typ", mode="w", delete=False) as f:
+            f.write('{% include some_var %}\n{{ title }}')
+            f.flush()
+            template_path = Path(f.name)
+
+        try:
+            verdict = preflight(template_path, {"title": "Test"})
+            assert verdict.ready  # Warnings don't block
+            partial_warnings = [
+                i for i in verdict.warnings if i.check == "partial_contract"
+            ]
+            assert len(partial_warnings) >= 1
+        finally:
+            template_path.unlink()
+
+    def test_strict_no_effect_on_complete_contract(self):
+        """strict=True on a complete contract still returns ready=True."""
+        from pathlib import Path
+        from formforge.readiness import preflight
+
+        examples = Path(__file__).parent.parent / "examples"
+        import json
+        data = json.loads((examples / "invoice_data.json").read_text())
+        verdict = preflight(examples / "invoice.j2.typ", data, strict=True)
+        partial = [
+            i for i in verdict.errors if i.check == "partial_contract"
+        ]
+        assert len(partial) == 0
 
 
 class TestReportSerialization:

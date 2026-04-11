@@ -93,6 +93,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Run semantic validation (arithmetic, dates, completeness)",
     )
+    preflight_cmd.add_argument(
+        "--strict",
+        action="store_true",
+        help="Block on partial contracts from unresolved dynamic includes",
+    )
 
     audit_cmd = sub.add_parser("audit", help="Render with full audit trail")
     audit_cmd.add_argument("template", help="Path to template (.j2.typ or .typ)")
@@ -332,7 +337,13 @@ def _resolve_hints(template_name: str):
 
     Returns None for unrecognized template types — no fake confidence.
     """
-    from .semantic import INVOICE_HINTS, RECEIPT_HINTS, STATEMENT_HINTS
+    from .semantic import (
+        INVOICE_HINTS,
+        LETTER_HINTS,
+        RECEIPT_HINTS,
+        REPORT_HINTS,
+        STATEMENT_HINTS,
+    )
 
     name = template_name.lower()
     if "invoice" in name or "einvoice" in name:
@@ -341,6 +352,10 @@ def _resolve_hints(template_name: str):
         return RECEIPT_HINTS
     if "statement" in name:
         return STATEMENT_HINTS
+    if "letter" in name:
+        return LETTER_HINTS
+    if "report" in name:
+        return REPORT_HINTS
     return None
 
 
@@ -540,7 +555,13 @@ def _run_preflight(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
 
-    verdict = preflight(template_path, data, zugferd=args.zugferd, semantic_hints=semantic_hints)
+    strict = getattr(args, "strict", False)
+    verdict = preflight(
+        template_path, data,
+        zugferd=args.zugferd,
+        semantic_hints=semantic_hints,
+        strict=strict,
+    )
 
     # Header
     status = "PASS" if verdict.ready else "FAIL"

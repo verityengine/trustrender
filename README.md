@@ -177,9 +177,11 @@ Semantic hints are not inferred. The caller declares what to check. Presets exis
 
 | Preset | Template types | Checks |
 |--------|---------------|--------|
-| `INVOICE_HINTS` | invoices, e-invoices | line item sum, dates, numerics, invoice number |
-| `RECEIPT_HINTS` | receipts | item amounts, subtotal, dates, numerics |
-| `STATEMENT_HINTS` | account statements | balance reconciliation, aging totals, dates, numerics |
+| `INVOICE_HINTS` | invoices, e-invoices | line item sum, dates, numerics, invoice number, text anomalies |
+| `RECEIPT_HINTS` | receipts | item amounts, subtotal, dates, numerics, text anomalies |
+| `STATEMENT_HINTS` | account statements | balance reconciliation, aging totals, dates, numerics, text anomalies |
+| `LETTER_HINTS` | business letters | date, sender/recipient names, subject, closing, text anomalies |
+| `REPORT_HINTS` | reports | date, title, company name, executive summary, spend numerics, text anomalies |
 
 The CLI auto-detects the preset from the template filename. Unknown template types get no semantic checks — no fake confidence.
 
@@ -202,6 +204,16 @@ formforge preflight invoice.j2.typ data.json --semantic
 ```
 
 Preflight answers "can this data produce the right document?" without spending compute on Typst compilation.
+
+With `strict=True`, partial contracts from unresolved dynamic includes are promoted from warnings to errors — readiness fails if the contract is provably incomplete:
+
+```python
+verdict = preflight("template.j2.typ", data, strict=True)
+```
+
+```
+formforge preflight template.j2.typ data.json --strict
+```
 
 ### Include behavior
 
@@ -242,9 +254,9 @@ error[DATA_CONTRACT]: 3 validation error(s)
 - Structural types only (scalar / object / list) — no int/str/float narrowing
 - `required` is a template-read heuristic, not business-semantic truth
 - Semantic checks require explicit hints — no automatic business-logic inference
-- Letter and report templates have no semantic presets yet
-- Dynamic `{% include %}` produces a partial contract (warning, not error)
-- Freeform text anomaly detection is not attempted — no garbage-string scoring
+- Dynamic `{% include %}` produces a partial contract (warning by default; use `strict=True` to block)
+- Text anomaly detection covers control characters and zero-width characters on hinted fields only — no garbage-string scoring or Unicode normalization
+- Currency parsing limited to `€$£¥` symbols — other currency formats silently pass numeric checks
 
 ## ZUGFeRD / Factur-X e-invoicing
 
@@ -575,7 +587,7 @@ Server error responses include `error`, `message`, `stage`, and `request_id`. Wi
 - `formforge check` CLI for template introspection and data validation
 - ZUGFeRD / Factur-X: EN 16931 and XRechnung e-invoice generation (PDF/A-3b + embedded CII XML, XSD/Schematron-validated)
 - Generation proof: cryptographic provenance embedded in PDF metadata, verifiable without re-rendering
-- 620 tests passing (unit, integration, contract, include inference, semantic, ZUGFeRD, provenance, audit, ugly-data stress, diagnostics)
+- 688 tests passing (unit, integration, contract, include inference, semantic, ZUGFeRD, provenance, audit, ugly-data pressure, diagnostics)
 
 ## Development
 

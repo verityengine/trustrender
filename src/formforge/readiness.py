@@ -65,6 +65,8 @@ def _check_payload(
     template_path: Path,
     data: dict,
     issues: list[ReadinessIssue],
+    *,
+    strict: bool = False,
 ) -> None:
     """Stage 1: Payload readiness — does the data fit the template?"""
     if not template_path.name.endswith(".j2.typ"):
@@ -84,11 +86,15 @@ def _check_payload(
                 message=e.message,
             ))
         if result.is_partial:
+            # strict=True promotes partial-contract warnings to errors.
+            # This blocks readiness when dynamic includes leave the contract
+            # incomplete — callers who need certainty opt in.
+            severity = "error" if strict else "warning"
             for inc in result.unresolved_includes:
                 issues.append(ReadinessIssue(
                     stage="payload",
                     check="partial_contract",
-                    severity="warning",
+                    severity=severity,
                     path=inc,
                     message=f"Contract is partial: include '{inc}' could not be resolved statically",
                 ))
@@ -265,6 +271,7 @@ def preflight(
     *,
     zugferd: str | None = None,
     semantic_hints: object | None = None,
+    strict: bool = False,
 ) -> ReadinessVerdict:
     """Run all readiness checks without rendering.
 
@@ -278,6 +285,9 @@ def preflight(
         zugferd: If set, also run compliance checks for this profile.
         semantic_hints: SemanticHints instance for semantic validation.
             If None, semantic checks are skipped.
+        strict: If True, partial contracts from unresolved dynamic
+            includes are promoted from warnings to errors. This blocks
+            readiness when the contract is provably incomplete.
 
     Returns:
         ReadinessVerdict with ``ready=True`` if no errors.
@@ -308,7 +318,7 @@ def preflight(
         )
 
     # Stage 1: Payload
-    _check_payload(template_path, data, all_issues)
+    _check_payload(template_path, data, all_issues, strict=strict)
     stages.append("payload")
 
     # Stage 2: Template

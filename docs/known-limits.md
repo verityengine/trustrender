@@ -1,6 +1,6 @@
 # Formforge Known Limitations
 
-Conducted: 2026-04-10
+Updated: 2026-04-11 (post trust-gap closure: letter/report presets, text anomaly detection, strict preflight)
 
 Honest documentation of what Formforge does not do, does partially, or does with caveats.
 
@@ -62,14 +62,42 @@ What it does:
 - Validates data against inferred contract before rendering
 
 What it does not:
-- Follow `{% include %}` fragments. Templates using includes may have incomplete contracts. Invoice and statement templates use includes for headers/footers, so their contracts miss fields accessed in those fragments.
 - Support Jinja2 macros
 - Narrow types beyond structural (no int/str/float distinction)
 - Guarantee correctness of `required` vs `optional` beyond direct `{% if field %}` guards
 
+Note: Contract inference follows `{% include %}` directives recursively for static includes. Dynamic includes (`{% include some_var %}`) are marked unresolved and the contract is flagged as partial.
+
+### Semantic currency parsing scope
+
+The semantic validator parses currency amounts by stripping `€`, `$`, `£`, `¥`, whitespace, and commas, then calling `float()`. Other currency symbols are not supported:
+
+Not parsed: `₹` (Indian Rupee), `R$` (Brazilian Real), `kr` (Swedish Krona), `zł` (Polish Złoty), `₱` (Philippine Peso), `₽` (Russian Ruble), and others.
+
+When an amount uses an unsupported symbol, `_try_parse_number` returns `None`. This means:
+- Arithmetic consistency checks silently skip (subtotal unparseable)
+- Numeric coercion checks fire warnings (expected numeric, got string)
+- No crash, no error — just reduced semantic coverage
+
+### European number format not supported
+
+Numbers formatted as `1.234,56` (period as thousands separator, comma as decimal) are not parseable by the semantic validator. The comma is stripped as a thousands separator, leaving `1.234.56` which fails `float()`.
+
+This affects: German, French, Italian, Spanish, and most European number conventions. Workaround: pass numeric amounts as integers/floats or use US-style formatting for semantic validation.
+
+### Float precision in semantic checks
+
+Semantic arithmetic checks use Python `float` (IEEE 754 double precision). Numbers beyond 2^53 lose integer precision silently. This affects only semantic comparisons — rendering is unaffected because amounts are strings in templates.
+
+Arithmetic tolerance is `> 0.01` (strictly greater than one cent). Due to IEEE 754 representation, differences at exactly $0.01 may fire false warnings (e.g., `abs(30.0 - 30.01) = 0.010000000000001563`).
+
+### Non-finite values rejected
+
+As of 2026-04-12, `_try_parse_number` rejects Infinity, -Infinity, and NaN via `math.isfinite()`. These are mathematically valid floats but not valid business amounts.
+
 ### Performance numbers are from manual runs
 
-Published benchmarks (56ms latency, 53.8 RPS, 500 soak renders) are from a single manual run on Apple Silicon macOS. They are not automated, tracked, or reproduced in CI. The soak test harness exists and is well-designed but results are not committed to the repo.
+Published benchmarks (56ms latency, 53.8 RPS, 500 soak renders) are from a single manual run on Apple Silicon macOS. They are not automated, tracked, or reproduced in CI. The soak test harness exists and results are committed to `benchmarks/soak_results.md`.
 
 WeasyPrint comparison (2.3x faster) was measured on the same hardware for a simple invoice template only.
 
@@ -150,14 +178,24 @@ The `typst_markup` filter marks content as safe Typst markup, bypassing auto-esc
 
 The `color` parameter in `{{ value | typst_color("#27ae60") }}` is not escaped or validated. It must be a hex color code or valid Typst color name. Do not pass user data as the color parameter.
 
+### Text anomaly detection is narrow by design
+
+Semantic validation detects control characters (U+0000-U+001F except tab, newline, carriage return) and zero-width characters (U+200B, U+200C, U+200D, U+FEFF, U+2060) in hinted text fields. Warnings name the exact character: null byte, form feed, zero-width space, BOM, word joiner.
+
+What it does not detect:
+- Garbage strings, repeated characters, or suspicious patterns — too many false positives
+- Unicode normalization issues (NFC vs NFD) — data pipeline concern
+- Absurd field length — layout overflow is the template's responsibility
+- Characters in unhinted fields — only fields listed in `text_check_fields` are scanned
+
 ### Contract inference is heuristic
 
 The `required` vs `optional` distinction is based on whether a field appears inside a direct `{% if field %}` guard. More complex conditional patterns (nested ifs, boolean combinations, filter-based checks) may not be detected correctly.
 
 If contract accuracy matters for your use case, review the inferred contract with `formforge check <template>` and validate against your data schema manually.
 
-### Included template fragments are invisible to contracts
+### Dynamic includes produce partial contracts
 
-If your template uses `{% include "fragment.j2.typ" %}`, the fields accessed inside that fragment are not included in the inferred contract. The contract only covers the top-level template file.
+Static includes (`{% include "fragment.j2.typ" %}`) are followed recursively — fields from included fragments are merged into the contract. But dynamic includes (`{% include some_var %}`) cannot be resolved statically.
 
-For templates with includes, the contract is a lower bound on required fields, not a complete specification.
+When a contract is partial, `preflight()` warns by default. Use `preflight(strict=True)` or `formforge preflight --strict` to promote partial-contract warnings to errors — readiness fails if the contract is provably incomplete.
