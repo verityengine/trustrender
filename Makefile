@@ -18,6 +18,12 @@ dev: ## Create venv with editable install + dev deps
 	$(PYTHON) -m venv $(VENV)
 	$(VENV)/bin/pip install --upgrade pip setuptools wheel --quiet
 	$(VENV)/bin/pip install -e ".[dev]" --quiet
+	@# Some Python builds skip __editable__*.pth files — add a fallback
+	@pth=$$(ls $(VENV)/lib/python*/site-packages/__editable__*.pth 2>/dev/null | head -1); \
+		if [ -n "$$pth" ]; then \
+			dir=$$(dirname "$$pth"); \
+			cp "$$pth" "$$dir/trustrender-editable.pth"; \
+		fi
 	@echo "\n  Installed trustrender (editable + dev) into $(VENV)"
 	@echo "  Activate: source $(VENV)/bin/activate"
 
