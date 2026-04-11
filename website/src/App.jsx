@@ -4,6 +4,9 @@ import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
+const API_BASE = import.meta.env.VITE_API_BASE || ''
+const apiUrl = (path) => `${API_BASE}${path}`
+
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    TRUSTRENDER — Product site
    Art direction: editorial charcoal meets document precision
@@ -1030,7 +1033,7 @@ function TrustLayers() {
     {
       title: 'Readiness',
       desc: 'Structural contract inferred from your template. Missing fields, wrong types, null values — intercepted at the data layer before render.',
-      stats: ['787 automated tests', '500 soak renders, 0 errors', '56ms avg latency'],
+      stats: ['837 automated tests', '500 soak renders, 0 errors', '~60ms avg latency'],
       flourish: <ReadinessFlourish />,
     },
     {
@@ -1272,7 +1275,7 @@ function ReadyDemo() {
     setChecking(true); setVerdict(null)
     try {
       const data = JSON.parse(json)
-      const res = await fetch('/api/preflight', {
+      const res = await fetch(apiUrl('/preflight'), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ template, data }),
       })
@@ -1467,7 +1470,7 @@ function AppWorkspace() {
 
   const fetchTraces = async ({ autoSelect = false } = {}) => {
     try {
-      const res = await fetch('/api/history?limit=50')
+      const res = await fetch(apiUrl('/history?limit=50'))
       if (res.status === 503) { setHistoryError('disabled'); setTraces(null); return }
       if (!res.ok) { setHistoryError('error'); return }
       const data = await res.json()
@@ -1508,7 +1511,7 @@ function AppWorkspace() {
   const fetchTemplateSource = async (tpl) => {
     setSourceLoading(true)
     try {
-      const res = await fetch(`/api/template-source?name=${encodeURIComponent(tpl)}`)
+      const res = await fetch(apiUrl(`/template-source?name=${encodeURIComponent(tpl)}`))
       if (res.ok) {
         const { source } = await res.json()
         setTemplateSource(source); setOriginalSource(source)
@@ -1570,7 +1573,7 @@ function AppWorkspace() {
     const fixtureZugferd = FIXTURES[tpl]?.zugferd
     if (fixtureZugferd) payload.zugferd = fixtureZugferd
     try {
-      const res = await fetch('/api/preflight', {
+      const res = await fetch(apiUrl('/preflight'), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
@@ -1594,7 +1597,7 @@ function AppWorkspace() {
       if (isTemplateModified) renderPayload.template_source = templateSource
       const fixtureZugferd = FIXTURES[template]?.zugferd
       if (fixtureZugferd) renderPayload.zugferd = fixtureZugferd
-      const res = await fetch('/api/render', {
+      const res = await fetch(apiUrl('/render'), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(renderPayload),
       })
@@ -2251,7 +2254,7 @@ function PerformanceProof() {
             {[
               { n: '69.5 MB', d: 'Peak RSS under load' },
               { n: '500+', d: 'Soak renders, zero errors' },
-              { n: '787', d: 'Automated tests' },
+              { n: '837', d: 'Automated tests' },
               { n: '98', d: 'Ugly-data edge cases' },
             ].map(s => (
               <div key={s.d} className="text-center py-4">

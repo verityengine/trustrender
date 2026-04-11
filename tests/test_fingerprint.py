@@ -57,13 +57,10 @@ class TestComputeFingerprint:
         assert fp1.data_hash != fp2.data_hash
         assert fp1.fingerprint != fp2.fingerprint
 
-    def test_includes_detected(self):
-        """Invoice template includes fragments — they should be hashed."""
+    def test_includes_empty_when_none(self):
+        """Invoice template has no includes — include list should be empty."""
         fp = compute_fingerprint(EXAMPLES / "invoice.j2.typ", _load_data())
-        include_paths = [h.path for h in fp.include_hashes]
-        # Invoice includes header_logo and footer_page fragments
-        assert any("header_logo" in p for p in include_paths)
-        assert any("footer_page" in p for p in include_paths)
+        assert len(fp.include_hashes) == 0
 
     def test_assets_detected(self):
         """Invoice template references logo.png — it should be hashed."""

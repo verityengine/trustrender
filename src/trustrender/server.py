@@ -31,7 +31,7 @@ from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
-from starlette.routing import Route
+from starlette.routing import Mount, Route
 
 from . import TrustRenderError, RenderResult, __version__, _build_font_paths, _render_document_pipeline
 from .engine import TypstCliBackend
@@ -461,9 +461,9 @@ def create_app(
     ]
 
     # Always mount trace API (returns 503 if history not enabled).
-    # Routes use bare paths (no /api/ prefix) because the Vite dev proxy
-    # strips /api/ before forwarding.  In production the server is accessed
-    # directly, so these paths work either way.
+    # All routes use bare paths — one canonical surface.  The Vite dev
+    # proxy handles the /api/ prefix in development; the production
+    # build calls these paths directly.
     from .dashboard import api_history, api_stats, api_trace
 
     routes.extend([
@@ -476,21 +476,6 @@ def create_app(
         from .dashboard import dashboard_routes
 
         routes.extend([r for r in dashboard_routes() if r.path == "/dashboard"])
-
-    # /api/ route group: same endpoints under /api/ prefix for the bundled
-    # playground frontend (which always calls /api/...).  The bare routes
-    # above remain for CLI / direct API usage.
-    api_routes = [
-        Route("/health", health, methods=["GET"]),
-        Route("/render", render_endpoint, methods=["POST"]),
-        Route("/preflight", preflight_endpoint, methods=["POST"]),
-        Route("/template-source", template_source_endpoint, methods=["GET"]),
-        Route("/history", api_history, methods=["GET"]),
-        Route("/history/{trace_id}", api_trace, methods=["GET"]),
-        Route("/stats", api_stats, methods=["GET"]),
-    ]
-    from starlette.routing import Mount
-    routes.append(Mount("/api", routes=api_routes))
 
     # Bundled playground: serve built static files at / if they exist.
     # Must be mounted last so API routes and /dashboard take precedence.
