@@ -108,8 +108,8 @@ header{display:flex;align-items:center;justify-content:space-between;padding:14p
 header h1{font-family:var(--display);font-size:19px;font-weight:400;color:var(--ink);letter-spacing:.4px}
 header .meta{display:flex;align-items:center;gap:14px}
 header .meta span{font-size:11px;color:var(--faint);font-family:var(--mono)}
-header button{background:var(--panel);border:1px solid var(--border);color:var(--muted);padding:6px 16px;border-radius:5px;cursor:pointer;font-size:11px;font-family:var(--sans);font-weight:500;letter-spacing:.2px;transition:all .15s}
-header button:hover{border-color:var(--accent-border);color:var(--ink2);background:var(--raised)}
+header button{background:var(--panel);border:1px solid var(--border);color:var(--ink2);padding:8px 20px;border-radius:5px;cursor:pointer;font-size:12px;font-family:var(--sans);font-weight:500;letter-spacing:.3px;transition:all .15s}
+header button:hover{border-color:var(--accent-border);color:var(--ink);background:var(--accent-soft)}
 
 /* Summary strip */
 .strip{display:flex;border-bottom:1px solid var(--border);background:linear-gradient(180deg,var(--surface) 0%,var(--bg) 100%)}
