@@ -1,5 +1,11 @@
-// Receipt template - compact layout
+// Receipt template - compact thermal-style layout
 // Tests: narrow width, tax lines, payment method, wrapping item names
+
+#let primary = rgb("#1B2838")
+#let accent = rgb("#C4622A")
+#let muted = rgb("#7A7670")
+#let light-bg = rgb("#F8F7F5")
+#let rule-light = rgb("#E5E2DD")
 
 #set page(
   width: 3.5in,
@@ -7,104 +13,117 @@
   margin: (top: 0.3in, bottom: 0.3in, left: 0.25in, right: 0.25in),
 )
 
-#set text(size: 8.5pt, font: "Inter")
+#set text(size: 8.5pt, font: "Inter", fill: primary)
 
-// --- Header ---
+// ══════════════════════════════════════════════════════════════
+// HEADER
+// ══════════════════════════════════════════════════════════════
+
 #align(center)[
-  #image("assets/logo.png", width: 1in)
-  #v(4pt)
-  #text(weight: "bold", size: 11pt)[{{ company.name }}]
-  #v(2pt)
-  #text(size: 7.5pt, fill: luma(100))[
-    {{ company.address_line1 }} \
-    {{ company.address_line2 }} \
-    {{ company.phone }}
+  #image("assets/logo.png", width: 0.8in)
+  #v(6pt)
+  #text(weight: "bold", size: 12pt)[{{ company.name }}]
+  #v(3pt)
+  #text(size: 7.5pt, fill: muted)[
+    {{ company.address_line1 }} · {{ company.address_line2 }} \
+    {{ company.phone }}{% if company.website %} · {{ company.website }}{% endif %}
   ]
 ]
 
-#v(0.1in)
-#line(length: 100%, stroke: (dash: "dashed", thickness: 0.5pt, paint: luma(180)))
-#v(0.05in)
+#v(10pt)
+#block(width: 100%, fill: primary, inset: (x: 8pt, y: 5pt), radius: 2pt)[
+  #grid(
+    columns: (1fr, auto),
+    text(size: 8pt, fill: white, weight: "bold")[{{ receipt_number }}],
+    text(size: 8pt, fill: white)[{{ date }} {{ time }}],
+  )
+]
+#v(6pt)
 
-// --- Receipt Meta ---
 #grid(
   columns: (1fr, 1fr),
-  [Receipt: *{{ receipt_number }}*],
-  align(right)[{{ date }}],
-)
-#grid(
-  columns: (1fr, 1fr),
-  [Cashier: {{ cashier }}],
-  align(right)[{{ time }}],
+  text(size: 7.5pt, fill: muted)[Cashier: {{ cashier }}],
+  align(right, text(size: 7.5pt, fill: muted)[Register: {{ register }}]),
 )
 
-#v(0.05in)
-#line(length: 100%, stroke: (dash: "dashed", thickness: 0.5pt, paint: luma(180)))
-#v(0.08in)
+#v(8pt)
+#line(length: 100%, stroke: 0.5pt + rule-light)
+#v(8pt)
 
-// --- Items ---
+// ══════════════════════════════════════════════════════════════
+// ITEMS
+// ══════════════════════════════════════════════════════════════
+
 {% for item in items %}
 #grid(
   columns: (1fr, auto),
   gutter: 4pt,
-  [{{ item.description }}],
-  align(right)[{{ item.amount }}],
+  [#text(weight: "bold")[{{ item.description }}]],
+  align(right)[#text(weight: "bold")[{{ item.amount }}]],
 )
-#text(size: 7.5pt, fill: luma(120))[#h(0.15in) {{ item.qty }} x {{ item.unit_price }}]
-#v(4pt)
+#text(size: 7pt, fill: muted)[#h(0.1in) {{ item.qty }} × {{ item.unit_price }}]
+#v(6pt)
 {% endfor %}
 
-#v(0.05in)
-#line(length: 100%, stroke: 0.5pt + luma(200))
-#v(0.05in)
+#v(4pt)
+#line(length: 100%, stroke: 0.5pt + rule-light)
+#v(6pt)
 
-// --- Totals ---
-#grid(
-  columns: (1fr, auto),
-  row-gutter: 3pt,
-  [Subtotal], align(right)[{{ subtotal }}],
-  [{{ tax_label }}], align(right)[{{ tax_amount }}],
-)
-
-#v(0.05in)
-#line(length: 100%, stroke: 0.8pt)
-#v(0.05in)
+// ══════════════════════════════════════════════════════════════
+// TOTALS
+// ══════════════════════════════════════════════════════════════
 
 #grid(
   columns: (1fr, auto),
-  [#text(weight: "bold", size: 11pt)[TOTAL]], align(right)[#text(weight: "bold", size: 11pt)[{{ total }}]],
+  row-gutter: 4pt,
+  text(fill: muted)[Subtotal], align(right)[{{ subtotal }}],
+  text(fill: muted)[{{ tax_label }}], align(right)[{{ tax_amount }}],
 )
 
-#v(0.08in)
-#line(length: 100%, stroke: (dash: "dashed", thickness: 0.5pt, paint: luma(180)))
-#v(0.08in)
+#v(6pt)
+#line(length: 100%, stroke: 1.2pt + accent)
+#v(6pt)
 
-// --- Payment ---
 #grid(
   columns: (1fr, auto),
-  row-gutter: 3pt,
-  [{{ payment.method }} ending {{ payment.last_four }}], align(right)[{{ amount_tendered }}],
-  [Auth: {{ payment.auth_code }}], [],
+  [#text(weight: "bold", size: 13pt)[TOTAL]],
+  align(right)[#text(weight: "bold", size: 13pt, fill: accent)[{{ total }}]],
 )
+
+#v(10pt)
+#line(length: 100%, stroke: 0.5pt + rule-light)
+#v(8pt)
+
+// ══════════════════════════════════════════════════════════════
+// PAYMENT
+// ══════════════════════════════════════════════════════════════
+
+#block(width: 100%, fill: light-bg, radius: 3pt, inset: (x: 10pt, y: 8pt))[
+  #grid(
+    columns: (1fr, auto),
+    row-gutter: 3pt,
+    [{{ payment.method }} ····{{ payment.last_four }}], align(right)[{{ amount_tendered }}],
+    text(size: 7pt, fill: muted)[Auth: {{ payment.auth_code }}], [],
+  )
 {% if change_due != "$0.00" %}
-#grid(
-  columns: (1fr, auto),
-  [Change Due], align(right)[{{ change_due }}],
-)
+  #v(4pt)
+  #grid(
+    columns: (1fr, auto),
+    text(weight: "bold")[Change Due], align(right, text(weight: "bold")[{{ change_due }}]),
+  )
 {% endif %}
+]
 
-#v(0.1in)
-#line(length: 100%, stroke: (dash: "dashed", thickness: 0.5pt, paint: luma(180)))
-#v(0.1in)
+#v(12pt)
 
-// --- Footer ---
+// ══════════════════════════════════════════════════════════════
+// FOOTER
+// ══════════════════════════════════════════════════════════════
+
 #align(center)[
-  #text(size: 7.5pt, fill: luma(100))[
-    {{ footer_message }}
-  ]
-  #v(6pt)
-  #text(size: 7pt, fill: luma(150))[
-    {{ company.website }} \
-    Register: {{ register }}
+  #text(size: 9pt, weight: "bold", fill: accent)[{{ footer_message }}]
+  #v(8pt)
+  #text(size: 6.5pt, fill: muted)[
+    {{ company.name }} · {{ company.address_line1 }}
   ]
 ]
