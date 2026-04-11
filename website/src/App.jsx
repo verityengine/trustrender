@@ -2327,7 +2327,7 @@ function DeveloperSetup() {
                   <span className="text-[10px] font-mono text-panel/30 ml-2">terminal</span>
                 </div>
                 <div className="p-5 font-mono text-[11px] leading-[1.9]">
-                  <div className="text-panel/50">$ pip install git+https://github.com/verityengine/trustrender</div>
+                  <div className="text-panel/50">$ pip install trustrender</div>
                   <div className="text-panel/50">$ trustrender doctor --smoke</div>
                   <div className="text-panel/30 mt-3">Environment</div>
                   <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  Python 3.12.13 ({'>='}3.11 required)</span></div>
@@ -2376,11 +2376,11 @@ function FinalCTA() {
           <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
             <div className="px-5 py-4 border border-panel/15 rounded-lg">
               <div className="text-[10px] tracking-[0.15em] uppercase text-panel/30 font-semibold mb-2">Lean core</div>
-              <code className="font-mono text-[13px] text-panel/70">pip install git+https://github.com/verityengine/trustrender</code>
+              <code className="font-mono text-[13px] text-panel/70">pip install trustrender</code>
             </div>
             <div className="px-5 py-4 border border-rust/30 rounded-lg bg-rust/[0.06]">
               <div className="text-[10px] tracking-[0.15em] uppercase text-rust/60 font-semibold mb-2">With e-invoicing</div>
-              <code className="font-mono text-[13px] text-panel/70">pip install "trustrender[zugferd] @ git+https://github.com/verityengine/trustrender"</code>
+              <code className="font-mono text-[13px] text-panel/70">pip install "trustrender[zugferd]"</code>
             </div>
           </div>
         </FadeUp>
