@@ -109,6 +109,68 @@ formforge serve --templates ./templates --debug
 
 Full flag reference: `formforge render --help` / `formforge serve --help`.
 
+## Pre-render contract validation
+
+Formforge can reject structurally wrong payloads before they become broken PDFs. For `.j2.typ` templates, it infers a minimum data contract from the Jinja2 AST and validates caller data against it.
+
+**Inspect what a template expects:**
+
+```
+formforge check examples/invoice.j2.typ
+```
+
+```
+Template: examples/invoice.j2.typ
+Fields: 12 top-level (12 required)
+
+  * sender: object {address_line1, address_line2, email, name}
+  * recipient: object {address_line1, address_line2, email, name}
+  * items: list[{amount, description, num, qty, unit_price}]
+  * invoice_number: scalar
+  ...
+```
+
+**Validate a data file without rendering:**
+
+```
+formforge check examples/invoice.j2.typ --data bad_data.json
+```
+
+```
+error[DATA_CONTRACT]: 3 validation error(s)
+  sender: expected object, got string
+  items[3].description: missing required field
+  notes: expected scalar, got null
+```
+
+**Validate during render (opt-in):**
+
+```
+formforge render invoice.j2.typ data.json -o out.pdf --validate
+```
+
+**Python API:**
+
+```python
+render("invoice.j2.typ", data, output="out.pdf", validate=True)
+```
+
+**HTTP server:**
+
+```json
+{"template": "invoice.j2.typ", "data": {...}, "validate": true}
+```
+
+Returns 422 with `DATA_CONTRACT` error code if validation fails.
+
+### Caveats
+
+- Structural validation only (scalar / object / list) — no int/str/float type narrowing
+- `required` is a template-read heuristic, not business-semantic truth
+- Raw `.typ` templates get no contract validation (Jinja2 templates only)
+- `{% include %}` fragments are not followed — contract may be incomplete for templates that rely on included fragments for data access
+- Validation is opt-in. Default render behavior is unchanged.
+
 ## HTTP server
 
 The server exposes two endpoints:
@@ -302,6 +364,7 @@ Intermediate files are written next to the template as `_formforge_*.typ`. They 
 | `MISSING_ASSET` | Referenced file (image, etc.) not found |
 | `MISSING_FONT` | Font not available (rare due to silent fallback) |
 | `COMPILE_ERROR` | Typst compilation failed |
+| `DATA_CONTRACT` | Data does not satisfy template's structural contract |
 | `RENDER_TIMEOUT` | Render exceeded the time limit |
 | `BACKEND_ERROR` | Unexpected backend failure |
 
@@ -310,6 +373,7 @@ Intermediate files are written next to the template as `_formforge_*.typ`. They 
 | Stage | Where |
 |-------|-------|
 | `data_resolution` | Parsing/validating input data |
+| `data_validation` | Validating data against template contract (opt-in) |
 | `template_preprocess` | Jinja2 rendering |
 | `compilation` | Typst compilation to PDF |
 | `execution` | Server/CLI execution wrapper |
@@ -327,7 +391,9 @@ Server error responses include `error`, `message`, `stage`, and `request_id`. Wi
 - Library and CLI support both backends; server forces typst-cli
 - Docker: builds, runs, produces matching output
 - 5 starter templates: invoice, statement, receipt, letter, report
-- 245 tests passing (unit, integration, ugly-data stress, environment diagnostics)
+- Pre-render contract validation: opt-in structural check catches missing/wrong fields before Jinja runs
+- `formforge check` CLI for template introspection and data validation
+- 288 tests passing (unit, integration, contract, ugly-data stress, environment diagnostics)
 
 ## Development
 
