@@ -36,3 +36,7 @@ htmlcov/
 
 # Local caches (Mustang JAR, etc.)
 .cache/
+
+# TrustRender temp render artifacts
+_trustrender_*.typ
+examples/_trustrender_*.typ
