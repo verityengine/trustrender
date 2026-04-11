@@ -280,6 +280,7 @@ def _check_fonts(
     font_paths: list[str] | None,
     issues: list[ReadinessIssue],
     *,
+    data: dict | None = None,
     strict: bool = False,
 ) -> None:
     """Check that fonts declared in the template are available.
@@ -288,6 +289,9 @@ def _check_fonts(
     (bundled + explicit).  When ``font_paths`` is None, auto-resolves
     the bundled font directory so that default callers still get font
     checking.
+
+    When ``data`` is provided, also resolves dynamic font references
+    (``font: "{{ field_name }}"``) from the data dict and checks them.
 
     System fonts cannot be reliably enumerated, so a missing font in
     configured paths gets a warning (it might be a system font).
@@ -302,8 +306,6 @@ def _check_fonts(
         return  # Can't read template — other stages will catch this
 
     font_stacks = _parse_declared_fonts(source)
-    if not font_stacks:
-        return  # No font declarations — nothing to check
 
     # Auto-resolve bundled fonts when no explicit paths are provided.
     # This ensures default callers still get font verification.
@@ -318,6 +320,7 @@ def _check_fonts(
     available = _enumerate_font_families(effective_paths)
     bundled = _is_bundled_template(template_path)
 
+    # Check static font declarations
     for stack in font_stacks:
         # If ANY font in the stack is found in configured paths, it's OK
         found = any(name.lower() in available for name in stack)
@@ -347,6 +350,26 @@ def _check_fonts(
             + (" (bundled font expected)" if bundled and first_font in _BUNDLED_FONT_FAMILIES else "")
             + (" (may be available as system font)" if severity == "warning" else ""),
         ))
+
+    # Check dynamic font declarations resolved from data
+    if data is not None:
+        for font_name in _resolve_dynamic_fonts(source, data):
+            if font_name.lower() in available:
+                continue
+            if strict:
+                severity = "error"
+            elif bundled and font_name.lower() in _BUNDLED_FONT_FAMILIES:
+                severity = "error"
+            else:
+                severity = "warning"
+            issues.append(ReadinessIssue(
+                stage="template",
+                check="missing_font",
+                severity=severity,
+                path=font_name,
+                message=f"Dynamic font not found in configured paths: {font_name}"
+                + (" (may be available as system font)" if severity == "warning" else ""),
+            ))
 
 
 def _check_environment(
@@ -617,7 +640,7 @@ def preflight(
 
     # Stage 2: Template (syntax + assets + fonts)
     _check_template(template_path, all_issues)
-    _check_fonts(template_path, font_paths, all_issues, strict=strict)
+    _check_fonts(template_path, font_paths, all_issues, data=data, strict=strict)
     stages.append("template")
 
     # Stage 3: Environment

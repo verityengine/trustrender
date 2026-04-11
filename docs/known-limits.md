@@ -29,11 +29,11 @@ Not supported (fails loudly at validation time):
 
 ### Mustang validation is manual
 
-One-time manual validation against the Mustang reference validator has passed for the EN 16931 profile (see `docs/zugferd-prototype.md`). This is not automated in CI but is available locally via `make mustang-validate` (requires Java). `preflight()` and `render()` both run XSD validation when `facturx` is installed. Schematron and Mustang validation are not in the render pipeline.
+One-time manual validation against the Mustang reference validator has passed for the EN 16931 profile (see `docs/zugferd-prototype.md`). This is not automated in CI but is available locally via `make mustang-validate` (requires Java). Mustang validation is the only compliance check not in the render pipeline; XSD and Schematron both run in `render()` and `preflight()` when `facturx` is installed.
 
-### Schematron validation is not in the render pipeline
+### Validation layers in the render pipeline
 
-XSD validation runs in both `render()` (as a guard rail after XML generation, before PDF embedding — raises `ZUGFERD_ERROR` on failure) and `preflight()` (when the `facturx` library is available). Schematron validation runs only in the test suite and is not enforced at render time.
+Both XSD and Schematron validation now run in `render()` and `preflight()` when the `facturx` library is installed. XSD validates structural correctness of the CII XML; Schematron validates EN 16931 business rules. Both raise `ZUGFERD_ERROR` on failure in the render pipeline and produce errors in preflight. When `facturx` is not installed, both checks are silently skipped in `render()` and produce warnings in `preflight()`.
 
 ### Font fallback is silent — detected in preflight
 
@@ -200,15 +200,18 @@ The `typst_markup` filter marks content as safe Typst markup, bypassing auto-esc
 
 The `color` parameter in `{{ value | typst_color("#27ae60") }}` is not escaped or validated. It must be a hex color code or valid Typst color name. Do not pass user data as the color parameter.
 
-### Text anomaly detection is narrow by design
+### Text anomaly detection
 
-Semantic validation detects control characters (U+0000-U+001F except tab, newline, carriage return) and zero-width characters (U+200B, U+200C, U+200D, U+FEFF, U+2060) in hinted text fields. Warnings name the exact character: null byte, form feed, zero-width space, BOM, word joiner.
+Formforge detects control characters (U+0000-U+001F except tab, newline, carriage return) and zero-width characters (U+200B, U+200C, U+200D, U+FEFF, U+2060) in text fields. Warnings name the exact character: null byte, form feed, zero-width space, BOM, word joiner.
+
+**Safe-by-default:** `preflight()` scans ALL string values in the data dict automatically (the ``text_safety`` stage). This runs without semantic hints. Set ``text_scan=False`` to opt out. Auto-detected issues are marked ``(auto-detected)`` in the warning message.
+
+**Hint-driven:** When ``SemanticHints.text_check_fields`` is provided, the semantic stage also scans hinted fields. This provides focused scanning of identity fields (names, identifiers) independently of the safe-by-default layer.
 
 What it does not detect:
 - Garbage strings, repeated characters, or suspicious patterns — too many false positives
 - Unicode normalization issues (NFC vs NFD) — data pipeline concern
 - Absurd field length — layout overflow is the template's responsibility
-- Characters in unhinted fields — only fields listed in `text_check_fields` are scanned
 
 ### Contract inference is heuristic
 

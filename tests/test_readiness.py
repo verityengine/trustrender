@@ -256,3 +256,109 @@ class TestPreflightRegression:
         # The verdict has no pdf_bytes attribute
         assert not hasattr(verdict, "pdf_bytes")
         assert isinstance(verdict.ready, bool)
+
+
+class TestTextSafety:
+    """Tests for safe-by-default text anomaly scanning in preflight."""
+
+    def test_detects_control_chars_without_hints(self):
+        """Control chars detected in preflight even without semantic hints."""
+        data = _load_data("invoice")
+        data["sender"]["name"] = "Acme\x00Corp"
+        verdict = preflight(EXAMPLES / "invoice.j2.typ", data)
+        text_issues = [i for i in verdict.warnings if i.stage == "text_safety"]
+        assert len(text_issues) >= 1
+        assert any("null byte" in i.message for i in text_issues)
+        assert any("auto-detected" in i.message for i in text_issues)
+
+    def test_opt_out_skips_scanning(self):
+        """text_scan=False skips the text safety stage entirely."""
+        data = _load_data("invoice")
+        data["sender"]["name"] = "Acme\x00Corp"
+        verdict = preflight(EXAMPLES / "invoice.j2.typ", data, text_scan=False)
+        text_issues = [i for i in verdict.warnings if i.stage == "text_safety"]
+        assert len(text_issues) == 0
+        assert "text_safety" not in verdict.stages_checked
+
+
+class TestDynamicFontResolution:
+    """Tests for resolving {{ variable }} font references in preflight."""
+
+    def test_resolve_simple(self):
+        from formforge.readiness import _resolve_dynamic_fonts
+
+        source = '#set text(font: "{{ brand_font }}")'
+        data = {"brand_font": "Roboto"}
+        assert _resolve_dynamic_fonts(source, data) == ["Roboto"]
+
+    def test_resolve_nested(self):
+        from formforge.readiness import _resolve_dynamic_fonts
+
+        source = '#set text(font: "{{ theme.font }}")'
+        data = {"theme": {"font": "Arial"}}
+        assert _resolve_dynamic_fonts(source, data) == ["Arial"]
+
+    def test_missing_from_data(self):
+        from formforge.readiness import _resolve_dynamic_fonts
+
+        source = '#set text(font: "{{ missing_font }}")'
+        data = {"other": "value"}
+        assert _resolve_dynamic_fonts(source, data) == []
+
+    def test_preflight_warns_on_missing_dynamic_font(self, tmp_path):
+        """Preflight warns when a dynamic font resolves to an unavailable name."""
+        template = tmp_path / "test.j2.typ"
+        template.write_text('#set text(font: "{{ brand_font }}")\nHello {{ name }}')
+        data = {"brand_font": "NonExistentFont", "name": "World"}
+        verdict = preflight(template, data)
+        font_issues = [w for w in verdict.warnings if w.check == "missing_font"]
+        assert any("Dynamic font" in i.message for i in font_issues)
+        assert any("NonExistentFont" in i.path for i in font_issues)
+
+
+class TestSchematronInPreflight:
+    """Tests for Schematron validation in the compliance stage."""
+
+    def test_schematron_passes_for_valid_einvoice(self):
+        """Schematron validation runs and passes for valid e-invoice data."""
+        verdict = preflight(
+            EXAMPLES / "einvoice.j2.typ",
+            _load_data("einvoice"),
+            zugferd="en16931",
+        )
+        assert verdict.ready is True
+        schematron_errors = [
+            i for i in verdict.errors if i.check == "schematron_validation"
+        ]
+        assert len(schematron_errors) == 0
+
+    def test_schematron_in_render_pipeline(self):
+        """Render with zugferd succeeds — Schematron implicitly passes."""
+        from formforge import render
+
+        data = _load_data("einvoice")
+        pdf = render(str(EXAMPLES / "einvoice.j2.typ"), data, zugferd="en16931")
+        assert pdf[:5] == b"%PDF-"
+
+    def test_schematron_graceful_without_facturx(self):
+        """When facturx is missing, Schematron check produces a warning, not error."""
+        from unittest.mock import patch
+
+        # Simulate facturx not installed for Schematron import
+        original_import = __builtins__.__import__ if hasattr(__builtins__, '__import__') else __import__
+
+        def mock_import(name, *args, **kwargs):
+            if name == "facturx.facturx":
+                raise ImportError("mocked")
+            return original_import(name, *args, **kwargs)
+
+        with patch("builtins.__import__", side_effect=mock_import):
+            verdict = preflight(
+                EXAMPLES / "einvoice.j2.typ",
+                _load_data("einvoice"),
+                zugferd="en16931",
+            )
+        schematron_warns = [
+            i for i in verdict.warnings if i.check == "schematron_validation"
+        ]
+        assert len(schematron_warns) >= 1

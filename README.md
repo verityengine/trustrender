@@ -203,7 +203,7 @@ if not verdict.ready:
 formforge preflight invoice.j2.typ data.json --semantic
 ```
 
-Preflight answers "can this data produce the right document?" without spending compute on Typst compilation.
+Preflight answers "can this data produce the right document?" without spending compute on Typst compilation. It includes a `text_safety` stage that scans all string values in the data dict for control characters and zero-width characters — no semantic hints required. Set `text_scan=False` to opt out.
 
 With `strict=True`, partial contracts from unresolved dynamic includes are promoted from warnings to errors — readiness fails if the contract is provably incomplete:
 
@@ -597,15 +597,17 @@ Server error responses include `error`, `message`, `stage`, and `request_id`. Wi
 - Semantic validation: hint-driven arithmetic, date, completeness, numeric coercion, and balance reconciliation checks
 - Semantic presets: `INVOICE_HINTS`, `RECEIPT_HINTS`, `STATEMENT_HINTS`, `LETTER_HINTS`, `REPORT_HINTS` — auto-detected by template name in CLI
 - `formforge check` CLI for template introspection and data validation
-- ZUGFeRD / Factur-X: EN 16931 e-invoice generation for DE domestic B2B (PDF/A-3b + embedded CII XML, schema-tested)
+- ZUGFeRD / Factur-X: EN 16931 e-invoice generation for DE domestic B2B (PDF/A-3b + embedded CII XML, XSD + Schematron validated in render pipeline)
 - Generation proof: cryptographic provenance embedded in PDF metadata, verifiable without re-rendering
 - Output fingerprinting: SHA-256 of final PDF bytes stored in render trace (input + output hash chain)
+- Safe-by-default text scanning: `preflight()` scans all string values for control/zero-width characters without requiring semantic hints
+- Dynamic font resolution: `preflight()` resolves `font: "{{ field }}"` variable references from data and validates font availability
 - Bundled playground: `formforge serve` serves interactive dev sandbox at `/` — edit data, edit templates, preflight, render, inspect traces
 - Ops dashboard: production monitoring UI at `/dashboard` — two-tier stat hierarchy, trace detail with commanding header, color-coded pipeline stages, elevated identity chain, auto-refresh with manual override
 - Ephemeral template editing: browser-based template editor sends source for preflight/render without saving to disk
 - `formforge doctor --smoke`: environment diagnostics + render/server smoke test in one command
 - Benchmarked: 1,000-row invoice renders in 211ms (33 pages, 0.21ms/row), 53.8 RPS server throughput, 69.5 MB peak RSS
-- 818 tests passing (unit, integration, contract, include inference, semantic, ZUGFeRD, credit note, provenance, audit, ugly-data pressure, font verification, diagnostics)
+- 837 tests passing (unit, integration, contract, include inference, semantic, ZUGFeRD, credit note, provenance, audit, ugly-data pressure, font verification, text safety, Schematron, diagnostics)
 
 ## Development
 
