@@ -117,39 +117,53 @@ def create_app(
         content_length = request.headers.get("content-length")
         if content_length and int(content_length) > MAX_BODY_SIZE:
             return _error(
-                400, ErrorCode.INVALID_DATA, "Request body too large",
-                request_id, stage="execution",
+                400,
+                ErrorCode.INVALID_DATA,
+                "Request body too large",
+                request_id,
+                stage="execution",
             )
 
         # Parse JSON body
         body = await request.body()
         if len(body) > MAX_BODY_SIZE:
             return _error(
-                400, ErrorCode.INVALID_DATA, "Request body too large",
-                request_id, stage="execution",
+                400,
+                ErrorCode.INVALID_DATA,
+                "Request body too large",
+                request_id,
+                stage="execution",
             )
 
         try:
             payload = json.loads(body)
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
             return _error(
-                400, ErrorCode.INVALID_DATA, f"Invalid JSON: {exc}",
-                request_id, stage="execution",
+                400,
+                ErrorCode.INVALID_DATA,
+                f"Invalid JSON: {exc}",
+                request_id,
+                stage="execution",
             )
 
         if not isinstance(payload, dict):
             return _error(
-                400, ErrorCode.INVALID_DATA, "Request body must be a JSON object",
-                request_id, stage="execution",
+                400,
+                ErrorCode.INVALID_DATA,
+                "Request body must be a JSON object",
+                request_id,
+                stage="execution",
             )
 
         # Validate fields
         unknown = set(payload.keys()) - ALLOWED_FIELDS
         if unknown:
             return _error(
-                400, ErrorCode.INVALID_DATA,
+                400,
+                ErrorCode.INVALID_DATA,
                 f"Unknown fields: {', '.join(sorted(unknown))}",
-                request_id, stage="execution",
+                request_id,
+                stage="execution",
             )
 
         template_name = payload.get("template")
@@ -158,35 +172,46 @@ def create_app(
 
         if not template_name or not isinstance(template_name, str):
             return _error(
-                400, ErrorCode.INVALID_DATA,
+                400,
+                ErrorCode.INVALID_DATA,
                 "Missing or invalid 'template' field",
-                request_id, stage="execution",
+                request_id,
+                stage="execution",
             )
         if data is None or not isinstance(data, dict):
             return _error(
-                400, ErrorCode.INVALID_DATA,
+                400,
+                ErrorCode.INVALID_DATA,
                 "Missing or invalid 'data' field",
-                request_id, stage="execution",
+                request_id,
+                stage="execution",
             )
         if not isinstance(req_debug, bool):
             return _error(
-                400, ErrorCode.INVALID_DATA,
+                400,
+                ErrorCode.INVALID_DATA,
                 "'debug' must be a boolean",
-                request_id, stage="execution",
+                request_id,
+                stage="execution",
             )
 
         # Path traversal protection
         template_path = (templates_dir / template_name).resolve()
         if not str(template_path).startswith(str(templates_dir)):
             return _error(
-                400, ErrorCode.INVALID_DATA, "Invalid template path",
-                request_id, stage="execution",
+                400,
+                ErrorCode.INVALID_DATA,
+                "Invalid template path",
+                request_id,
+                stage="execution",
             )
         if not template_path.exists():
             return _error(
-                404, ErrorCode.TEMPLATE_NOT_FOUND,
+                404,
+                ErrorCode.TEMPLATE_NOT_FOUND,
                 f"Template not found: {template_name}",
-                request_id, stage="execution",
+                request_id,
+                stage="execution",
             )
 
         # Render with killable execution via CLI subprocess backend.
@@ -211,9 +236,11 @@ def create_app(
             # This is an exceptional event; the primary subprocess timeout
             # should have handled it.
             return _error(
-                504, ErrorCode.RENDER_TIMEOUT,
+                504,
+                ErrorCode.RENDER_TIMEOUT,
                 f"Render timed out after {render_timeout}s (watchdog)",
-                request_id, stage="execution",
+                request_id,
+                stage="execution",
             )
         except FormforgeError as exc:
             status = 504 if exc.code == ErrorCode.RENDER_TIMEOUT else 500

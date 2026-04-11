@@ -62,7 +62,7 @@ class TestTypstColor:
 
 class TestTypstMarkup:
     def test_returns_markup(self):
-        result = typst_markup("#text(weight: \"bold\")[hello]")
+        result = typst_markup('#text(weight: "bold")[hello]')
         assert isinstance(result, Markup)
 
     def test_bypasses_escape(self):

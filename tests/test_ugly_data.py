@@ -25,6 +25,7 @@ def assert_valid_pdf(pdf_bytes: bytes):
 
 # --- Invoice ugly data ---
 
+
 class TestInvoiceUglyData:
     TEMPLATE = EXAMPLES / "invoice.j2.typ"
 
@@ -75,8 +76,7 @@ class TestInvoiceUglyData:
     def test_long_address(self):
         data = self._base_data()
         data["recipient"]["address_line1"] = (
-            "12345 North Southeast Boulevard, Building C, "
-            "Suite 4200, Wing B, Floor 37"
+            "12345 North Southeast Boulevard, Building C, Suite 4200, Wing B, Floor 37"
         )
         assert_valid_pdf(render(self.TEMPLATE, data))
 
@@ -174,6 +174,7 @@ class TestInvoiceUglyData:
 
 
 # --- Statement ugly data ---
+
 
 class TestStatementUglyData:
     TEMPLATE = EXAMPLES / "statement.j2.typ"
@@ -289,6 +290,7 @@ class TestStatementUglyData:
 
 # --- Receipt ugly data ---
 
+
 class TestReceiptUglyData:
     TEMPLATE = EXAMPLES / "receipt.j2.typ"
 
@@ -343,9 +345,7 @@ class TestReceiptUglyData:
 
     def test_long_company_name(self):
         data = self._base_data()
-        data["company"]["name"] = (
-            "The Artisanal Handcrafted Organic Farm-to-Table Cafe & Bakery"
-        )
+        data["company"]["name"] = "The Artisanal Handcrafted Organic Farm-to-Table Cafe & Bakery"
         assert_valid_pdf(render(self.TEMPLATE, data))
 
     def test_many_items(self):
@@ -375,6 +375,7 @@ class TestReceiptUglyData:
 
 
 # --- Letter ugly data ---
+
 
 class TestLetterUglyData:
     TEMPLATE = EXAMPLES / "letter.j2.typ"
@@ -422,8 +423,7 @@ class TestLetterUglyData:
     def test_many_paragraphs(self):
         data = self._base_data()
         data["body_paragraphs"] = [
-            f"Paragraph {i}: {'Lorem ipsum dolor sit amet. ' * 5}"
-            for i in range(1, 11)
+            f"Paragraph {i}: {'Lorem ipsum dolor sit amet. ' * 5}" for i in range(1, 11)
         ]
         assert_valid_pdf(render(self.TEMPLATE, data))
 
@@ -447,6 +447,7 @@ class TestLetterUglyData:
 
 
 # --- Report ugly data ---
+
 
 class TestReportUglyData:
     TEMPLATE = EXAMPLES / "report.j2.typ"

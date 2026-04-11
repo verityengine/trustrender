@@ -45,7 +45,7 @@ class TestTypstEscape:
 
     def test_escapes_content_block_breakout(self):
         """Close bracket must not break out of content blocks."""
-        assert typst_escape(']{evil}[') == '\\u{005d}\\u{007b}evil\\u{007d}\\u{005b}'
+        assert typst_escape("]{evil}[") == "\\u{005d}\\u{007b}evil\\u{007d}\\u{005b}"
 
     def test_escapes_all_brackets_and_braces(self):
         """All four bracket/brace characters escaped in one string."""

@@ -47,12 +47,14 @@ from .errors import ErrorCode, FormforgeError
 # \u{007d} contains "{".  Chained .replace() calls would corrupt output.
 # str.translate acts only on the original string's literal characters and
 # does NOT recursively reprocess inserted replacement sequences.
-_BRACKET_TABLE = str.maketrans({
-    "{": "\\u{007b}",
-    "}": "\\u{007d}",
-    "[": "\\u{005b}",
-    "]": "\\u{005d}",
-})
+_BRACKET_TABLE = str.maketrans(
+    {
+        "{": "\\u{007b}",
+        "}": "\\u{007d}",
+        "[": "\\u{005b}",
+        "]": "\\u{005d}",
+    }
+)
 
 
 def typst_escape(value: object) -> object:

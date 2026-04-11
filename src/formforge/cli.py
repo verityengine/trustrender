@@ -34,18 +34,14 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     serve_cmd = sub.add_parser("serve", help="Start HTTP render server")
-    serve_cmd.add_argument(
-        "--templates", required=True, help="Template directory root"
-    )
+    serve_cmd.add_argument("--templates", required=True, help="Template directory root")
     serve_cmd.add_argument(
         "--port", type=int, default=8190, help="Port to listen on (default: 8190)"
     )
     serve_cmd.add_argument(
         "--host", default="127.0.0.1", help="Host to bind to (default: 127.0.0.1)"
     )
-    serve_cmd.add_argument(
-        "--debug", action="store_true", help="Enable debug mode"
-    )
+    serve_cmd.add_argument("--debug", action="store_true", help="Enable debug mode")
     serve_cmd.add_argument(
         "--font-path",
         action="append",
@@ -74,6 +70,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "doctor":
         from .doctor import run_doctor
+
         return run_doctor(smoke=args.smoke)
 
     return 1
@@ -102,8 +99,10 @@ def _format_error(exc: FormforgeError) -> str:
 def _run_render(args: argparse.Namespace) -> int:
     try:
         pdf_bytes = render(
-            args.template, args.data,
-            output=args.output, debug=args.debug,
+            args.template,
+            args.data,
+            output=args.output,
+            debug=args.debug,
             font_paths=args.font_paths,
         )
         print(f"Rendered {len(pdf_bytes):,} bytes -> {args.output}")

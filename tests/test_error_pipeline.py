@@ -12,8 +12,8 @@ import pytest
 from starlette.testclient import TestClient
 
 from formforge import FormforgeError, render
+from formforge.cli import _format_error, main
 from formforge.errors import ErrorCode
-from formforge.cli import main, _format_error
 from formforge.server import create_app
 
 FIXTURES = Path("tests/fixtures")
@@ -36,7 +36,9 @@ class TestErrorModel:
 
     def test_error_has_detail(self):
         exc = FormforgeError(
-            "summary", code=ErrorCode.COMPILE_ERROR, stage="compilation",
+            "summary",
+            code=ErrorCode.COMPILE_ERROR,
+            stage="compilation",
             detail="line 1\nline 2\nline 3",
         )
         assert exc.detail == "line 1\nline 2\nline 3"
@@ -47,7 +49,9 @@ class TestErrorModel:
 
     def test_to_dict_basic(self):
         exc = FormforgeError(
-            "something broke", code=ErrorCode.COMPILE_ERROR, stage="compilation",
+            "something broke",
+            code=ErrorCode.COMPILE_ERROR,
+            stage="compilation",
         )
         d = exc.to_dict()
         assert d["error"] == "COMPILE_ERROR"
@@ -57,7 +61,9 @@ class TestErrorModel:
 
     def test_to_dict_debug(self):
         exc = FormforgeError(
-            "summary", code=ErrorCode.MISSING_ASSET, stage="compilation",
+            "summary",
+            code=ErrorCode.MISSING_ASSET,
+            stage="compilation",
             detail="full diagnostic\nwith details",
             source_path="/tmp/test.typ",
             template_path="invoice.j2.typ",
@@ -70,7 +76,9 @@ class TestErrorModel:
 
     def test_to_dict_without_debug_excludes_paths(self):
         exc = FormforgeError(
-            "summary", code=ErrorCode.COMPILE_ERROR, stage="compilation",
+            "summary",
+            code=ErrorCode.COMPILE_ERROR,
+            stage="compilation",
             source_path="/tmp/test.typ",
         )
         d = exc.to_dict(include_debug=False)
@@ -79,14 +87,17 @@ class TestErrorModel:
 
     def test_str_includes_intermediate_path(self):
         exc = FormforgeError(
-            "compile failed", code=ErrorCode.COMPILE_ERROR, stage="compilation",
+            "compile failed",
+            code=ErrorCode.COMPILE_ERROR,
+            stage="compilation",
             source_path="/tmp/_formforge_abc.typ",
         )
         assert "Intermediate source: /tmp/_formforge_abc.typ" in str(exc)
 
     def test_str_includes_template_path(self):
         exc = FormforgeError(
-            "variable error", code=ErrorCode.TEMPLATE_VARIABLE,
+            "variable error",
+            code=ErrorCode.TEMPLATE_VARIABLE,
             stage="template_preprocess",
             template_path="invoice.j2.typ",
         )
@@ -273,16 +284,24 @@ class TestServerErrorResponses:
         assert "request_id" in data
 
     def test_template_not_found_has_code(self, client):
-        resp = client.post("/render", json={
-            "template": "nope.j2.typ", "data": {},
-        })
+        resp = client.post(
+            "/render",
+            json={
+                "template": "nope.j2.typ",
+                "data": {},
+            },
+        )
         assert resp.status_code == 404
         assert resp.json()["error"] == "TEMPLATE_NOT_FOUND"
 
     def test_render_error_has_code_and_stage(self, debug_client):
-        resp = debug_client.post("/render", json={
-            "template": "hello.typ", "data": {},
-        })
+        resp = debug_client.post(
+            "/render",
+            json={
+                "template": "hello.typ",
+                "data": {},
+            },
+        )
         # hello.typ is valid — this should succeed
         if resp.status_code != 200:
             data = resp.json()
@@ -296,19 +315,26 @@ class TestServerErrorResponses:
         assert "X-Request-ID" in resp.headers
 
         # Not found
-        resp = client.post("/render", json={
-            "template": "nope.typ", "data": {},
-        })
+        resp = client.post(
+            "/render",
+            json={
+                "template": "nope.typ",
+                "data": {},
+            },
+        )
         assert "request_id" in resp.json()
 
     def test_debug_mode_includes_detail_on_render_error(self, debug_client):
         # Use a template that references a missing image via the server
         # We need a template in EXAMPLES that will fail at compile time
         # Use bad data that causes a Jinja error
-        resp = debug_client.post("/render", json={
-            "template": "invoice.j2.typ",
-            "data": {},  # Missing required nested fields
-        })
+        resp = debug_client.post(
+            "/render",
+            json={
+                "template": "invoice.j2.typ",
+                "data": {},  # Missing required nested fields
+            },
+        )
         if resp.status_code == 500:
             data = resp.json()
             # In debug mode, detail and source_path should be present
@@ -316,10 +342,13 @@ class TestServerErrorResponses:
             assert "stage" in data
 
     def test_non_debug_excludes_detail_and_source_path(self, client):
-        resp = client.post("/render", json={
-            "template": "invoice.j2.typ",
-            "data": {},  # Will fail with missing variable
-        })
+        resp = client.post(
+            "/render",
+            json={
+                "template": "invoice.j2.typ",
+                "data": {},  # Will fail with missing variable
+            },
+        )
         if resp.status_code == 500:
             data = resp.json()
             # In non-debug mode, detail and source_path should NOT be present
@@ -335,10 +364,13 @@ class TestServerErrorResponses:
         # Create an app with very short timeout to test the code
         app = create_app(EXAMPLES, render_timeout=0.001)
         short_client = TestClient(app)
-        resp = short_client.post("/render", json={
-            "template": "invoice.j2.typ",
-            "data": json.load(open(EXAMPLES / "invoice_data.json")),
-        })
+        resp = short_client.post(
+            "/render",
+            json={
+                "template": "invoice.j2.typ",
+                "data": json.load(open(EXAMPLES / "invoice_data.json")),
+            },
+        )
         # May or may not timeout depending on speed — just verify
         # the response format is correct either way
         if resp.status_code == 504:
@@ -355,7 +387,8 @@ class TestServerErrorResponses:
 class TestCLIErrorFormat:
     def test_format_includes_code(self):
         exc = FormforgeError(
-            "file not found", code=ErrorCode.MISSING_ASSET,
+            "file not found",
+            code=ErrorCode.MISSING_ASSET,
             stage="compilation",
         )
         output = _format_error(exc)
@@ -364,7 +397,8 @@ class TestCLIErrorFormat:
 
     def test_format_includes_template_path(self):
         exc = FormforgeError(
-            "undefined var", code=ErrorCode.TEMPLATE_VARIABLE,
+            "undefined var",
+            code=ErrorCode.TEMPLATE_VARIABLE,
             stage="template_preprocess",
             template_path="invoice.j2.typ",
         )
@@ -373,7 +407,8 @@ class TestCLIErrorFormat:
 
     def test_format_includes_full_diagnostic(self):
         exc = FormforgeError(
-            "summary line", code=ErrorCode.COMPILE_ERROR,
+            "summary line",
+            code=ErrorCode.COMPILE_ERROR,
             stage="compilation",
             detail="summary line\n  at line 5\n  in column 10",
         )
@@ -383,12 +418,15 @@ class TestCLIErrorFormat:
 
     def test_cli_render_error_exit_code(self, tmp_path):
         out = tmp_path / "out.pdf"
-        code = main([
-            "render",
-            str(FIXTURES / "missing_image.j2.typ"),
-            str(FIXTURES / "simple.json"),
-            "-o", str(out),
-        ])
+        code = main(
+            [
+                "render",
+                str(FIXTURES / "missing_image.j2.typ"),
+                str(FIXTURES / "simple.json"),
+                "-o",
+                str(out),
+            ]
+        )
         assert code == 1
         # Clean up intermediate files
         for f in FIXTURES.glob("_formforge_*.typ"):
@@ -396,9 +434,13 @@ class TestCLIErrorFormat:
 
     def test_cli_template_not_found_exit_code(self, tmp_path):
         out = tmp_path / "out.pdf"
-        code = main([
-            "render", "nope.j2.typ",
-            str(FIXTURES / "simple.json"),
-            "-o", str(out),
-        ])
+        code = main(
+            [
+                "render",
+                "nope.j2.typ",
+                str(FIXTURES / "simple.json"),
+                "-o",
+                str(out),
+            ]
+        )
         assert code == 1

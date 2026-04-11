@@ -18,9 +18,7 @@ from pathlib import Path
 
 import pytest
 
-import formforge
 from formforge import bundled_font_dir, render
-from formforge.engine import TypstCliBackend, TypstPyBackend, get_backend
 
 FIXTURES = Path(__file__).parent / "fixtures"
 EXAMPLES = Path(__file__).parent.parent / "examples"
@@ -63,7 +61,12 @@ class TestBundledFontAvailability:
         d = bundled_font_dir()
         assert d is not None
         inter_dir = d / "Inter"
-        expected = {"Inter-Regular.ttf", "Inter-Bold.ttf", "Inter-Italic.ttf", "Inter-BoldItalic.ttf"}
+        expected = {
+            "Inter-Regular.ttf",
+            "Inter-Bold.ttf",
+            "Inter-Italic.ttf",
+            "Inter-BoldItalic.ttf",
+        }
         actual = {f.name for f in inter_dir.glob("*.ttf")}
         assert actual == expected
 
@@ -75,6 +78,7 @@ class TestBundledFontAvailability:
         monkeypatch.setenv("FORMFORGE_FONT_PATH", str(tmp_path))
         # Re-run the finder with env var set
         from formforge import _find_bundled_fonts
+
         result = _find_bundled_fonts()
         assert result == tmp_path.resolve()
 
@@ -134,6 +138,7 @@ class TestFontPrecedence:
     def test_explicit_paths_extend_bundled(self):
         """Explicit font_paths extend bundled fonts, not replace them."""
         from formforge import _build_font_paths
+
         bundled = bundled_font_dir()
         assert bundled is not None
         explicit = ["/some/custom/path"]
@@ -169,18 +174,21 @@ class TestFontPrecedence:
         monkeypatch.setenv("FORMFORGE_FONT_PATH", str(empty_fonts))
         # Re-import to pick up the env var change
         import importlib
+
         import formforge as ff
+
         importlib.reload(ff)
 
         try:
             pdf_without_bundled = ff.render(EXAMPLES / "invoice.j2.typ", INVOICE_DATA)
             # Without bundled Inter, invoice should NOT embed Inter
             # (it falls back to Typst default)
-            has_inter = _pdf_contains_font(pdf_without_bundled, "Inter")
+            _pdf_contains_font(pdf_without_bundled, "Inter")
             # Inter might still be available as a system font, so we can't
             # assert it's gone — but we can verify the env var was honored
             # by checking the resolved font path changed
             from formforge import bundled_font_dir as bfd
+
             resolved = bfd()
             # The resolved path should be our empty dir, not the original
             assert resolved == empty_fonts.resolve() or resolved is None
@@ -200,9 +208,7 @@ BOTH_BACKENDS = [
     pytest.param(
         "typst-cli",
         id="typst-cli",
-        marks=pytest.mark.skipif(
-            not HAS_TYPST_CLI, reason="typst CLI not on PATH"
-        ),
+        marks=pytest.mark.skipif(not HAS_TYPST_CLI, reason="typst CLI not on PATH"),
     ),
 ]
 

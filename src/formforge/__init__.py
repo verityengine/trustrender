@@ -17,6 +17,7 @@ __version__ = "0.1.0"
 
 __all__ = ["render", "FormforgeError", "ErrorCode", "__version__", "bundled_font_dir"]
 
+
 # Resolved once at import time — deterministic across local, test, and container.
 # Check multiple locations: dev layout (src/formforge -> fonts/) and env var.
 def _find_bundled_fonts() -> Path | None:
@@ -178,8 +179,7 @@ def _resolve_data(data: dict | str | os.PathLike) -> dict:
             ) from exc
 
     raise FormforgeError(
-        f"Data must be a dict, JSON string, or path to a .json file, "
-        f"got {type(data).__name__}",
+        f"Data must be a dict, JSON string, or path to a .json file, got {type(data).__name__}",
         code=ErrorCode.INVALID_DATA,
         stage="data_resolution",
     )

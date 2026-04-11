@@ -61,6 +61,7 @@ def _classify_typst_error(message: str) -> ErrorCode:
 # Backend protocol
 # ---------------------------------------------------------------------------
 
+
 @runtime_checkable
 class CompileBackend(Protocol):
     """Contract for Typst compilation backends.
@@ -83,6 +84,7 @@ class CompileBackend(Protocol):
 # ---------------------------------------------------------------------------
 # Backends
 # ---------------------------------------------------------------------------
+
 
 class TypstPyBackend:
     """In-process compilation via typst-py (the Python binding).
@@ -190,6 +192,7 @@ class TypstCliBackend:
 # Backend factory
 # ---------------------------------------------------------------------------
 
+
 def get_backend(*, force: str | None = None) -> CompileBackend:
     """Return a compilation backend instance.
 
@@ -208,13 +211,12 @@ def get_backend(*, force: str | None = None) -> CompileBackend:
     if choice == "typst-py":
         return TypstPyBackend()
     if choice is not None:
-        raise ValueError(
-            f"Unknown backend: {choice!r}. Use 'typst-py' or 'typst-cli'."
-        )
+        raise ValueError(f"Unknown backend: {choice!r}. Use 'typst-py' or 'typst-cli'.")
 
     # Auto-detect: prefer typst-py
     try:
         import typst  # noqa: F401
+
         return TypstPyBackend()
     except ImportError:
         return TypstCliBackend()
@@ -223,6 +225,7 @@ def get_backend(*, force: str | None = None) -> CompileBackend:
 # ---------------------------------------------------------------------------
 # Compile functions (used by __init__.py)
 # ---------------------------------------------------------------------------
+
 
 def compile_typst_file(
     path: str | os.PathLike,
@@ -296,7 +299,10 @@ def compile_typst(
 
         try:
             pdf_bytes = backend.compile(
-                tmp_path, format="pdf", font_paths=resolved_fonts, timeout=timeout,
+                tmp_path,
+                format="pdf",
+                font_paths=resolved_fonts,
+                timeout=timeout,
             )
         except FormforgeError as exc:
             if exc.template_path is None and template_path:

@@ -7,7 +7,6 @@ of which backend executes.
 
 from __future__ import annotations
 
-import os
 import shutil
 from pathlib import Path
 from unittest import mock
@@ -199,9 +198,7 @@ BOTH_BACKENDS = [
     pytest.param(
         "typst-cli",
         id="typst-cli",
-        marks=pytest.mark.skipif(
-            not HAS_TYPST_CLI, reason="typst CLI not on PATH"
-        ),
+        marks=pytest.mark.skipif(not HAS_TYPST_CLI, reason="typst CLI not on PATH"),
     ),
 ]
 
@@ -298,7 +295,9 @@ class TestTimeoutThreading:
         backend = TypstCliBackend()
         with pytest.raises(FormforgeError) as exc_info:
             compile_typst_file(
-                FIXTURES / "simple.typ", backend=backend, timeout=0.001,
+                FIXTURES / "simple.typ",
+                backend=backend,
+                timeout=0.001,
             )
         assert exc_info.value.code == ErrorCode.RENDER_TIMEOUT
 
