@@ -1,6 +1,6 @@
 .PHONY: help setup dev test lint clean docker smoke doctor
 
-PYTHON ?= /opt/homebrew/bin/python3.12
+PYTHON ?= python3
 VENV   := .venv
 
 help: ## Show available targets
