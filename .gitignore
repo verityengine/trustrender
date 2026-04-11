@@ -32,3 +32,4 @@ output/
 .pytest_cache/
 htmlcov/
 .coverage
+.claude/
