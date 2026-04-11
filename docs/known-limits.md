@@ -148,13 +148,9 @@ Temp files are named `_formforge_<random>.typ` (unpredictable via `tempfile.mkst
 
 Failed renders can accumulate temp files over time. No automatic cleanup facility exists. Operators should monitor and clean the template directory if running many renders that fail at the compile stage.
 
-### Silent font fallback means wrong output, not errors
+### Font fallback
 
-If a template requests a font that is not available, Typst will silently use a fallback font. The render succeeds. The PDF is valid. The font is wrong. No error code is returned.
-
-Drift detection now partially mitigates this: baseline drift checks compare embedded font names and produce a warning when the font set changes. This catches the common case of deploying to an environment that lacks the expected fonts. However, this requires a saved baseline from a known-good render — without a baseline, there is no detection.
-
-Defense: use bundled or explicitly supplied fonts, save baselines in CI, and verify output during deployment.
+Typst can silently substitute missing fonts. Formforge now records embedded-font drift in baselines and raises a warning when the font set changes, but this is not a full visual-diff guarantee. For deterministic output, rely on bundled or explicitly supplied fonts and use `formforge doctor` to catch missing declarations before deployment.
 
 ### typst-py backend cannot kill timeouts
 

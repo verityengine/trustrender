@@ -1185,6 +1185,38 @@ const FIXTURES = {
       closing: "Sincerely,", signature_name: "James Rodriguez", signature_title: "Director of Finance",
     },
   },
+  'einvoice.j2.typ': {
+    label: 'E-Invoice (DE)',
+    zugferd: 'en16931',
+    valid: {
+      invoice_type: "380", invoice_number: "RE-2026-0042", invoice_date: "2026-04-10", due_date: "2026-05-10", currency: "EUR",
+      seller: { name: "Muster GmbH", address: "Musterstra\u00dfe 1", city: "Berlin", postal_code: "10115", country: "DE", vat_id: "DE123456789", email: "rechnung@muster.de", phone: "+49 30 12345678" },
+      buyer: { name: "Kunde AG", address: "Kundenweg 42", city: "M\u00fcnchen", postal_code: "80331", country: "DE", vat_id: "DE987654321" },
+      items: [
+        { description: "Webseiten-Redesign", quantity: 1, unit: "C62", unit_price: 4500.00, tax_rate: 19, line_total: 4500.00 },
+        { description: "SEO-Optimierung (3 Monate)", quantity: 3, unit: "MON", unit_price: 750.00, tax_rate: 19, line_total: 2250.00 },
+        { description: "Logo-Design und CI", quantity: 1, unit: "C62", unit_price: 2200.00, tax_rate: 19, line_total: 2200.00 },
+      ],
+      subtotal: 8950.00,
+      tax_entries: [{ rate: 19, basis: 8950.00, amount: 1700.50 }],
+      tax_total: 1700.50, total: 10650.50,
+      payment: { means: "credit_transfer", iban: "DE89370400440532013000", bic: "COBADEFFXXX", bank_name: "Commerzbank" },
+      notes: "Zahlbar innerhalb von 30 Tagen netto."
+    },
+    invalid: {
+      invoice_type: "380", invoice_number: "RE-2026-0042", invoice_date: "2026-04-10", due_date: "2026-05-10", currency: "EUR",
+      seller: { name: "Muster GmbH", address: "Musterstra\u00dfe 1", city: "Berlin", postal_code: "10115", country: "DE" },
+      buyer: { name: "Kunde AG", address: "Kundenweg 42", city: "M\u00fcnchen", postal_code: "80331", country: "DE" },
+      items: [
+        { description: "Webseiten-Redesign", quantity: 1, unit: "C62", unit_price: 4500.00, tax_rate: 19, line_total: 4500.00 },
+      ],
+      subtotal: 8950.00,
+      tax_entries: [{ rate: 19, basis: 8950.00, amount: 1700.50 }],
+      tax_total: 1700.50, total: 10650.50,
+      payment: { means: "credit_transfer", iban: "DE89370400440532013000" },
+      notes: "Zahlbar innerhalb von 30 Tagen netto."
+    },
+  },
   'report.j2.typ': {
     label: 'Report',
     valid: {
@@ -1529,6 +1561,8 @@ function AppWorkspace() {
     setChecking(true)
     const payload = { template: tpl, data }
     if (modified) payload.template_source = src
+    const fixtureZugferd = FIXTURES[tpl]?.zugferd
+    if (fixtureZugferd) payload.zugferd = fixtureZugferd
     try {
       const res = await fetch('/api/preflight', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1552,6 +1586,8 @@ function AppWorkspace() {
       const data = JSON.parse(json)
       const renderPayload = { template, data, validate: true, debug: true }
       if (isTemplateModified) renderPayload.template_source = templateSource
+      const fixtureZugferd = FIXTURES[template]?.zugferd
+      if (fixtureZugferd) renderPayload.zugferd = fixtureZugferd
       const res = await fetch('/api/render', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(renderPayload),
@@ -1662,6 +1698,9 @@ function AppWorkspace() {
                 <select value={template} onChange={e => switchFixture(e.target.value, payloadMode)} className="text-[10px] font-mono text-muted bg-transparent border border-rule rounded px-2 py-1 cursor-pointer">
                   {Object.entries(FIXTURES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                 </select>
+                {FIXTURES[template]?.zugferd && (
+                  <span className="text-[8px] font-mono px-2 py-0.5 rounded-full bg-rust/10 text-rust font-semibold">EN 16931</span>
+                )}
                 {editorTab === 'data' && (
                   <>
                     <span className="text-[9px] text-muted">example</span>

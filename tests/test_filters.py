@@ -17,7 +17,8 @@ class TestTypstMoney:
     def test_negative_value_red(self):
         result = typst_money("-$500.00")
         assert '#text(fill: rgb("#c0392b"))' in str(result)
-        assert "-\\$500.00" in str(result)
+        # Leading "-" is line-start escaped to \u{002d} (renders identically)
+        assert "\\u{002d}\\$500.00" in str(result)
 
     def test_custom_negative_color(self):
         result = typst_money("-$100.00", negative_color="#e74c3c")
