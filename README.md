@@ -87,7 +87,7 @@ Both produce `invoice.pdf` from the bundled example template and data. Template 
 ## CLI usage
 
 ```
-formforge render <template> <data.json> -o <output.pdf> [--debug] [--validate] [--zugferd en16931] [--font-path <dir>]
+formforge render <template> <data.json> -o <output.pdf> [--debug] [--no-validate] [--zugferd en16931] [--font-path <dir>]
 formforge check <template> [--data <data.json>]
 formforge serve --templates <dir> [--host 127.0.0.1] [--port 8190] [--debug] [--font-path <dir>]
 formforge doctor [--smoke]
@@ -111,11 +111,105 @@ formforge serve --templates ./templates --debug
 
 Full flag reference: `formforge render --help` / `formforge serve --help`.
 
-## Pre-render contract validation
+## Data validation
 
-Formforge can reject structurally wrong payloads before they become broken PDFs. For `.j2.typ` templates, it infers a minimum data contract from the Jinja2 AST and validates caller data against it.
+For Jinja2 Typst templates, Formforge validates data before rendering by default. Bad payloads are rejected with specific field-level errors before any Typst compilation starts.
 
-**Inspect what a template expects:**
+### Structural validation (default)
+
+Every `render()` call on a `.j2.typ` template infers a minimum data contract from the Jinja2 AST and validates caller data against it. This catches:
+
+- missing required fields
+- null values on required fields
+- wrong structural types (passing a string where an object is expected, a dict where a list is expected)
+- requirements from `{% include %}` fragments (followed recursively with scope isolation)
+
+Bad data raises `FormforgeError(code=DATA_CONTRACT)` with paths pointing into the caller's JSON:
+
+```python
+render("invoice.j2.typ", {"invoice_number": "X"})
+```
+
+```
+FormforgeError: Data validation failed: 11 field errors in invoice.j2.typ
+  sender: missing required field (expected: object)
+  recipient: missing required field (expected: object)
+  items: missing required field (expected: list[object])
+  invoice_date: missing required field
+  ...
+```
+
+Raw `.typ` files are unaffected — they have no Jinja2 AST to infer a contract from.
+
+To skip structural validation explicitly:
+
+```python
+render("invoice.j2.typ", data, validate=False)
+```
+
+```
+formforge render invoice.j2.typ data.json -o out.pdf --no-validate
+```
+
+`validate=False` is an escape hatch for callers who know their data shape and want to skip the check, not the normal path.
+
+### Semantic validation (opt-in, hint-driven)
+
+Beyond structure, Formforge can check business-data correctness when the caller configures semantic hints. Semantic checks warn but do not block rendering.
+
+What semantic validation catches:
+
+- **Arithmetic mismatches**: line item totals that don't sum to the stated subtotal
+- **Balance reconciliation**: aging bucket totals that don't sum to the closing balance (statements)
+- **Unparseable dates**: strings in date fields that don't match any common format
+- **Non-numeric values**: currency fields containing non-parseable text
+- **Empty required fields**: business-critical fields that are blank strings or None
+
+```python
+from formforge.semantic import validate_semantics, STATEMENT_HINTS
+
+report = validate_semantics(statement_data, STATEMENT_HINTS)
+# Issues found:
+#   [warning] arithmetic: aging.total — sum of aging buckets = 18267.50, but aging.total = 999999.00
+```
+
+Semantic hints are not inferred. The caller declares what to check. Presets exist for common document types:
+
+| Preset | Template types | Checks |
+|--------|---------------|--------|
+| `INVOICE_HINTS` | invoices, e-invoices | line item sum, dates, numerics, invoice number |
+| `RECEIPT_HINTS` | receipts | item amounts, subtotal, dates, numerics |
+| `STATEMENT_HINTS` | account statements | balance reconciliation, aging totals, dates, numerics |
+
+The CLI auto-detects the preset from the template filename. Unknown template types get no semantic checks — no fake confidence.
+
+### Readiness (preflight)
+
+`preflight()` combines structural validation, semantic checks, template parsing, environment checks, and compliance eligibility into a single pre-render verdict without rendering:
+
+```python
+from formforge.readiness import preflight
+from formforge.semantic import INVOICE_HINTS
+
+verdict = preflight("invoice.j2.typ", data, semantic_hints=INVOICE_HINTS)
+if not verdict.ready:
+    for issue in verdict.errors:
+        print(f"{issue.path}: {issue.message}")
+```
+
+```
+formforge preflight invoice.j2.typ data.json --semantic
+```
+
+Preflight answers "can this data produce the right document?" without spending compute on Typst compilation.
+
+### Include behavior
+
+Contract inference follows `{% include %}` directives recursively. Static includes are resolved and their data requirements are merged into the parent contract. Variables set via `{% set %}` in the parent scope are correctly excluded from the contract.
+
+Dynamic includes (`{% include some_var %}`) and missing fragments cannot be resolved statically. They mark the contract as partial — visible via `infer_contract_with_metadata()` in the Python API and as a warning in `formforge check` and `preflight()` output.
+
+### Inspecting contracts
 
 ```
 formforge check examples/invoice.j2.typ
@@ -132,8 +226,6 @@ Fields: 12 top-level (12 required)
   ...
 ```
 
-**Validate a data file without rendering:**
-
 ```
 formforge check examples/invoice.j2.typ --data bad_data.json
 ```
@@ -145,44 +237,25 @@ error[DATA_CONTRACT]: 3 validation error(s)
   notes: expected scalar, got null
 ```
 
-**Validate during render (opt-in):**
+### Limits
 
-```
-formforge render invoice.j2.typ data.json -o out.pdf --validate
-```
-
-**Python API:**
-
-```python
-render("invoice.j2.typ", data, output="out.pdf", validate=True)
-```
-
-**HTTP server:**
-
-```json
-{"template": "invoice.j2.typ", "data": {...}, "validate": true}
-```
-
-Returns 422 with `DATA_CONTRACT` error code if validation fails.
-
-### Caveats
-
-- Structural validation only (scalar / object / list) — no int/str/float type narrowing
+- Structural types only (scalar / object / list) — no int/str/float narrowing
 - `required` is a template-read heuristic, not business-semantic truth
-- Raw `.typ` templates get no contract validation (Jinja2 templates only)
-- `{% include %}` fragments are not followed — contract may be incomplete for templates that rely on included fragments for data access
-- Validation is opt-in. Default render behavior is unchanged.
+- Semantic checks require explicit hints — no automatic business-logic inference
+- Letter and report templates have no semantic presets yet
+- Dynamic `{% include %}` produces a partial contract (warning, not error)
+- Freeform text anomaly detection is not attempted — no garbage-string scoring
 
 ## ZUGFeRD / Factur-X e-invoicing
 
-Formforge can generate Mustang-validated e-invoices for supported invoice shapes. Two profiles are available:
+Formforge can generate EN 16931-compliant e-invoices for supported invoice shapes. Generated XML passes XSD and Schematron validation. Two profiles are available:
 
 | Profile | Standard | Use case |
 |---------|----------|----------|
 | `en16931` | EN 16931 (ZUGFeRD / Factur-X) | B2B invoices in Germany and France |
 | `xrechnung` | XRechnung 3.0 | German government (B2G) invoices |
 
-When a `zugferd` profile is set, the pipeline adds two steps after normal PDF rendering: CII XML generation from the invoice data, and embedding the XML into a PDF/A-3b container with ZUGFeRD metadata. The output passes the Mustang validator (exit code 0, PDF valid, XML valid).
+When a `zugferd` profile is set, the pipeline adds two steps after normal PDF rendering: CII XML generation from the invoice data, and embedding the XML into a PDF/A-3b container with ZUGFeRD metadata. Generated XML is validated against EN 16931 XSD and Schematron rules automatically. One-time manual validation against the Mustang reference validator has also passed (see `docs/zugferd-prototype.md`).
 
 ZUGFeRD and Factur-X are the same specification — ZUGFeRD is the German name, Factur-X is the French name. Both are supported by the `en16931` profile.
 
@@ -303,7 +376,7 @@ Returns `application/pdf` on success.
 }
 ```
 
-**Request format:** JSON object with fields `template` (required string), `data` (required object), `debug` (optional boolean), `validate` (optional boolean), `zugferd` (optional: `"en16931"` or `"xrechnung"`), `provenance` (optional boolean). See `examples/request_invoice.json` for a complete runnable example.
+**Request format:** JSON object with fields `template` (required string), `data` (required object), `debug` (optional boolean), `validate` (optional boolean, defaults to true), `zugferd` (optional: `"en16931"` or `"xrechnung"`), `provenance` (optional boolean). See `examples/request_invoice.json` for a complete runnable example.
 
 **Request ID:** The server accepts a client-provided `X-Request-ID` header or generates a UUID. It is echoed on both success and error responses for request tracing.
 
@@ -475,7 +548,7 @@ Intermediate files are written next to the template as `_formforge_*.typ`. They 
 | Stage | Where |
 |-------|-------|
 | `data_resolution` | Parsing/validating input data |
-| `data_validation` | Validating data against template contract (opt-in) |
+| `data_validation` | Validating data against template contract (default for .j2.typ) |
 | `zugferd_validation` | Validating invoice data against EN 16931 requirements |
 | `template_preprocess` | Jinja2 rendering |
 | `compilation` | Typst compilation to PDF |
@@ -495,11 +568,14 @@ Server error responses include `error`, `message`, `stage`, and `request_id`. Wi
 - Library and CLI support both backends; server forces typst-cli
 - Docker: builds, runs, produces matching output
 - 5 starter templates: invoice, statement, receipt, letter, report
-- Pre-render contract validation: opt-in structural check catches missing/wrong fields before Jinja runs
+- Pre-render contract validation: default for `.j2.typ` — catches missing/wrong fields before Jinja runs
+- Include-aware contract inference: follows `{% include %}` fragments recursively, marks dynamic includes as partial
+- Semantic validation: hint-driven arithmetic, date, completeness, numeric coercion, and balance reconciliation checks
+- Semantic presets: `INVOICE_HINTS`, `RECEIPT_HINTS`, `STATEMENT_HINTS` — auto-detected by template name in CLI
 - `formforge check` CLI for template introspection and data validation
-- ZUGFeRD / Factur-X: Mustang-validated EN 16931 and XRechnung e-invoice generation (PDF/A-3b + embedded CII XML)
+- ZUGFeRD / Factur-X: EN 16931 and XRechnung e-invoice generation (PDF/A-3b + embedded CII XML, XSD/Schematron-validated)
 - Generation proof: cryptographic provenance embedded in PDF metadata, verifiable without re-rendering
-- 325+ tests passing (unit, integration, contract, ZUGFeRD, provenance, ugly-data stress, diagnostics)
+- 620 tests passing (unit, integration, contract, include inference, semantic, ZUGFeRD, provenance, audit, ugly-data stress, diagnostics)
 
 ## Development
 
@@ -546,6 +622,8 @@ make help     # list all targets
 - Code/math mode contexts are not auto-escaped
 - Line-start markup (`=` headings, `-` lists) is template layout, not auto-escaped
 - Font determinism across arbitrary environments is not fully soak-tested
+- Dynamic `{% include %}` marks contract as partial (warning, not error)
+- Semantic hints for letter and report templates are not yet built — CLI reports "no semantic hints configured"
 - Standard install from source is the most reliable local path today
 - Not yet published to PyPI
 
