@@ -23,10 +23,10 @@ dev = [
     "pytest>=8.0",
     "ruff>=0.4",
     "httpx>=0.27",
-    "facturx>=3.0",
+    "factur-x>=3.0",
 ]
 zugferd = [
-    "facturx>=3.0",
+    "factur-x>=3.0",
 ]
 
 [tool.setuptools.packages.find]
