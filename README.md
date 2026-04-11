@@ -2,7 +2,7 @@
 
 Generate structured business PDFs from data + templates. No browser, no Chromium.
 
-Formforge renders invoices, statements, receipts, and similar structured documents using [Typst](https://typst.app/) as the layout engine and Jinja2 for data binding. It ships as a Python library, CLI, and HTTP server.
+Formforge renders invoices (including credit notes), statements, receipts, and similar structured documents using [Typst](https://typst.app/) as the layout engine and Jinja2 for data binding. It ships as a Python library, CLI, and HTTP server.
 
 ## Non-goals
 
@@ -299,7 +299,7 @@ pdf = render(
 }
 ```
 
-Returns 422 with `ZUGFERD_ERROR` if invoice data is missing required fields or contains unsupported shapes (allowances, charges, mixed rates). Bad `zugferd` values return 400.
+Returns 422 with `ZUGFERD_ERROR` if invoice data is missing required fields or contains unsupported shapes (allowances, charges). Bad `zugferd` values return 400.
 
 The invoice data model uses raw numeric amounts (not pre-formatted strings), explicit currency codes, VAT IDs, and structured tax entries. See `examples/einvoice_data.json` for the full shape. See `docs/einvoice-scope.md` for the full supported/unsupported scenario matrix.
 
@@ -309,13 +309,12 @@ The invoice data model uses raw numeric amounts (not pre-formatted strings), exp
 - Country: Germany (DE)
 - Currency: EUR
 - Tax: standard VAT, single or mixed rates per invoice (e.g., 7% + 19%)
-- Invoice type: domestic B2B standard invoice (type code 380)
+- Invoice types: standard invoice (type 380) and credit note (type 381)
 - Payment: SEPA credit transfer, SEPA direct debit
 
 ### Not supported (fails loudly at validation time)
 
 - XRechnung (code path exists, not yet schema-validated)
-- Credit notes (type 381)
 - Reverse charge
 - Intra-community / cross-border
 - Allowances, charges, or discounts
@@ -392,6 +391,8 @@ Returns `application/pdf` on success.
 **Request format:** JSON object with fields `template` (required string), `data` (required object), `debug` (optional boolean), `validate` (optional boolean, defaults to true), `zugferd` (optional: `"en16931"`), `provenance` (optional boolean). See `examples/request_invoice.json` for a complete runnable example.
 
 **Request ID:** The server accepts a client-provided `X-Request-ID` header or generates a UUID. It is echoed on both success and error responses for request tracing.
+
+**Backpressure:** The server limits concurrent renders (default 8, configurable via `--max-concurrent`). Requests that arrive while at capacity receive 503. This prevents runaway resource consumption under load.
 
 **Max request body:** 1 MB.
 
@@ -584,11 +585,11 @@ Server error responses include `error`, `message`, `stage`, and `request_id`. Wi
 - Pre-render contract validation: default for `.j2.typ` — catches missing/wrong fields before Jinja runs
 - Include-aware contract inference: follows `{% include %}` fragments recursively, marks dynamic includes as partial
 - Semantic validation: hint-driven arithmetic, date, completeness, numeric coercion, and balance reconciliation checks
-- Semantic presets: `INVOICE_HINTS`, `RECEIPT_HINTS`, `STATEMENT_HINTS` — auto-detected by template name in CLI
+- Semantic presets: `INVOICE_HINTS`, `RECEIPT_HINTS`, `STATEMENT_HINTS`, `LETTER_HINTS`, `REPORT_HINTS` — auto-detected by template name in CLI
 - `formforge check` CLI for template introspection and data validation
 - ZUGFeRD / Factur-X: EN 16931 e-invoice generation for DE domestic B2B (PDF/A-3b + embedded CII XML, schema-tested)
 - Generation proof: cryptographic provenance embedded in PDF metadata, verifiable without re-rendering
-- 688 tests passing (unit, integration, contract, include inference, semantic, ZUGFeRD, provenance, audit, ugly-data pressure, diagnostics)
+- 758 tests passing (unit, integration, contract, include inference, semantic, ZUGFeRD, credit note, provenance, audit, ugly-data pressure, diagnostics)
 
 ## Development
 
@@ -636,7 +637,6 @@ make help     # list all targets
 - Line-start markup (`=` headings, `-` lists) is template layout, not auto-escaped
 - Font determinism across arbitrary environments is not fully soak-tested
 - Dynamic `{% include %}` marks contract as partial (warning, not error)
-- Semantic hints for letter and report templates are not yet built — CLI reports "no semantic hints configured"
 - Standard install from source is the most reliable local path today
 - Not yet published to PyPI
 
