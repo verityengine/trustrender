@@ -606,7 +606,7 @@ Server error responses include `error`, `message`, `stage`, and `request_id`. Wi
 - Ephemeral template editing: browser-based template editor sends source for preflight/render without saving to disk
 - `formforge doctor --smoke`: environment diagnostics + render/server smoke test in one command
 - Benchmarked: 1,000-row invoice renders in 211ms (33 pages, 0.21ms/row), 53.8 RPS server throughput, 69.5 MB peak RSS
-- 787 tests passing (unit, integration, contract, include inference, semantic, ZUGFeRD, credit note, provenance, audit, ugly-data pressure, font verification, diagnostics)
+- 818 tests passing (unit, integration, contract, include inference, semantic, ZUGFeRD, credit note, provenance, audit, ugly-data pressure, font verification, diagnostics)
 
 ## Development
 
