@@ -522,3 +522,139 @@ class TestFixtureVariants:
         from facturx import xml_check_xsd
         xml_check_xsd(xml)
         assert "Müller".encode("utf-8") in xml
+
+
+# ---------------------------------------------------------------------------
+# Credit notes (type code 381)
+# ---------------------------------------------------------------------------
+
+
+def _load_creditnote_data() -> dict:
+    return json.loads((EXAMPLES / "creditnote_data.json").read_text())
+
+
+class TestCreditNotes:
+    """Prove credit note (type 381) support works end-to-end."""
+
+    def test_credit_note_validation_passes(self):
+        errors = validate_zugferd_invoice_data(_load_creditnote_data())
+        assert errors == []
+
+    def test_credit_note_requires_referenced_invoice(self):
+        """Type 381 without referenced_invoice -> error."""
+        data = _load_creditnote_data()
+        del data["referenced_invoice"]
+        errors = validate_zugferd_invoice_data(data)
+        paths = [e.path for e in errors]
+        assert "referenced_invoice" in paths
+
+    def test_credit_note_rejects_empty_referenced_invoice(self):
+        """Type 381 with whitespace-only referenced_invoice -> error."""
+        data = _load_creditnote_data()
+        data["referenced_invoice"] = "   "
+        errors = validate_zugferd_invoice_data(data)
+        paths = [e.path for e in errors]
+        assert "referenced_invoice" in paths
+
+    def test_invoice_rejects_referenced_invoice(self):
+        """Type 380 with referenced_invoice -> error (prevent confusion)."""
+        data = _load_einvoice_data()
+        data["referenced_invoice"] = "RE-2026-0001"
+        errors = validate_zugferd_invoice_data(data)
+        paths = [e.path for e in errors]
+        assert "referenced_invoice" in paths
+
+    def test_invalid_type_code_rejected(self):
+        """Unsupported type code -> error with explicit message."""
+        data = _load_einvoice_data()
+        data["invoice_type"] = "999"
+        errors = validate_zugferd_invoice_data(data)
+        paths = [e.path for e in errors]
+        assert "invoice_type" in paths
+        assert "380" in errors[0].message and "381" in errors[0].message
+
+    def test_default_type_is_380(self):
+        """Omitting invoice_type defaults to 380 (backward compat)."""
+        data = _load_einvoice_data()
+        del data["invoice_type"]  # simulate legacy data without the field
+        errors = validate_zugferd_invoice_data(data)
+        assert errors == []
+
+    def test_credit_note_xml_type_code(self):
+        """XML contains type code 381."""
+        xml = build_invoice_xml(_load_creditnote_data())
+        xml_str = xml.decode("utf-8")
+        assert ">381<" in xml_str
+
+    def test_credit_note_xml_has_referenced_document(self):
+        """XML contains the referenced invoice number (BT-25)."""
+        xml = build_invoice_xml(_load_creditnote_data())
+        xml_str = xml.decode("utf-8")
+        assert "RE-2026-0042" in xml_str
+
+    def test_default_type_xml_is_380(self):
+        """Omitting invoice_type produces type code 380 in XML."""
+        data = _load_einvoice_data()
+        xml = build_invoice_xml(data)
+        xml_str = xml.decode("utf-8")
+        assert ">380<" in xml_str
+
+    def test_credit_note_xsd_passes(self):
+        xml = build_invoice_xml(_load_creditnote_data())
+        from facturx import xml_check_xsd
+        xml_check_xsd(xml)
+
+    def test_credit_note_schematron_passes(self):
+        xml = build_invoice_xml(_load_creditnote_data())
+        from facturx.facturx import xml_check_schematron
+        xml_check_schematron(xml)
+
+    def test_credit_note_render_produces_pdf(self):
+        """Full render with zugferd=en16931 produces valid PDF."""
+        data = _load_creditnote_data()
+        pdf = render(
+            "examples/einvoice.j2.typ",
+            data,
+            zugferd="en16931",
+        )
+        assert pdf[:5] == b"%PDF-"
+        from facturx import get_xml_from_pdf
+        filename, _ = get_xml_from_pdf(pdf)
+        assert filename == "factur-x.xml"
+
+    def test_credit_note_preflight_passes(self):
+        """Credit note passes readiness preflight."""
+        from formforge.readiness import preflight
+        data = _load_creditnote_data()
+        verdict = preflight(
+            "examples/einvoice.j2.typ",
+            data,
+            zugferd="en16931",
+        )
+        assert verdict.ready is True
+
+    def test_credit_note_preflight_fails_without_ref(self):
+        """Credit note without referenced_invoice fails preflight."""
+        from formforge.readiness import preflight
+        data = _load_creditnote_data()
+        del data["referenced_invoice"]
+        verdict = preflight(
+            "examples/einvoice.j2.typ",
+            data,
+            zugferd="en16931",
+        )
+        assert verdict.ready is False
+
+    def test_default_render_still_says_rechnung(self):
+        """Standard invoice (no invoice_type) renders RECHNUNG, not GUTSCHRIFT."""
+        data = _load_einvoice_data()
+        pdf = render(
+            "examples/einvoice.j2.typ",
+            data,
+            zugferd="en16931",
+        )
+        assert pdf[:5] == b"%PDF-"
+        # Verify type code 380 in embedded XML
+        from facturx import get_xml_from_pdf
+        _, xml_bytes = get_xml_from_pdf(pdf)
+        assert b">380<" in xml_bytes

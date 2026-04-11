@@ -1,0 +1,55 @@
+{
+  "invoice_type": "381",
+  "invoice_number": "GS-2026-0001",
+  "referenced_invoice": "RE-2026-0042",
+  "invoice_date": "2026-04-15",
+  "due_date": "2026-05-15",
+  "currency": "EUR",
+
+  "seller": {
+    "name": "Muster GmbH",
+    "address": "Musterstra\u00dfe 1",
+    "city": "Berlin",
+    "postal_code": "10115",
+    "country": "DE",
+    "vat_id": "DE123456789",
+    "email": "rechnung@muster.de",
+    "phone": "+49 30 12345678"
+  },
+
+  "buyer": {
+    "name": "Kunde AG",
+    "address": "Kundenweg 42",
+    "city": "M\u00fcnchen",
+    "postal_code": "80331",
+    "country": "DE",
+    "vat_id": "DE987654321"
+  },
+
+  "items": [
+    {
+      "description": "Gutschrift: SEO-Optimierung (1 Monat)",
+      "quantity": 1,
+      "unit": "MON",
+      "unit_price": 750.00,
+      "tax_rate": 19,
+      "line_total": 750.00
+    }
+  ],
+
+  "subtotal": 750.00,
+  "tax_entries": [
+    { "rate": 19, "basis": 750.00, "amount": 142.50 }
+  ],
+  "tax_total": 142.50,
+  "total": 892.50,
+
+  "payment": {
+    "means": "credit_transfer",
+    "iban": "DE89370400440532013000",
+    "bic": "COBADEFFXXX",
+    "bank_name": "Commerzbank"
+  },
+
+  "notes": "Gutschrift zu Rechnung RE-2026-0042."
+}

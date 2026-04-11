@@ -8,11 +8,11 @@ Supported scope (v1):
     - Country: Germany (DE)
     - Currency: EUR only
     - Tax: standard VAT — single or mixed rates per invoice (e.g., 7% + 19%)
-    - Invoice type: domestic B2B standard VAT invoice (type code 380)
+    - Invoice types: standard invoice (380) and credit note (381)
 
 Explicitly unsupported:
-    - Credit notes, reverse charge, intra-community,
-      cross-border, non-EUR currencies, non-DE countries
+    - Reverse charge, intra-community, cross-border,
+      non-EUR currencies, non-DE countries
 
 Uses ``drafthorse`` for both XML generation and PDF attachment.
 No ``factur-x`` dependency needed — drafthorse handles the full pipeline.
@@ -45,6 +45,7 @@ _PAYMENT_MEANS_CODES = {
 
 _SUPPORTED_CURRENCIES = {"EUR"}
 _SUPPORTED_COUNTRIES = {"DE"}
+_SUPPORTED_TYPE_CODES = {"380", "381"}  # standard invoice, credit note
 
 
 # ---------------------------------------------------------------------------
@@ -72,6 +73,34 @@ def validate_zugferd_invoice_data(
                 expected="string",
                 actual="missing",
             ))
+
+    # --- Invoice type ---
+    invoice_type = str(data.get("invoice_type", "380"))
+    if invoice_type not in _SUPPORTED_TYPE_CODES:
+        errors.append(ContractError(
+            path="invoice_type",
+            message=f"invoice_type '{invoice_type}' is not supported; supported types are 380 (invoice) and 381 (credit note)",
+            expected=f"one of {sorted(_SUPPORTED_TYPE_CODES)}",
+            actual=invoice_type,
+        ))
+
+    # Credit note requires referenced_invoice; standard invoice rejects it
+    ref = data.get("referenced_invoice")
+    if invoice_type == "381":
+        if not isinstance(ref, str) or not ref.strip():
+            errors.append(ContractError(
+                path="referenced_invoice",
+                message="referenced_invoice is required for credit notes (type 381)",
+                expected="non-empty string (original invoice number)",
+                actual="missing" if ref is None else repr(ref),
+            ))
+    elif ref is not None:
+        errors.append(ContractError(
+            path="referenced_invoice",
+            message="referenced_invoice is not valid for invoice type 380; only credit notes (381) reference a prior invoice",
+            expected="absent",
+            actual=repr(ref),
+        ))
 
     # --- Unsupported shapes: fail loudly ---
     currency = data.get("currency", "")
@@ -311,7 +340,7 @@ def build_invoice_xml(data: dict, *, profile: str = "en16931") -> bytes:
 
     # --- Header ---
     doc.header.id = data["invoice_number"]
-    doc.header.type_code = "380"  # Invoice
+    doc.header.type_code = str(data.get("invoice_type", "380"))
     doc.header.issue_date_time = _parse_date(data["invoice_date"])
 
     # --- Seller ---
@@ -416,6 +445,10 @@ def build_invoice_xml(data: dict, *, profile: str = "en16931") -> bytes:
         tax.category_code = "S"  # Standard rate
         tax.rate_applicable_percent = Decimal(str(entry["rate"]))
         settlement.trade_tax.add(tax)
+
+    # Referenced invoice (BT-25) for credit notes
+    if str(data.get("invoice_type", "380")) == "381" and data.get("referenced_invoice"):
+        settlement.invoice_referenced_document.issuer_assigned_id = data["referenced_invoice"]
 
     # Monetary summation
     ms = settlement.monetary_summation

@@ -3,15 +3,19 @@
 
 #set page(paper: "a4", margin: (top: 1.2in, bottom: 1in, left: 1in, right: 1in))
 #set text(size: 10pt, font: "Inter", lang: "de")
-#set document(title: "Rechnung " + "{{ invoice_number }}")
+#set document(title: "{% if invoice_type|default('380') == '381' %}Gutschrift{% else %}Rechnung{% endif %} " + "{{ invoice_number }}")
 
 // --- Header ---
 #grid(
   columns: (1fr, 1fr),
   [
-    #text(size: 22pt, weight: "bold")[RECHNUNG]
+    #text(size: 22pt, weight: "bold")[{% if invoice_type|default("380") == "381" %}GUTSCHRIFT{% else %}RECHNUNG{% endif %}]
     #v(4pt)
     #text(size: 9pt, fill: luma(100))[Nr. {{ invoice_number }}]
+{% if referenced_invoice %}
+    #v(2pt)
+    #text(size: 9pt, fill: luma(100))[Bezug: {{ referenced_invoice }}]
+{% endif %}
   ],
   align(right)[
     #text(size: 9pt, fill: luma(100))[
