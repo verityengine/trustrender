@@ -45,7 +45,21 @@ Editable install is intended for development workflows. Use the standard install
   - Cargo: `cargo install --git https://github.com/typst/typst --locked typst-cli`
   - Or download from [typst.app](https://typst.app/)
 
-The `typst` Python package (used by the `typst-py` backend) is a pip dependency and installed automatically. The Typst CLI binary is a separate system-level install.
+The `typst` Python package (used by the `typst-py` backend) is a pip dependency and installed automatically. The Typst CLI binary is a separate system-level install — it is always required by server mode and recommended for all usage.
+
+### Verify your install
+
+```
+formforge doctor
+```
+
+This checks Python version, package imports, Typst backends, fonts, and environment variables. Run it first if anything seems broken.
+
+With a render smoke test:
+
+```
+formforge doctor --smoke
+```
 
 ## Quick start
 
@@ -313,7 +327,44 @@ Server error responses include `error`, `message`, `stage`, and `request_id`. Wi
 - Library and CLI support both backends; server forces typst-cli
 - Docker: builds, runs, produces matching output
 - 5 starter templates: invoice, statement, receipt, letter, report
-- 225 tests passing (unit, integration, ugly-data stress tests)
+- 245 tests passing (unit, integration, ugly-data stress, environment diagnostics)
+
+## Development
+
+### Quick setup
+
+```
+make dev
+source .venv/bin/activate
+```
+
+Or manually:
+
+```
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+```
+
+### Verify environment
+
+```
+formforge doctor           # check everything
+formforge doctor --smoke   # include render + server health smoke test
+```
+
+### Common tasks
+
+```
+make test     # run pytest
+make lint     # run ruff check + format check
+make smoke    # quick render + server health verification
+make clean    # remove build artifacts
+make docker   # build Docker image
+make help     # list all targets
+```
+
+`make setup` creates a standard (non-editable) install. `make dev` creates an editable install with dev dependencies.
 
 ## Caveats
 
