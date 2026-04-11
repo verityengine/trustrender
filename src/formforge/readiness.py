@@ -574,7 +574,12 @@ def preflight(
         _check_compliance(data, zugferd, all_issues, eligible)
         stages.append("compliance")
 
-    # Stage 5: Semantic (opt-in)
+    # Stage 5: Text safety (safe-by-default)
+    if text_scan:
+        _check_text_safety(data, all_issues)
+        stages.append("text_safety")
+
+    # Stage 6: Semantic (opt-in)
     if semantic_hints is not None:
         _check_semantic(data, semantic_hints, all_issues)
         stages.append("semantic")
