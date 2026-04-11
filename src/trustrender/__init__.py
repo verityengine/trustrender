@@ -31,7 +31,7 @@ __all__ = [
 
 
 # Resolved once at import time — deterministic across local, test, and container.
-# Check multiple locations: dev layout (src/trustrender -> fonts/) and env var.
+# Check multiple locations: env var, installed package, dev layout.
 def _find_bundled_fonts() -> Path | None:
     """Find bundled font directory. Checked once at import time."""
     # 1. Environment variable (explicit override, used in containers)
@@ -41,7 +41,12 @@ def _find_bundled_fonts() -> Path | None:
         if p.is_dir():
             return p.resolve()
 
-    # 2. Development layout: src/trustrender/__init__.py -> ../../fonts/
+    # 2. Installed package: fonts/ inside the trustrender package directory
+    pkg_path = Path(__file__).resolve().parent / "fonts"
+    if pkg_path.is_dir():
+        return pkg_path
+
+    # 3. Development layout: src/trustrender/__init__.py -> ../../fonts/
     dev_path = Path(__file__).resolve().parent.parent.parent / "fonts"
     if dev_path.is_dir():
         return dev_path
