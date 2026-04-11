@@ -424,12 +424,61 @@ def _check_compliance(
 # Public API
 # ---------------------------------------------------------------------------
 
+def _check_text_safety(
+    data: dict,
+    issues: list[ReadinessIssue],
+) -> None:
+    """Safe-by-default text scanning — detect control and zero-width chars in all strings.
+
+    Runs independently of semantic hints.  Walks the entire data dict and
+    scans every string value for problematic characters.
+    """
+    from .semantic import _collect_string_paths, _scan_text
+
+    for path in _collect_string_paths(data):
+        # Resolve the value from the data dict using the concrete path
+        current: object = data
+        try:
+            for part in _split_concrete_path(path):
+                if isinstance(part, int):
+                    current = current[part]  # type: ignore[index]
+                else:
+                    current = current[part]  # type: ignore[index]
+        except (KeyError, IndexError, TypeError):
+            continue
+        if not isinstance(current, str):
+            continue
+        for problem in _scan_text(current):
+            issues.append(ReadinessIssue(
+                stage="text_safety",
+                check="text_anomaly",
+                severity="warning",
+                path=path,
+                message=f"{problem} (auto-detected)",
+            ))
+
+
+def _split_concrete_path(path: str) -> list[str | int]:
+    """Split a concrete path like 'items[0].description' into segments."""
+    import re
+
+    segments: list[str | int] = []
+    for part in re.split(r"\.|(?=\[)", path):
+        if not part:
+            continue
+        if part.startswith("[") and part.endswith("]"):
+            segments.append(int(part[1:-1]))
+        else:
+            segments.append(part)
+    return segments
+
+
 def _check_semantic(
     data: dict,
     semantic_hints: object | None,
     issues: list[ReadinessIssue],
 ) -> None:
-    """Stage 5: Semantic validation — does the data make business sense?"""
+    """Stage 6: Semantic validation — does the data make business sense?"""
     if semantic_hints is None:
         return
 
@@ -454,12 +503,13 @@ def preflight(
     zugferd: str | None = None,
     semantic_hints: object | None = None,
     strict: bool = False,
+    text_scan: bool = True,
 ) -> ReadinessVerdict:
     """Run all readiness checks without rendering.
 
     Combines payload validation, template checks, font checks,
-    environment checks, compliance eligibility, and optional semantic
-    validation into a single structured verdict.
+    environment checks, compliance eligibility, text safety scanning,
+    and optional semantic validation into a single structured verdict.
 
     Args:
         template: Path to a ``.j2.typ`` or ``.typ`` template file.
@@ -474,6 +524,9 @@ def preflight(
             fonts are promoted from warnings to errors. This blocks
             readiness when the contract is provably incomplete or when
             font availability cannot be confirmed.
+        text_scan: If True (default), scan all string values in the data
+            dict for control characters and zero-width characters. Set to
+            False to skip text safety scanning.
 
     Returns:
         ReadinessVerdict with ``ready=True`` if no errors.
