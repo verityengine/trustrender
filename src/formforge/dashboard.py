@@ -85,13 +85,13 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#101012; --surface:#161618; --panel:#1c1c1f; --raised:#232326;
-  --border:#2a2a2e; --border-light:#38383d;
-  --ink:#eae8e3; --ink2:#b5b0a6; --muted:#7d796f; --faint:#555249;
-  --accent:#c07a42; --accent-soft:rgba(192,122,66,.10); --accent-border:rgba(192,122,66,.25);
-  --ok:#6b9e80; --ok-soft:rgba(107,158,128,.08); --ok-border:rgba(107,158,128,.20);
-  --err:#c4604e; --err-soft:rgba(196,96,78,.08); --err-border:rgba(196,96,78,.20);
-  --info:#7a9eb0; --info-soft:rgba(122,158,176,.07);
+  --bg:#12100e; --surface:#171411; --panel:#1d1915;
+  --border:#2b241d; --border-light:#3a3026;
+  --ink:#f3ede3; --ink2:#b7a995; --muted:#847766; --faint:#847766;
+  --accent:#b86a3a; --accent-hover:#cb7a47; --accent-soft:rgba(184,106,58,.10); --accent-border:rgba(184,106,58,.25);
+  --ok:#5f8f73; --ok-soft:rgba(95,143,115,.12); --ok-border:rgba(95,143,115,.22);
+  --err:#b45849; --err-soft:rgba(180,88,73,.12); --err-border:rgba(180,88,73,.22);
+  --info:#5f7690; --info-soft:rgba(95,118,144,.12);
   --display:'DM Serif Display',Georgia,serif;
   --sans:'Inter',system-ui,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,monospace;
@@ -136,9 +136,9 @@ header button:hover{border-color:var(--accent-border);color:var(--ink2);backgrou
 .events::-webkit-scrollbar{width:6px}
 .events::-webkit-scrollbar-track{background:transparent}
 .events::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-.event{padding:14px 20px 14px 18px;border-bottom:1px solid var(--border);border-left:3px solid transparent;cursor:pointer;transition:all .12s}
+.event{padding:14px 20px 14px 18px;border-bottom:1px solid var(--border);border-left:2px solid transparent;cursor:pointer;transition:all .12s}
 .event:hover{background:var(--surface)}
-.event.selected{background:var(--panel);border-left-color:var(--accent)}
+.event.selected{background:var(--panel);border-left:2px solid var(--accent)}
 .event .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
 .event .template{font-size:13px;font-weight:500;color:var(--ink)}
 .event .time{font-size:10px;font-family:var(--mono);color:var(--faint);letter-spacing:.3px}
