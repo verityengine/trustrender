@@ -404,104 +404,182 @@ function ProvenanceFlourish() {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
-    const W = 560, H = 340
+    const W = 520, H = 300
     canvas.width = W; canvas.height = H
     let raf, t = 0
 
-    const stages = [
-      { x: 70, y: 170, label: 'input', hash: 'a7f3e2' },
-      { x: 210, y: 170, label: 'template', hash: 'c2e1b8' },
-      { x: 350, y: 170, label: 'render', hash: 'd4f091' },
-      { x: 490, y: 170, label: 'output', hash: '9b4d7a' },
+    const rows = [
+      { label: 'data', file: 'invoice_data.json', hash: 'sha256:a7f3e2c1', icon: '{ }' },
+      { label: 'template', file: 'invoice.j2.typ', hash: 'sha256:c2e1b809', icon: '< >' },
+      { label: 'assets', file: 'Inter-Bold.ttf, logo.png', hash: 'sha256:d4f09188', icon: 'A a' },
+      { label: 'output', file: 'invoice.pdf  (3 pages)', hash: 'sha256:9b4d7a52', icon: 'PDF' },
     ]
 
+    const rowH = 52, startY = 32, leftX = 28, hashX = 370
+
     function draw() {
-      t += 0.006
+      t += 0.005
       ctx.clearRect(0, 0, W, H)
 
-      const cycleT = (t * 0.8) % 2.5
-      const activeCount = Math.min(Math.floor(cycleT / 0.5), 4)
+      const cycleT = (t * 0.6) % 3.5
+      const activeCount = Math.min(Math.floor(cycleT / 0.6), 4)
+      const verifying = activeCount > 0 && activeCount <= 4 ? Math.floor(cycleT / 0.6) - 1 : -1
 
-      // Draw connections
-      for (let i = 0; i < stages.length - 1; i++) {
-        const s = stages[i], next = stages[i + 1]
-        const active = i < activeCount
+      // Timeline spine
+      const spineX = leftX + 14
+      ctx.beginPath()
+      ctx.moveTo(spineX, startY + 16)
+      ctx.lineTo(spineX, startY + (rows.length - 1) * rowH + 16)
+      ctx.strokeStyle = 'rgba(28,27,25,0.1)'
+      ctx.lineWidth = 1.5
+      ctx.stroke()
 
-        // Base line
+      // Active spine
+      if (activeCount > 0) {
+        const endY = startY + Math.min(activeCount - 1, 3) * rowH + 16
         ctx.beginPath()
-        ctx.moveTo(s.x + 40, s.y)
-        ctx.lineTo(next.x - 40, next.y)
-        ctx.strokeStyle = active ? `rgba(196,98,42,0.7)` : 'rgba(28,27,25,0.15)'
-        ctx.lineWidth = active ? 2.5 : 1.5
-        ctx.setLineDash(active ? [] : [5, 5])
+        ctx.moveTo(spineX, startY + 16)
+        ctx.lineTo(spineX, endY)
+        ctx.strokeStyle = 'rgba(196,98,42,0.5)'
+        ctx.lineWidth = 2
         ctx.stroke()
-        ctx.setLineDash([])
-
-        // Flowing particles along active connections
-        if (active) {
-          for (let p = 0; p < 3; p++) {
-            const pt = ((t * 3 + p * 0.33 + i * 0.2) % 1)
-            const px = (s.x + 40) + (next.x - 40 - s.x - 40) * pt
-            ctx.beginPath()
-            ctx.arc(px, s.y, 3.5, 0, Math.PI * 2)
-            ctx.fillStyle = `rgba(196,98,42,${0.9 * (1 - Math.abs(pt - 0.5) * 2)})`
-            ctx.fill()
-            // Glow
-            ctx.beginPath()
-            ctx.arc(px, s.y, 10, 0, Math.PI * 2)
-            ctx.fillStyle = `rgba(196,98,42,${0.15 * (1 - Math.abs(pt - 0.5) * 2)})`
-            ctx.fill()
-          }
-        }
       }
 
-      // Draw stage nodes
-      stages.forEach((s, i) => {
+      rows.forEach((row, i) => {
+        const y = startY + i * rowH
         const active = i < activeCount
-        const current = i === activeCount - 1 && activeCount > 0
-        const size = 36
-        const pulse = current ? Math.sin(t * 8) * 0.1 + 0.9 : 1
+        const current = i === verifying
+        const pulse = current ? Math.sin(t * 8) * 0.12 + 0.88 : 1
 
-        // Glow for active
-        if (active) {
+        // Timeline dot
+        ctx.beginPath()
+        ctx.arc(spineX, y + 16, active ? 5 : 3.5, 0, Math.PI * 2)
+        ctx.fillStyle = active ? `rgba(196,98,42,${0.85 * pulse})` : 'rgba(28,27,25,0.15)'
+        ctx.fill()
+        if (current) {
           ctx.beginPath()
-          ctx.roundRect(s.x - size - 8, s.y - size/1.2 - 8, (size + 8) * 2, size * 1.9, 10)
-          ctx.fillStyle = `rgba(196,98,42,${0.1 * pulse})`
+          ctx.arc(spineX, y + 16, 10, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(196,98,42,${0.12 * pulse})`
           ctx.fill()
         }
 
-        // Box
+        // Icon circle
+        const iconX = leftX + 44
         ctx.beginPath()
-        ctx.roundRect(s.x - size, s.y - size/1.2, size * 2, size * 1.6, 6)
-        ctx.fillStyle = active ? `rgba(196,98,42,0.12)` : 'rgba(28,27,25,0.04)'
-        ctx.strokeStyle = active ? `rgba(196,98,42,${0.6 * pulse})` : 'rgba(28,27,25,0.18)'
-        ctx.lineWidth = active ? 2 : 1.2
+        ctx.arc(iconX, y + 16, 13, 0, Math.PI * 2)
+        ctx.fillStyle = active ? 'rgba(196,98,42,0.1)' : 'rgba(28,27,25,0.04)'
+        ctx.strokeStyle = active ? `rgba(196,98,42,${0.4 * pulse})` : 'rgba(28,27,25,0.12)'
+        ctx.lineWidth = 1.2
         ctx.fill(); ctx.stroke()
 
-        // Label
-        ctx.font = `${active ? '700' : '500'} 12px "JetBrains Mono", monospace`
-        ctx.fillStyle = `rgba(28,27,25,${active ? 0.9 : 0.4})`
+        ctx.font = `600 8px "JetBrains Mono", monospace`
         ctx.textAlign = 'center'
-        ctx.fillText(s.label, s.x, s.y - 4)
+        ctx.fillStyle = active ? `rgba(196,98,42,${0.8 * pulse})` : 'rgba(28,27,25,0.3)'
+        ctx.fillText(row.icon, iconX, y + 19)
 
-        // Hash
-        ctx.font = '500 10px "JetBrains Mono", monospace'
-        ctx.fillStyle = active ? `rgba(196,98,42,${0.8 * pulse})` : 'rgba(28,27,25,0.2)'
-        ctx.fillText(s.hash, s.x, s.y + 14)
+        // Stage label
+        ctx.font = `${active ? '600' : '400'} 12px "JetBrains Mono", monospace`
+        ctx.textAlign = 'left'
+        ctx.fillStyle = `rgba(28,27,25,${active ? 0.85 : 0.3})`
+        ctx.fillText(row.label, leftX + 66, y + 13)
+
+        // File name
+        ctx.font = '400 9px "JetBrains Mono", monospace'
+        ctx.fillStyle = `rgba(28,27,25,${active ? 0.45 : 0.15})`
+        ctx.fillText(row.file, leftX + 66, y + 28)
+
+        // Hash value — appears with typing animation for current
+        ctx.textAlign = 'right'
+        if (active) {
+          let displayHash = row.hash
+          if (current) {
+            const charCount = Math.floor(((cycleT / 0.6) % 1) * (row.hash.length + 4))
+            displayHash = row.hash.slice(0, Math.min(charCount, row.hash.length))
+            // Blinking cursor
+            if (Math.sin(t * 12) > 0) displayHash += '_'
+          }
+          ctx.font = '500 10px "JetBrains Mono", monospace'
+          ctx.fillStyle = current ? `rgba(196,98,42,${0.9 * pulse})` : 'rgba(196,98,42,0.55)'
+          ctx.fillText(displayHash, W - 28, y + 13)
+
+          // Checkmark for completed (not current)
+          if (!current) {
+            ctx.font = '500 12px system-ui'
+            ctx.fillStyle = 'rgba(107,142,95,0.8)'
+            ctx.fillText('\u2713', W - 18, y + 29)
+            ctx.font = '400 8px "JetBrains Mono", monospace'
+            ctx.fillStyle = 'rgba(28,27,25,0.3)'
+            ctx.fillText('verified', W - 32, y + 29)
+          }
+        } else {
+          ctx.font = '500 10px "JetBrains Mono", monospace'
+          ctx.fillStyle = 'rgba(28,27,25,0.1)'
+          ctx.fillText('- - - - - -', W - 28, y + 13)
+        }
+
+        // Horizontal connector from icon to hash area
+        if (active) {
+          ctx.beginPath()
+          ctx.moveTo(leftX + 66 + ctx.measureText(row.label).width + 8, y + 9)
+          ctx.textAlign = 'left'
+          ctx.font = '600 12px "JetBrains Mono", monospace'
+          const labelW = ctx.measureText(row.label).width
+          const lineStartX = leftX + 66 + labelW + 10
+          const lineEndX = hashX - 10
+          if (lineEndX > lineStartX) {
+            ctx.beginPath()
+            ctx.moveTo(lineStartX, y + 10)
+            ctx.lineTo(lineEndX, y + 10)
+            ctx.strokeStyle = `rgba(196,98,42,${0.15 * pulse})`
+            ctx.lineWidth = 1
+            ctx.setLineDash([3, 4])
+            ctx.stroke()
+            ctx.setLineDash([])
+          }
+        }
       })
 
-      // Chain label
-      ctx.font = '400 9px "JetBrains Mono", monospace'
-      ctx.fillStyle = 'rgba(28,27,25,0.15)'
-      ctx.textAlign = 'center'
-      ctx.fillText('input → template → render → output', W/2, H - 20)
+      // Final combined fingerprint at bottom
+      const bottomY = startY + rows.length * rowH + 8
+      if (activeCount >= 4) {
+        const allDone = cycleT > 2.8
+        const fadeIn = Math.min((cycleT - 2.4) / 0.4, 1)
+        if (fadeIn > 0) {
+          ctx.globalAlpha = fadeIn
+          // Separator line
+          ctx.beginPath()
+          ctx.moveTo(leftX, bottomY - 4)
+          ctx.lineTo(W - 28, bottomY - 4)
+          ctx.strokeStyle = 'rgba(196,98,42,0.2)'
+          ctx.lineWidth = 1
+          ctx.stroke()
+
+          ctx.font = '600 11px "JetBrains Mono", monospace'
+          ctx.textAlign = 'left'
+          ctx.fillStyle = `rgba(196,98,42,${allDone ? 0.9 : 0.6})`
+          ctx.fillText('render fingerprint', leftX + 14, bottomY + 16)
+
+          ctx.font = '500 10px "JetBrains Mono", monospace'
+          ctx.textAlign = 'right'
+          ctx.fillStyle = 'rgba(196,98,42,0.7)'
+          ctx.fillText('sha256:e83b...f41a', W - 28, bottomY + 16)
+
+          if (allDone) {
+            ctx.font = '600 9px system-ui'
+            ctx.fillStyle = 'rgba(107,142,95,0.85)'
+            ctx.textAlign = 'left'
+            ctx.fillText('\u2713  all inputs tracked', leftX + 14, bottomY + 34)
+          }
+          ctx.globalAlpha = 1
+        }
+      }
 
       raf = requestAnimationFrame(draw)
     }
     raf = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(raf)
   }, [])
-  return <canvas ref={canvasRef} className="w-full" style={{ aspectRatio: '560/340' }} />
+  return <canvas ref={canvasRef} className="w-full" style={{ aspectRatio: '520/300' }} />
 }
 
 /* ── Utilities ────────────────────────────────────────────────────── */
@@ -946,7 +1024,7 @@ function TrustLayers() {
     {
       title: 'Readiness',
       desc: 'Structural contract inferred from your template. Missing fields, wrong types, null values — intercepted at the data layer before render.',
-      stats: ['729 automated tests', '500 soak renders, 0 errors', '56ms avg latency'],
+      stats: ['751 automated tests', '500 soak renders, 0 errors', '56ms avg latency'],
       flourish: <ReadinessFlourish />,
     },
     {
@@ -1305,8 +1383,9 @@ function ReadyDemo() {
                 )}
               </div>
               <div className="px-4 py-3 border-t border-rule-light">
-                <a href="#app" className="text-[12px] text-rust hover:text-wine font-medium">
-                  Full experience: Ready &middot; Generate &middot; History &rarr;
+                <a href="#app" className="flex items-center justify-between gap-3 group px-4 py-2.5 -mx-1 rounded-lg bg-rust/8 hover:bg-rust/15 transition-colors">
+                  <span className="text-[12px] text-rust font-semibold">Try the full playground</span>
+                  <span className="text-[11px] text-rust/60 font-mono group-hover:text-rust transition-colors">Ready &middot; Generate &middot; History &rarr;</span>
                 </a>
               </div>
             </div>
@@ -1324,6 +1403,12 @@ function AppWorkspace() {
   const [payloadMode, setPayloadMode] = useState('valid')
   const [json, setJson] = useState(() => JSON.stringify(FIXTURES['invoice.j2.typ'].valid, null, 2))
   const [parseError, setParseError] = useState(null)
+
+  // Template editor state
+  const [editorTab, setEditorTab] = useState('data') // 'data' | 'template'
+  const [templateSource, setTemplateSource] = useState('')
+  const [originalSource, setOriginalSource] = useState('')
+  const [sourceLoading, setSourceLoading] = useState(false)
 
   // Ready state
   const [verdict, setVerdict] = useState(null)
@@ -1369,7 +1454,25 @@ function AppWorkspace() {
     setTemplate(tpl); setPayloadMode(mode)
     setJson(JSON.stringify(FIXTURES[tpl][mode === 'valid' ? 'valid' : 'invalid'], null, 2))
     setVerdict(null); setRenderStatus('idle'); setPdfData(null); setRenderError(null)
+    // Template editor: fetch fresh source, clear modified state
+    setTemplateSource(''); setOriginalSource('')
+    fetchTemplateSource(tpl)
   }
+
+  const fetchTemplateSource = async (tpl) => {
+    setSourceLoading(true)
+    try {
+      const res = await fetch(`/api/template-source?name=${encodeURIComponent(tpl)}`)
+      if (res.ok) {
+        const { source } = await res.json()
+        setTemplateSource(source); setOriginalSource(source)
+      }
+    } catch { /* server unreachable — editor stays empty */ }
+    setSourceLoading(false)
+  }
+
+  // Fetch template source on initial mount
+  useEffect(() => { fetchTemplateSource(template) }, [])
 
   // JSON parse check
   useEffect(() => {
@@ -1377,14 +1480,22 @@ function AppWorkspace() {
     catch (e) { setParseError(e.message.split(' at ')[0]) }
   }, [json])
 
-  // Auto-preflight on valid JSON change (debounced 500ms)
+  // Auto-preflight on valid JSON / template source change
   // Request sequencing: only apply the latest response, ignore stale ones
   const jsonRef = useRef(json)
   const templateRef = useRef(template)
+  const templateSourceRef = useRef(templateSource)
+  const originalSourceRef = useRef(originalSource)
   const preflightSeq = useRef(0)
   jsonRef.current = json
   templateRef.current = template
+  templateSourceRef.current = templateSource
+  originalSourceRef.current = originalSource
 
+  const templateSourceTimer = useRef(null)
+  const isTemplateModified = templateSource !== originalSource && originalSource !== ''
+
+  // Debounce: 500ms for data changes, 900ms for template source edits (burstier typing)
   useEffect(() => {
     if (parseError) return
     if (preflightTimer.current) clearTimeout(preflightTimer.current)
@@ -1392,16 +1503,28 @@ function AppWorkspace() {
     return () => clearTimeout(preflightTimer.current)
   }, [json, template])
 
+  useEffect(() => {
+    if (parseError || !originalSource) return
+    if (templateSourceTimer.current) clearTimeout(templateSourceTimer.current)
+    templateSourceTimer.current = setTimeout(() => { runPreflight() }, 900)
+    return () => clearTimeout(templateSourceTimer.current)
+  }, [templateSource])
+
   const runPreflight = async () => {
     let data
     try { data = JSON.parse(jsonRef.current) } catch { return }
     const tpl = templateRef.current
+    const src = templateSourceRef.current
+    const origSrc = originalSourceRef.current
+    const modified = src !== origSrc && origSrc !== ''
     const seq = ++preflightSeq.current
     setChecking(true)
+    const payload = { template: tpl, data }
+    if (modified) payload.template_source = src
     try {
       const res = await fetch('/api/preflight', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ template: tpl, data }),
+        body: JSON.stringify(payload),
       })
       if (seq !== preflightSeq.current) return // stale response, discard
       setVerdict(await res.json())
@@ -1419,9 +1542,11 @@ function AppWorkspace() {
     setPdfData(null)
     try {
       const data = JSON.parse(json)
+      const renderPayload = { template, data, validate: true, debug: true }
+      if (isTemplateModified) renderPayload.template_source = templateSource
       const res = await fetch('/api/render', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ template, data, validate: true, debug: true }),
+        body: JSON.stringify(renderPayload),
       })
       if (res.headers.get('X-Trace-ID')) setTraceId(res.headers.get('X-Trace-ID'))
       if (res.ok) {
@@ -1862,14 +1987,14 @@ function ComplianceWedge() {
                 Validated e&#8209;invoicing for German B2B
               </h2>
               <p className="text-[14px] text-mid leading-relaxed">
-                Invoice data validated before render. Wrong data is rejected before a document is produced. Output is a PDF/A-3b with embedded CII XML for automated processing. No Java, no iText, no browser. Scoped to German domestic B2B invoicing: DE, EUR, mixed VAT rates, type 380.
+                Invoice data validated before render. Structurally invalid data is rejected before a document is produced. Output is PDF/A-3b with embedded CII XML for supported invoice paths. No Java, no iText, no browser. Scoped to German domestic B2B invoicing: DE, EUR, mixed VAT rates, standard invoices and credit notes.
               </p>
             </div>
             <div className="md:w-3/5 grid grid-cols-2 gap-4">
               {[
                 { l: 'EN 16931 profile', d: 'Schema-tested CII XML' },
                 { l: 'ZUGFeRD / Factur-X', d: 'CII XML embedded in PDF/A-3b' },
-                { l: 'Scope', d: 'DE domestic, EUR, mixed VAT rates' },
+                { l: 'Scope', d: 'DE domestic, EUR, mixed VAT, credit notes' },
                 { l: 'Pure Python pipeline', d: 'No Java, no iText, no Chromium' },
               ].map(c => (
                 <div key={c.l} className="bg-panel rounded-lg border border-rule-light p-5" style={{ boxShadow: '0 1px 4px rgba(20,18,16,0.03)' }}>

@@ -101,7 +101,7 @@ Every public or semi-public claim, checked against code.
 
 | Claim | Source | Verdict | Evidence | Action |
 |-------|--------|---------|----------|--------|
-| Contract catches data errors before rendering | Outreach | TRUE | 68 pressure tests: None in required fields, type mismatches, empty dicts all blocked by contract with exact paths | **Strengthened** |
+| Contract catches data errors before rendering | Outreach | TRUE | 28 pressure tests: None in required fields, type mismatches, empty dicts all blocked by contract with exact paths | **Strengthened** |
 | Ugly data renders without crash | Implicit | TRUE | Control chars, RTL, null bytes, zero-width chars, bidi text, deep nesting — all render valid PDFs | None |
 | Semantic validation catches arithmetic mismatches | Website | TRUE | Arithmetic drift > $0.01 correctly warned in pressure tests | None |
 | Non-finite values rejected | New claim (2026-04-12) | TRUE | Infinity, NaN, -inf rejected by `_try_parse_number` via `math.isfinite()` | **Added** |
