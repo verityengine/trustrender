@@ -1029,8 +1029,8 @@ function TrustLayers() {
     },
     {
       title: 'Compliance',
-      desc: 'Pre-render validated invoice path for German domestic invoicing. EN 16931, ZUGFeRD / Factur-X. No Java, no iText, no browser stack.',
-      stats: ['EN 16931 profile', 'Factur-X PDF/A-3b', 'DE / EUR / mixed rates'],
+      desc: 'Machine-readable invoices accepted by German AP systems. Validated before render, embedded as ZUGFeRD / Factur-X. Pure Python \u2014 no Java stack.',
+      stats: ['Schema-validated XML', 'ZUGFeRD / Factur-X', 'German B2B ready'],
       flourish: <ComplianceFlourish />,
       caption: 'Simplified invoice structure \u2014 not a complete EN 16931 field map',
     },
@@ -2104,10 +2104,10 @@ function ComplianceWedge() {
             </div>
             <div className="md:w-3/5 grid grid-cols-2 gap-4">
               {[
-                { l: 'EN 16931 profile', d: 'Schema-tested CII XML' },
-                { l: 'ZUGFeRD / Factur-X', d: 'CII XML embedded in PDF/A-3b' },
-                { l: 'Scope', d: 'DE domestic, EUR, mixed VAT, credit notes' },
-                { l: 'Pure Python pipeline', d: 'No Java, no iText, no Chromium' },
+                { l: 'Machine-readable invoices', d: 'EN 16931 schema-validated XML in every PDF' },
+                { l: 'Accepted by AP systems', d: 'ZUGFeRD / Factur-X \u2014 the German standard' },
+                { l: 'German B2B ready', d: 'EUR, mixed VAT rates, invoices and credit notes' },
+                { l: 'pip install and go', d: 'Pure Python \u2014 no Java, no iText, no Chromium' },
               ].map(c => (
                 <div key={c.l} className="bg-panel rounded-lg border border-rule-light p-5" style={{ boxShadow: '0 1px 4px rgba(20,18,16,0.03)' }}>
                   <div className="text-[14px] font-semibold text-ink">{c.l}</div>
