@@ -1621,8 +1621,8 @@ function AppWorkspace() {
 
   const STAGES = ['payload', 'template', 'environment', 'compliance', 'semantic']
   const STAGE_SKIP_INFO = {
-    compliance: { label: 'not requested', reason: 'No compliance profile selected' },
-    semantic: { label: 'not configured', reason: 'Semantic checks are not configured for this template' },
+    compliance: { label: 'optional', reason: 'Enable with a compliance profile' },
+    semantic: { label: 'optional', reason: 'Enable with semantic hints for this template' },
   }
 
   const stageStatus = (stageName) => {
@@ -1637,7 +1637,7 @@ function AppWorkspace() {
     if (status === 'pass') return <svg className="w-3.5 h-3.5 text-sage" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
     if (status === 'fail') return <svg className="w-3.5 h-3.5 text-wine" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
     if (status === 'warn') return <div className="w-3 h-3 rounded-full bg-rust/30 flex items-center justify-center"><div className="w-1.5 h-1.5 rounded-full bg-rust" /></div>
-    if (status === 'skipped') return <svg className="w-3.5 h-3.5 text-rule" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" d="M5 12h14" /></svg>
+    if (status === 'skipped') return <div className="w-3.5 h-3.5 rounded-full border-[1.5px] border-dashed border-muted" />
     return <div className="w-3 h-3 rounded-full border border-rule-light" />
   }
 
@@ -1783,25 +1783,25 @@ function AppWorkspace() {
                   </div>
                 )}
                 {verdict && !checking && (
-                  <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${verdict.ready ? 'bg-sage/[0.06] border-sage/20' : 'bg-wine/[0.04] border-wine/20'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${verdict.ready ? 'bg-sage/15' : 'bg-wine/10'}`}>
+                  <div className={`flex items-center gap-4 px-5 py-4 rounded-lg border ${verdict.ready ? 'bg-sage/[0.06] border-sage/20' : 'bg-wine/[0.04] border-wine/20'}`}>
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${verdict.ready ? 'bg-sage/15' : 'bg-wine/10'}`}>
                       {verdict.ready
-                        ? <svg className="w-4 h-4 text-sage" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                        : <svg className="w-4 h-4 text-wine" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                        ? <svg className="w-4.5 h-4.5 text-sage" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                        : <svg className="w-4.5 h-4.5 text-wine" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                       }
                     </div>
                     <div className="flex-1">
-                      <div className={`text-[14px] font-semibold ${verdict.ready ? 'text-sage' : 'text-wine'}`}>
+                      <div className={`font-semibold ${verdict.ready ? 'text-[17px] text-sage' : 'text-[14px] text-wine'}`}>
                         {verdict.ready ? 'Ready to render' : `${verdict.errors?.length || 0} issue${(verdict.errors?.length || 0) !== 1 ? 's' : ''} must be fixed before this request is ready`}
                       </div>
-                      <div className="text-[11px] text-muted">
+                      <div className="text-[11px] text-muted mt-0.5">
                         {verdict.stages_checked?.length || 0} stages checked
                         {verdict.warnings?.length > 0 && ` \u00b7 ${verdict.warnings.length} warning${verdict.warnings.length !== 1 ? 's' : ''}`}
                       </div>
                     </div>
                     {verdict.ready ? (
                       <button onClick={() => { setTab('generate'); setTimeout(renderPdf, 100) }}
-                        className="text-[11px] px-4 py-1.5 rounded-full font-medium bg-ink text-panel hover:bg-ink-2 transition-colors cursor-pointer flex-shrink-0">
+                        className="text-[13px] px-5 py-2 rounded-full font-semibold bg-ink text-panel hover:bg-ink-2 transition-all cursor-pointer flex-shrink-0 shadow-sm hover:shadow-md">
                         Render PDF
                       </button>
                     ) : (
@@ -1829,11 +1829,11 @@ function AppWorkspace() {
                         const s = stageStatus(stage)
                         const issues = [...(verdict.errors?.filter(e => e.stage === stage) || []), ...(verdict.warnings?.filter(w => w.stage === stage) || [])]
                         return (
-                          <div key={stage} className="px-4 py-3">
+                          <div key={stage} className={`px-4 py-3 ${s === 'skipped' ? 'opacity-50' : ''}`}>
                             <div className="flex items-center gap-3">
                               <StageIcon status={s} />
                               <div className="flex-1 min-w-0">
-                                <span className="text-[12px] font-medium text-ink capitalize">{stage}</span>
+                                <span className={`text-[13px] font-medium capitalize ${s === 'skipped' ? 'text-muted' : 'text-ink'}`}>{stage}</span>
                                 {s === 'skipped' && STAGE_SKIP_INFO[stage] && (
                                   <div className="text-[10px] text-muted">{STAGE_SKIP_INFO[stage].reason}</div>
                                 )}
@@ -1896,11 +1896,32 @@ function AppWorkspace() {
                   </div>
                   <div className="flex-1 flex items-center justify-center p-4">
                     {renderStatus === 'idle' && (
-                      <div className="text-center py-16">
-                        <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-rule flex items-center justify-center">
-                          <svg className="w-5 h-5 text-rule" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+                      <div className="text-center py-12">
+                        {/* Document silhouette */}
+                        <div className="w-[120px] mx-auto mb-6 rounded border border-rule-light bg-white/60 p-4 opacity-40" style={{ aspectRatio: '8.5/11' }}>
+                          <div className="w-1/2 h-1.5 bg-rule/20 rounded-full mb-3" />
+                          <div className="w-3/4 h-1 bg-rule/15 rounded-full mb-2" />
+                          <div className="w-full h-1 bg-rule/15 rounded-full mb-2" />
+                          <div className="w-2/3 h-1 bg-rule/15 rounded-full mb-4" />
+                          <div className="w-full h-px bg-rule/10 mb-3" />
+                          <div className="space-y-1.5">
+                            <div className="flex gap-2"><div className="w-2/5 h-1 bg-rule/12 rounded-full" /><div className="flex-1 h-1 bg-rule/12 rounded-full" /></div>
+                            <div className="flex gap-2"><div className="w-2/5 h-1 bg-rule/12 rounded-full" /><div className="flex-1 h-1 bg-rule/12 rounded-full" /></div>
+                            <div className="flex gap-2"><div className="w-2/5 h-1 bg-rule/12 rounded-full" /><div className="flex-1 h-1 bg-rule/12 rounded-full" /></div>
+                          </div>
                         </div>
-                        <p className="text-[13px] text-muted">Run a readiness check, then render from the Ready tab</p>
+                        <p className="text-[14px] text-muted font-medium mb-1.5">Your rendered PDF will appear here</p>
+                        {verdict?.ready ? (
+                          <button onClick={() => { renderPdf() }}
+                            className="text-[12px] text-rust hover:text-wine font-medium cursor-pointer transition-colors">
+                            Render now
+                          </button>
+                        ) : (
+                          <button onClick={() => setTab('ready')}
+                            className="text-[12px] text-rust hover:text-wine font-medium cursor-pointer transition-colors">
+                            Run readiness checks first &rarr;
+                          </button>
+                        )}
                       </div>
                     )}
                     {renderStatus === 'rendering' && (
