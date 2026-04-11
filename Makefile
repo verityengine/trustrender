@@ -35,6 +35,11 @@ clean: ## Remove build artifacts (not .venv)
 	find . -type d -name .pytest_cache -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name .ruff_cache -exec rm -rf {} + 2>/dev/null || true
 
+build-playground: ## Build playground UI and copy to package
+	cd website && npm run build
+	rm -rf src/formforge/playground
+	cp -r website/dist src/formforge/playground
+
 docker: ## Build Docker image
 	docker build -t formforge .
 

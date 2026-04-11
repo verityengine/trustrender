@@ -477,6 +477,28 @@ def create_app(
 
         routes.extend([r for r in dashboard_routes() if r.path == "/dashboard"])
 
+    # /api/ route group: same endpoints under /api/ prefix for the bundled
+    # playground frontend (which always calls /api/...).  The bare routes
+    # above remain for CLI / direct API usage.
+    api_routes = [
+        Route("/health", health, methods=["GET"]),
+        Route("/render", render_endpoint, methods=["POST"]),
+        Route("/preflight", preflight_endpoint, methods=["POST"]),
+        Route("/template-source", template_source_endpoint, methods=["GET"]),
+        Route("/history", api_history, methods=["GET"]),
+        Route("/history/{trace_id}", api_trace, methods=["GET"]),
+        Route("/stats", api_stats, methods=["GET"]),
+    ]
+    from starlette.routing import Mount
+    routes.append(Mount("/api", routes=api_routes))
+
+    # Bundled playground: serve built static files at / if they exist.
+    # Must be mounted last so API routes and /dashboard take precedence.
+    playground_dir = Path(__file__).parent / "playground"
+    if playground_dir.is_dir() and (playground_dir / "index.html").exists():
+        from starlette.staticfiles import StaticFiles
+        routes.append(Mount("/", app=StaticFiles(directory=str(playground_dir), html=True), name="playground"))
+
     app = Starlette(
         routes=routes,
         middleware=[
