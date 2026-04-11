@@ -1626,36 +1626,94 @@ function AppWorkspace() {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6 items-start">
           {/* Left: Editor (shared across tabs) */}
           <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
+            {/* Editor header: tab switcher + template selector */}
             <div className="px-4 py-2.5 border-b border-rule-light flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="flex gap-1.5"><div className="w-2 h-2 rounded-full bg-rule" /><div className="w-2 h-2 rounded-full bg-rule" /><div className="w-2 h-2 rounded-full bg-rule" /></div>
-                <span className="text-[10px] font-mono text-muted ml-2">payload</span>
+                <div className="flex items-center gap-0.5 ml-2 rounded-md border border-rule overflow-hidden">
+                  <button onClick={() => setEditorTab('data')}
+                    className={`text-[10px] font-mono px-2.5 py-1 cursor-pointer transition-colors
+                      ${editorTab === 'data' ? 'bg-surface text-ink font-semibold' : 'text-muted hover:text-mid'}`}>
+                    Data
+                  </button>
+                  <button onClick={() => setEditorTab('template')}
+                    className={`text-[10px] font-mono px-2.5 py-1 cursor-pointer transition-colors flex items-center gap-1
+                      ${editorTab === 'template' ? 'bg-surface text-ink font-semibold' : 'text-muted hover:text-mid'}`}>
+                    Template
+                    {isTemplateModified && <span className="w-1.5 h-1.5 rounded-full bg-rust" />}
+                  </button>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <select value={template} onChange={e => switchFixture(e.target.value, payloadMode)} className="text-[10px] font-mono text-muted bg-transparent border border-rule rounded px-2 py-1 cursor-pointer">
                   {Object.entries(FIXTURES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                 </select>
-                <span className="text-[9px] text-muted">example</span>
-                <div className="flex rounded-full border border-rule overflow-hidden">
-                  <button onClick={() => switchFixture(template, 'valid')}
-                    className={`text-[9px] px-2.5 py-1 font-medium cursor-pointer transition-colors
-                      ${payloadMode === 'valid' ? 'bg-sage/10 text-sage' : 'text-muted hover:text-mid'}`}>
-                    passing
+                {editorTab === 'data' && (
+                  <>
+                    <span className="text-[9px] text-muted">example</span>
+                    <div className="flex rounded-full border border-rule overflow-hidden">
+                      <button onClick={() => switchFixture(template, 'valid')}
+                        className={`text-[9px] px-2.5 py-1 font-medium cursor-pointer transition-colors
+                          ${payloadMode === 'valid' ? 'bg-sage/10 text-sage' : 'text-muted hover:text-mid'}`}>
+                        passing
+                      </button>
+                      <button onClick={() => switchFixture(template, 'invalid')}
+                        className={`text-[9px] px-2.5 py-1 font-medium cursor-pointer transition-colors
+                          ${payloadMode === 'invalid' ? 'bg-wine/10 text-wine' : 'text-muted hover:text-mid'}`}>
+                        broken
+                      </button>
+                    </div>
+                  </>
+                )}
+                {editorTab === 'template' && isTemplateModified && (
+                  <button onClick={() => setTemplateSource(originalSource)}
+                    className="text-[9px] px-2.5 py-1 font-medium cursor-pointer text-muted hover:text-ink border border-rule rounded-full transition-colors">
+                    Reset
                   </button>
-                  <button onClick={() => switchFixture(template, 'invalid')}
-                    className={`text-[9px] px-2.5 py-1 font-medium cursor-pointer transition-colors
-                      ${payloadMode === 'invalid' ? 'bg-wine/10 text-wine' : 'text-muted hover:text-mid'}`}>
-                    broken
-                  </button>
-                </div>
+                )}
               </div>
             </div>
-            <textarea value={json} onChange={e => setJson(e.target.value)} spellCheck={false} wrap="off"
-              className="w-full p-4 font-mono text-[11px] leading-[1.8] text-ink-2 bg-panel resize-none focus:outline-none min-h-[520px] whitespace-pre overflow-x-auto"
-              style={{ tabSize: 2 }} />
-            {parseError && <div className="px-4 py-2 border-t border-wine/20 bg-wine/[0.04] text-[11px] text-wine font-mono">JSON: {parseError}</div>}
-            {payloadMode === 'invalid' && !parseError && (
-              <div className="px-4 py-2 border-t border-rule-light text-[10px] text-muted">Try the broken payload to see what Ready catches.</div>
+
+            {/* Data editor */}
+            {editorTab === 'data' && (
+              <>
+                <textarea value={json} onChange={e => setJson(e.target.value)} spellCheck={false} wrap="off"
+                  className="w-full p-4 font-mono text-[11px] leading-[1.8] text-ink-2 bg-panel resize-none focus:outline-none min-h-[520px] whitespace-pre overflow-x-auto"
+                  style={{ tabSize: 2 }} />
+                {parseError && <div className="px-4 py-2 border-t border-wine/20 bg-wine/[0.04] text-[11px] text-wine font-mono">JSON: {parseError}</div>}
+                {payloadMode === 'invalid' && !parseError && (
+                  <div className="px-4 py-2 border-t border-rule-light text-[10px] text-muted">Try the broken payload to see what Ready catches.</div>
+                )}
+              </>
+            )}
+
+            {/* Template editor */}
+            {editorTab === 'template' && (
+              <>
+                {sourceLoading ? (
+                  <div className="p-4 min-h-[520px] flex items-center justify-center">
+                    <span className="text-[11px] text-muted font-mono">Loading template...</span>
+                  </div>
+                ) : (
+                  <textarea value={templateSource} onChange={e => setTemplateSource(e.target.value)} spellCheck={false} wrap="off"
+                    onKeyDown={e => {
+                      if (e.key === 'Tab') { e.preventDefault(); const s = e.target; const start = s.selectionStart; const end = s.selectionEnd; setTemplateSource(templateSource.slice(0, start) + '  ' + templateSource.slice(end)); setTimeout(() => { s.selectionStart = s.selectionEnd = start + 2 }, 0) }
+                    }}
+                    className="w-full p-4 font-mono text-[11px] leading-[1.8] text-ink-2 bg-panel resize-none focus:outline-none min-h-[520px] whitespace-pre overflow-x-auto"
+                    style={{ tabSize: 2 }} />
+                )}
+                {/* Template compile errors from preflight */}
+                {verdict && !checking && verdict.errors?.filter(e => ['template', 'template_preprocess', 'compilation', 'template_syntax'].includes(e.stage) || e.check?.includes('syntax')).length > 0 && (
+                  <div className="px-4 py-2 border-t border-wine/20 bg-wine/[0.04]">
+                    {verdict.errors.filter(e => ['template', 'template_preprocess', 'compilation', 'template_syntax'].includes(e.stage) || e.check?.includes('syntax')).map((e, i) => (
+                      <div key={i} className="text-[11px] text-wine font-mono">{e.message}</div>
+                    ))}
+                  </div>
+                )}
+                <div className="px-4 py-1.5 border-t border-rule-light text-[9px] text-muted">
+                  Edits are session-only and not saved to disk.{isTemplateModified ? '' : ` Includes resolve from ${template.split('/')[0]}/`}
+                </div>
+              </>
             )}
           </div>
 
