@@ -600,7 +600,7 @@ Server error responses include `error`, `message`, `stage`, and `request_id`. Wi
 - `formforge check` CLI for template introspection and data validation
 - ZUGFeRD / Factur-X: EN 16931 e-invoice generation for DE domestic B2B (PDF/A-3b + embedded CII XML, schema-tested)
 - Generation proof: cryptographic provenance embedded in PDF metadata, verifiable without re-rendering
-- 758 tests passing (unit, integration, contract, include inference, semantic, ZUGFeRD, credit note, provenance, audit, ugly-data pressure, diagnostics)
+- 787 tests passing (unit, integration, contract, include inference, semantic, ZUGFeRD, credit note, provenance, audit, ugly-data pressure, diagnostics)
 
 ## Development
 
