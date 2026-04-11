@@ -524,6 +524,33 @@ def _describe_char(ch: str) -> str:
     return f"U+{cp:04X}"
 
 
+def _collect_string_paths(
+    data: dict, prefix: str = "", depth: int = 0,
+) -> list[str]:
+    """Recursively walk a data dict, returning paths to all string values.
+
+    Paths use dot notation for nested dicts and indexed notation for arrays.
+    Max depth of 10 prevents pathological nesting from hanging.
+    """
+    if depth > 10:
+        return []
+    paths: list[str] = []
+    for key, value in data.items():
+        path = f"{prefix}.{key}" if prefix else key
+        if isinstance(value, str):
+            paths.append(path)
+        elif isinstance(value, dict):
+            paths.extend(_collect_string_paths(value, path, depth + 1))
+        elif isinstance(value, list):
+            for i, item in enumerate(value):
+                item_path = f"{path}[{i}]"
+                if isinstance(item, str):
+                    paths.append(item_path)
+                elif isinstance(item, dict):
+                    paths.extend(_collect_string_paths(item, item_path, depth + 1))
+    return paths
+
+
 def _scan_text(value: str) -> list[str]:
     """Scan a string for control and zero-width characters.
 
