@@ -7,8 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from formforge.errors import ErrorCode, FormforgeError
-from formforge.schema import (
+from formforge.contract import (
     LIST_OBJECT,
     LIST_SCALAR,
     OBJECT,
@@ -16,6 +15,7 @@ from formforge.schema import (
     infer_contract,
     validate_data,
 )
+from formforge.errors import ErrorCode, FormforgeError
 
 EXAMPLES = Path(__file__).parent.parent / "examples"
 
@@ -389,30 +389,45 @@ class TestValidationGuardMerge:
 
 class TestIntegration:
     def test_render_bad_data_raises_data_contract(self):
-        """render() with incomplete data should raise DATA_CONTRACT error."""
+        """render(validate=True) with incomplete data raises DATA_CONTRACT."""
         from formforge import render
 
         with pytest.raises(FormforgeError) as exc_info:
-            render(EXAMPLES / "invoice.j2.typ", {})
+            render(EXAMPLES / "invoice.j2.typ", {}, validate=True)
 
         exc = exc_info.value
         assert exc.code == ErrorCode.DATA_CONTRACT
         assert exc.stage == "data_validation"
 
     def test_render_good_data_passes(self):
-        """render() with complete data should succeed."""
+        """render(validate=True) with complete data should succeed."""
         from formforge import render
 
         data = _load_data("invoice")
-        pdf = render(EXAMPLES / "invoice.j2.typ", data)
+        pdf = render(EXAMPLES / "invoice.j2.typ", data, validate=True)
         assert pdf[:5] == b"%PDF-"
+
+    def test_render_without_validate_skips_contract(self):
+        """render() without validate=True does NOT run contract validation."""
+        from formforge import render
+
+        # Bad data but no validate flag — should hit Jinja error, not contract.
+        with pytest.raises(FormforgeError) as exc_info:
+            render(EXAMPLES / "invoice.j2.typ", {"invoice_number": "X"})
+
+        # Should be a template error, not DATA_CONTRACT.
+        assert exc_info.value.code != ErrorCode.DATA_CONTRACT
 
     def test_error_detail_contains_paths(self):
         """Error detail should contain the missing field paths."""
         from formforge import render
 
         with pytest.raises(FormforgeError) as exc_info:
-            render(EXAMPLES / "invoice.j2.typ", {"invoice_number": "X"})
+            render(
+                EXAMPLES / "invoice.j2.typ",
+                {"invoice_number": "X"},
+                validate=True,
+            )
 
         detail = exc_info.value.detail
         assert "sender" in detail

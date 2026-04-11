@@ -39,7 +39,7 @@ from .templates import render_template
 
 MAX_BODY_SIZE = 1_048_576  # 1 MB
 RENDER_TIMEOUT = 30  # seconds
-ALLOWED_FIELDS = {"template", "data", "debug"}
+ALLOWED_FIELDS = {"template", "data", "debug", "validate"}
 
 
 def _server_render(
@@ -47,6 +47,7 @@ def _server_render(
     data: dict,
     *,
     debug: bool,
+    validate: bool,
     font_paths: list[str] | None,
     timeout: float,
 ) -> bytes:
@@ -61,9 +62,8 @@ def _server_render(
     """
     backend = TypstCliBackend(compile_timeout=timeout)
 
-    if template_path.name.endswith(".j2.typ"):
-        # Validate data against template contract before rendering.
-        from .schema import (
+    if validate and template_path.name.endswith(".j2.typ"):
+        from .contract import (
             format_contract_detail,
             format_contract_errors,
             infer_contract,
@@ -81,6 +81,7 @@ def _server_render(
                 detail=format_contract_detail(validation_errors, contract),
             )
 
+    if template_path.name.endswith(".j2.typ"):
         rendered = render_template(template_path, data)
         return compile_typst(
             rendered,
@@ -188,6 +189,7 @@ def create_app(
         template_name = payload.get("template")
         data = payload.get("data")
         req_debug = payload.get("debug", False)
+        req_validate = payload.get("validate", False)
 
         if not template_name or not isinstance(template_name, str):
             return _error(
@@ -245,6 +247,7 @@ def create_app(
                     template_path,
                     data,
                     debug=use_debug,
+                    validate=req_validate,
                     font_paths=resolved_fonts,
                     timeout=render_timeout,
                 ),

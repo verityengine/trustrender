@@ -171,16 +171,15 @@ class TestTemplateSyntax:
 
 class TestTemplateVariable:
     def test_undefined_variable_raises(self):
-        # Data validation now catches missing fields before Jinja renders.
         with pytest.raises(FormforgeError) as exc_info:
             render(FIXTURES / "undefined_var.j2.typ", {"title": "T"})
-        assert exc_info.value.code == ErrorCode.DATA_CONTRACT
-        assert exc_info.value.stage == "data_validation"
+        assert exc_info.value.code == ErrorCode.TEMPLATE_VARIABLE
+        assert exc_info.value.stage == "template_preprocess"
 
     def test_undefined_variable_names_the_variable(self):
         with pytest.raises(FormforgeError) as exc_info:
             render(FIXTURES / "undefined_var.j2.typ", {"title": "T"})
-        assert "sender" in exc_info.value.detail
+        assert "sender" in str(exc_info.value)
 
     def test_undefined_variable_includes_template_path(self):
         with pytest.raises(FormforgeError) as exc_info:

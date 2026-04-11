@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 from . import FormforgeError, __version__, render
 
@@ -32,6 +33,15 @@ def main(argv: list[str] | None = None) -> int:
         dest="font_paths",
         help="Additional font directory (can be repeated)",
     )
+    render_cmd.add_argument(
+        "--validate",
+        action="store_true",
+        help="Validate data against template contract before rendering",
+    )
+
+    check_cmd = sub.add_parser("check", help="Inspect or validate template data contract")
+    check_cmd.add_argument("template", help="Path to .j2.typ template")
+    check_cmd.add_argument("--data", help="Path to JSON data file to validate against")
 
     serve_cmd = sub.add_parser("serve", help="Start HTTP render server")
     serve_cmd.add_argument("--templates", required=True, help="Template directory root")
@@ -65,6 +75,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "render":
         return _run_render(args)
 
+    if args.command == "check":
+        return _run_check(args)
+
     if args.command == "serve":
         return _run_serve(args)
 
@@ -96,6 +109,63 @@ def _format_error(exc: FormforgeError) -> str:
     return "\n".join(lines)
 
 
+def _run_check(args: argparse.Namespace) -> int:
+    """Inspect template contract or validate data against it."""
+    import json
+
+    from .contract import infer_contract, validate_data
+
+    template_path = Path(args.template)
+    if not template_path.exists():
+        print(f"error: Template not found: {template_path}", file=sys.stderr)
+        return 1
+    if not template_path.name.endswith(".j2.typ"):
+        print(f"error: Not a Jinja2 template: {template_path}", file=sys.stderr)
+        return 1
+
+    contract = infer_contract(template_path)
+
+    if args.data:
+        data_path = Path(args.data)
+        if not data_path.exists():
+            print(f"error: Data file not found: {data_path}", file=sys.stderr)
+            return 1
+        with open(data_path) as f:
+            data = json.load(f)
+
+        errors = validate_data(contract, data)
+        if not errors:
+            print(f"Valid: {args.data} matches {args.template}")
+            return 0
+        print(
+            f"error[DATA_CONTRACT]: {len(errors)} validation error(s)",
+            file=sys.stderr,
+        )
+        print(f"  template: {args.template}", file=sys.stderr)
+        print(f"  data: {args.data}", file=sys.stderr)
+        print(file=sys.stderr)
+        for e in errors:
+            print(f"  {e.path}: {e.message}", file=sys.stderr)
+        return 1
+
+    # No --data: show inferred contract summary
+    required_fields = [f for f in contract.values() if f.required]
+    print(f"Template: {args.template}")
+    print(f"Fields: {len(contract)} top-level ({len(required_fields)} required)")
+    print()
+    for name, spec in sorted(contract.items()):
+        marker = "*" if spec.required else " "
+        desc = spec.expected_type
+        if spec.expected_type == "object" and spec.children:
+            child_names = ", ".join(sorted(spec.children.keys()))
+            desc = f"object {{{child_names}}}"
+        elif spec.expected_type in ("list[object]",) and spec.children:
+            child_names = ", ".join(sorted(spec.children.keys()))
+            desc = f"list[{{{child_names}}}]"
+        print(f"  {marker} {name}: {desc}")
+    return 0
+
+
 def _run_render(args: argparse.Namespace) -> int:
     try:
         pdf_bytes = render(
@@ -104,6 +174,7 @@ def _run_render(args: argparse.Namespace) -> int:
             output=args.output,
             debug=args.debug,
             font_paths=args.font_paths,
+            validate=args.validate,
         )
         print(f"Rendered {len(pdf_bytes):,} bytes -> {args.output}")
         if args.debug:

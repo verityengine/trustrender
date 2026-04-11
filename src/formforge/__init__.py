@@ -75,6 +75,7 @@ def render(
     output: str | os.PathLike | None = None,
     debug: bool = False,
     font_paths: list[str | os.PathLike] | None = None,
+    validate: bool = False,
 ) -> bytes:
     """Render a PDF from a template and data.
 
@@ -88,6 +89,9 @@ def render(
             On error, the intermediate file is always preserved regardless of this flag.
         font_paths: Additional font directories.  These are prepended to the
             bundled font directory.
+        validate: If True, validate data against the template's inferred
+            structural contract before rendering.  Raises ``FormforgeError``
+            with code ``DATA_CONTRACT`` if validation fails.
 
     Returns:
         PDF file contents as bytes.
@@ -111,24 +115,25 @@ def render(
     resolved_fonts = _build_font_paths(font_paths)
 
     if is_jinja:
-        # Validate data against template contract before rendering.
-        from .schema import (
-            format_contract_detail,
-            format_contract_errors,
-            infer_contract,
-            validate_data,
-        )
-
-        contract = infer_contract(template_path)
-        validation_errors = validate_data(contract, data_dict)
-        if validation_errors:
-            raise FormforgeError(
-                format_contract_errors(validation_errors, template_path.name),
-                code=ErrorCode.DATA_CONTRACT,
-                stage="data_validation",
-                template_path=str(template_path),
-                detail=format_contract_detail(validation_errors, contract),
+        # Pre-render contract validation (opt-in).
+        if validate:
+            from .contract import (
+                format_contract_detail,
+                format_contract_errors,
+                infer_contract,
+                validate_data,
             )
+
+            contract = infer_contract(template_path)
+            validation_errors = validate_data(contract, data_dict)
+            if validation_errors:
+                raise FormforgeError(
+                    format_contract_errors(validation_errors, template_path.name),
+                    code=ErrorCode.DATA_CONTRACT,
+                    stage="data_validation",
+                    template_path=str(template_path),
+                    detail=format_contract_detail(validation_errors, contract),
+                )
 
         rendered = render_template(template_path, data_dict)
         pdf_bytes = compile_typst(
