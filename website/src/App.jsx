@@ -1029,8 +1029,8 @@ function TrustLayers() {
     },
     {
       title: 'Compliance',
-      desc: 'Machine-readable invoices accepted by German AP systems. Validated before render, embedded as ZUGFeRD / Factur-X. Pure Python \u2014 no Java stack.',
-      stats: ['Schema-validated XML', 'ZUGFeRD / Factur-X', 'German B2B ready'],
+      desc: 'Machine-readable German B2B invoices for the supported EN 16931 path. Validated before render, embedded as ZUGFeRD / Factur-X. Pure Python \u2014 no Java stack.',
+      stats: ['Supported EN 16931 path', 'ZUGFeRD / Factur-X', 'German B2B invoice flow'],
       flourish: <ComplianceFlourish />,
       caption: 'Simplified invoice structure \u2014 not a complete EN 16931 field map',
     },
@@ -2116,10 +2116,10 @@ function ComplianceWedge() {
             <div className="md:w-2/5">
               <p className="text-[11px] tracking-[0.22em] uppercase text-rust mb-4 font-semibold">Compliance</p>
               <h2 className="font-display text-[28px] md:text-[36px] tracking-tight leading-[1.1] mb-4">
-                Don't just generate invoices. Generate acceptance.
+                Validated e&#8209;invoicing for the supported German B2B path.
               </h2>
               <p className="text-[14px] text-mid leading-relaxed mb-6">
-                Formforge runs XSD validation and semantic checks before the PDF is created. Structurally invalid data is rejected. Output is PDF/A-3b with embedded CII XML. Your invoices are certified compliant before they reach an AP system.
+                Formforge runs XSD validation and semantic checks before the PDF is created. Structurally invalid data is rejected before a document is produced. Output is PDF/A-3b with embedded CII XML for the supported EN 16931 invoice flow.
               </p>
               <p className="text-[12px] text-muted leading-relaxed">
                 Scoped to German domestic B2B invoicing: DE, EUR, mixed VAT rates, standard invoices and credit notes. No Java, no iText, no browser.
@@ -2127,9 +2127,9 @@ function ComplianceWedge() {
             </div>
             <div className="md:w-3/5 grid grid-cols-2 gap-4">
               {[
-                { l: 'Machine-readable invoices', d: 'EN 16931 schema-validated XML in every PDF' },
-                { l: 'Accepted by AP systems', d: 'ZUGFeRD / Factur-X \u2014 the German standard' },
-                { l: 'German B2B ready', d: 'EUR, mixed VAT rates, invoices and credit notes' },
+                { l: 'EN 16931 validated', d: 'XSD-checked XML for the supported invoice path' },
+                { l: 'ZUGFeRD / Factur-X', d: 'CII XML embedded in PDF/A-3b output' },
+                { l: 'German B2B invoice flow', d: 'DE, EUR, mixed VAT rates, invoices and credit notes' },
                 { l: 'pip install and go', d: 'Pure Python \u2014 no Java, no iText, no Chromium' },
               ].map(c => (
                 <div key={c.l} className="bg-panel rounded-lg border border-rule-light p-5" style={{ boxShadow: '0 1px 4px rgba(20,18,16,0.03)' }}>
