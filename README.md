@@ -2,23 +2,11 @@
 
 Generate structured business PDFs from data + templates. No browser, no Chromium.
 
-TrustRender renders invoices (including credit notes), statements, receipts, and similar structured documents using [Typst](https://typst.app/) as the layout engine and Jinja2 for data binding. It ships as a Python library, CLI, and HTTP server.
+TrustRender renders invoices, statements, receipts, and similar structured documents using [Typst](https://typst.app/) as the layout engine and Jinja2 for data binding. It ships as a Python library, CLI, and HTTP server.
 
-## Non-goals
-
-TrustRender is not:
-
-- arbitrary HTML-to-PDF conversion
-- a browser or headless renderer
-- a visual/WYSIWYG editor
-- DOCX, PPTX, or multi-format output
-- a general document platform
-
-It does one thing: structured business PDFs from code.
+**Not** an HTML-to-PDF converter, headless browser, visual editor, or multi-format platform. It does one thing: structured business PDFs from code.
 
 ## Install
-
-### Standard install (recommended)
 
 ```
 git clone https://github.com/verityengine/trustrender.git
@@ -26,54 +14,26 @@ cd trustrender
 pip install .
 ```
 
-This is the most reliable local path today.
+Requires Python 3.11+ and the Typst CLI binary (`brew install typst` on macOS, or [typst.app](https://typst.app/)).
 
-### Development install
+For development: `pip install -e ".[dev]"` or `make dev`.
 
-```
-pip install -e ".[dev]"
-```
-
-Editable install is intended for development workflows. Use the standard install above if you just want to run TrustRender.
-
-### Requirements
-
-- Python 3.11+
-- Python package dependencies (`typst`, `jinja2`, `starlette`, `uvicorn`) are installed automatically by `pip install .`
-- **Typst CLI binary** is a separate install, required for the `typst-cli` backend (and always used by the server). The binary name on PATH must be `typst`. Install via:
-  - macOS: `brew install typst`
-  - Cargo: `cargo install --git https://github.com/typst/typst --locked typst-cli`
-  - Or download from [typst.app](https://typst.app/)
-
-The `typst` Python package (used by the `typst-py` backend) is a pip dependency and installed automatically. The Typst CLI binary is a separate system-level install — it is always required by server mode and recommended for all usage.
-
-### Verify your install
-
-```
-trustrender doctor
-```
-
-This checks Python version, package imports, Typst backends, fonts, and environment variables. Run it first if anything seems broken.
-
-With a render smoke test:
+### Verify
 
 ```
 trustrender doctor --smoke
 ```
 
+Checks Python version, backends, fonts, and runs a real render + server health check.
+
 ## Quick start
 
-**Python API:**
+**Python:**
 
 ```python
 from trustrender import render
 
-pdf_bytes = render(
-    "examples/invoice.j2.typ",
-    "examples/invoice_data.json",
-    output="invoice.pdf",
-)
-print(f"Rendered {len(pdf_bytes)} bytes")
+pdf = render("examples/invoice.j2.typ", "examples/invoice_data.json", output="invoice.pdf")
 ```
 
 **CLI:**
@@ -82,591 +42,157 @@ print(f"Rendered {len(pdf_bytes)} bytes")
 trustrender render examples/invoice.j2.typ examples/invoice_data.json -o invoice.pdf
 ```
 
-Both produce `invoice.pdf` from the bundled example template and data. Template and data paths are resolved relative to the current working directory.
-
-## CLI usage
+**Server:**
 
 ```
-trustrender render <template> <data.json> -o <output.pdf> [--debug] [--no-validate] [--zugferd en16931] [--font-path <dir>]
-trustrender check <template> [--data <data.json>]
-trustrender serve --templates <dir> [--host 127.0.0.1] [--port 8190] [--debug] [--font-path <dir>] [--max-body-size <bytes>]
-trustrender doctor [--smoke]
+trustrender serve --templates examples/ --port 8190
+curl -X POST http://localhost:8190/render \
+  -H "Content-Type: application/json" \
+  --data @examples/request_invoice.json -o invoice.pdf
 ```
 
-Common examples:
+## Why TrustRender
 
-```
-# Render a single PDF
-trustrender render templates/invoice.j2.typ data.json -o out.pdf
+### Validated before render
 
-# Render with custom fonts
-trustrender render templates/invoice.j2.typ data.json -o out.pdf --font-path ./my-fonts
-
-# Start the HTTP server
-trustrender serve --templates ./templates --port 8190
-
-# Start with debug mode (preserves intermediate files)
-trustrender serve --templates ./templates --debug
-```
-
-Full flag reference: `trustrender render --help` / `trustrender serve --help`.
-
-## Data validation
-
-For Jinja2 Typst templates, TrustRender validates data before rendering by default. Bad payloads are rejected with specific field-level errors before any Typst compilation starts.
-
-### Structural validation (default)
-
-Every `render()` call on a `.j2.typ` template infers a minimum data contract from the Jinja2 AST and validates caller data against it. This catches:
-
-- missing required fields
-- null values on required fields
-- wrong structural types (passing a string where an object is expected, a dict where a list is expected)
-- requirements from `{% include %}` fragments (followed recursively with scope isolation)
-
-Bad data raises `TrustRenderError(code=DATA_CONTRACT)` with paths pointing into the caller's JSON:
-
-```python
-render("invoice.j2.typ", {"invoice_number": "X"})
-```
+Every `render()` call on a `.j2.typ` template validates data against the template's inferred contract by default. Missing fields, null values, and wrong structural types are rejected with specific field-level errors before Typst compilation starts.
 
 ```
 TrustRenderError: Data validation failed: 11 field errors in invoice.j2.typ
   sender: missing required field (expected: object)
-  recipient: missing required field (expected: object)
   items: missing required field (expected: list[object])
   invoice_date: missing required field
-  ...
 ```
 
-Raw `.typ` files are unaffected — they have no Jinja2 AST to infer a contract from.
+`preflight()` goes further: structural validation, semantic checks, font verification, compliance eligibility, and text safety scanning — all without rendering.
 
-To skip structural validation explicitly:
+### No browser dependency
 
-```python
-render("invoice.j2.typ", data, validate=False)
-```
+No Chromium, no Puppeteer, no headless browser. Typst compiles directly to PDF. The server runs renders as killable subprocesses with real timeout enforcement.
 
-```
-trustrender render invoice.j2.typ data.json -o out.pdf --no-validate
-```
+Measured: 1,000-row invoice renders in 211ms (33 pages). Server throughput: 53.8 RPS. Peak RSS: 69.5 MB.
 
-`validate=False` is an escape hatch for callers who know their data shape and want to skip the check, not the normal path.
+### EN 16931 e-invoicing
 
-### Semantic validation (opt-in, hint-driven)
-
-Beyond structure, TrustRender can check business-data correctness when the caller configures semantic hints. Semantic checks warn but do not block rendering.
-
-What semantic validation catches:
-
-- **Arithmetic mismatches**: line item totals that don't sum to the stated subtotal
-- **Balance reconciliation**: aging bucket totals that don't sum to the closing balance (statements)
-- **Unparseable dates**: strings in date fields that don't match any common format
-- **Non-numeric values**: currency fields containing non-parseable text
-- **Empty required fields**: business-critical fields that are blank strings or None
-
-```python
-from trustrender.semantic import validate_semantics, STATEMENT_HINTS
-
-report = validate_semantics(statement_data, STATEMENT_HINTS)
-# Issues found:
-#   [warning] arithmetic: aging.total — sum of aging buckets = 18267.50, but aging.total = 999999.00
-```
-
-Semantic hints are not inferred. The caller declares what to check. Presets exist for common document types:
-
-| Preset | Template types | Checks |
-|--------|---------------|--------|
-| `INVOICE_HINTS` | invoices, e-invoices | line item sum, dates, numerics, invoice number, text anomalies |
-| `RECEIPT_HINTS` | receipts | item amounts, subtotal, dates, numerics, text anomalies |
-| `STATEMENT_HINTS` | account statements | balance reconciliation, aging totals, dates, numerics, text anomalies |
-| `LETTER_HINTS` | business letters | date, sender/recipient names, subject, closing, text anomalies |
-| `REPORT_HINTS` | reports | date, title, company name, executive summary, spend numerics, text anomalies |
-
-The CLI auto-detects the preset from the template filename. Unknown template types get no semantic checks — no fake confidence.
-
-### Readiness (preflight)
-
-`preflight()` combines structural validation, semantic checks, template parsing, environment checks, and compliance eligibility into a single pre-render verdict without rendering:
-
-```python
-from trustrender.readiness import preflight
-from trustrender.semantic import INVOICE_HINTS
-
-verdict = preflight("invoice.j2.typ", data, semantic_hints=INVOICE_HINTS)
-if not verdict.ready:
-    for issue in verdict.errors:
-        print(f"{issue.path}: {issue.message}")
-```
+Generates ZUGFeRD / Factur-X compliant invoices for German domestic B2B. PDF/A-3b output with embedded CII XML, validated by XSD and Schematron before embedding.
 
 ```
-trustrender preflight invoice.j2.typ data.json --semantic
+trustrender render einvoice.j2.typ data.json -o invoice.pdf --zugferd en16931
 ```
 
-Preflight answers "can this data produce the right document?" without spending compute on Typst compilation. It includes a `text_safety` stage that scans all string values in the data dict for control characters and zero-width characters — no semantic hints required. Set `text_scan=False` to opt out.
+Supported: DE, EUR, standard VAT (single or mixed rates), invoices and credit notes.
+Not supported (fails loudly): reverse charge, cross-border, allowances/charges, non-EUR.
 
-With `strict=True`, partial contracts from unresolved dynamic includes are promoted from warnings to errors — readiness fails if the contract is provably incomplete:
+See [docs/einvoice-scope.md](docs/einvoice-scope.md) for the full scope matrix.
 
-```python
-verdict = preflight("template.j2.typ", data, strict=True)
-```
+### Output provenance
 
-```
-trustrender preflight template.j2.typ data.json --strict
-```
-
-### Include behavior
-
-Contract inference follows `{% include %}` directives recursively. Static includes are resolved and their data requirements are merged into the parent contract. Variables set via `{% set %}` in the parent scope are correctly excluded from the contract.
-
-Dynamic includes (`{% include some_var %}`) and missing fragments cannot be resolved statically. They mark the contract as partial — visible via `infer_contract_with_metadata()` in the Python API and as a warning in `trustrender check` and `preflight()` output.
-
-### Inspecting contracts
-
-```
-trustrender check examples/invoice.j2.typ
-```
-
-```
-Template: examples/invoice.j2.typ
-Fields: 12 top-level (12 required)
-
-  * sender: object {address_line1, address_line2, email, name}
-  * recipient: object {address_line1, address_line2, email, name}
-  * items: list[{amount, description, num, qty, unit_price}]
-  * invoice_number: scalar
-  ...
-```
-
-```
-trustrender check examples/invoice.j2.typ --data bad_data.json
-```
-
-```
-error[DATA_CONTRACT]: 3 validation error(s)
-  sender: expected object, got string
-  items[3].description: missing required field
-  notes: expected scalar, got null
-```
-
-### Limits
-
-- Structural types only (scalar / object / list) — no int/str/float narrowing
-- `required` is a template-read heuristic, not business-semantic truth
-- Semantic checks require explicit hints — no automatic business-logic inference
-- Dynamic `{% include %}` produces a partial contract (warning by default; use `strict=True` to block)
-- Text anomaly detection (control characters, zero-width characters) scans all strings by default in preflight; semantic hint layer provides focused scanning of identity fields
-- Numeric coercion is intentionally narrow — locale-specific money formats should be normalized upstream before validation
-
-## ZUGFeRD / Factur-X e-invoicing
-
-TrustRender generates EN 16931 e-invoices for German domestic B2B invoicing. Both XSD and Schematron validation run in the render pipeline when `facturx` is installed — invalid XML is rejected before embedding into the PDF. One profile is currently supported:
-
-| Profile | Standard | Use case |
-|---------|----------|----------|
-| `en16931` | EN 16931 (ZUGFeRD / Factur-X) | Domestic B2B invoices in Germany |
-
-When `zugferd="en16931"` is set, the pipeline adds two steps after normal PDF rendering: CII XML generation from the invoice data, and embedding the XML into a PDF/A-3b container with ZUGFeRD metadata.
-
-Pre-render validation checks required fields, currency, country, tax rate constraints, and data completeness. `render()` and `preflight()` both run XSD and Schematron validation on the generated XML (requires `facturx`). One-time manual validation against the Mustang reference validator has also passed (see `docs/zugferd-prototype.md`). Local developer validation is available via `make mustang-validate` (requires Java).
-
-ZUGFeRD and Factur-X are the same specification — ZUGFeRD is the German name, Factur-X is the French name.
-
-**CLI:**
-
-```
-trustrender render examples/einvoice.j2.typ examples/einvoice_data.json -o invoice.pdf --zugferd en16931
-```
-
-**Python API:**
-
-```python
-pdf = render(
-    "examples/einvoice.j2.typ",
-    "examples/einvoice_data.json",
-    output="invoice.pdf",
-    zugferd="en16931",
-)
-```
-
-**HTTP server:**
-
-```json
-{
-  "template": "einvoice.j2.typ",
-  "data": { "invoice_number": "RE-2026-0042", "currency": "EUR", "seller": { ... }, ... },
-  "zugferd": "en16931"
-}
-```
-
-Returns 422 with `ZUGFERD_ERROR` if invoice data is missing required fields or contains unsupported shapes (allowances, charges). Bad `zugferd` values return 400.
-
-The invoice data model uses raw numeric amounts (not pre-formatted strings), explicit currency codes, VAT IDs, and structured tax entries. See `examples/einvoice_data.json` for the full shape. See `docs/einvoice-scope.md` for the full supported/unsupported scenario matrix.
-
-### Supported scope
-
-- Profile: EN 16931 (ZUGFeRD / Factur-X)
-- Country: Germany (DE)
-- Currency: EUR
-- Tax: standard VAT, single or mixed rates per invoice (e.g., 7% + 19%)
-- Invoice types: standard invoice (type 380) and credit note (type 381)
-- Payment: SEPA credit transfer, SEPA direct debit
-
-### Not supported (fails loudly at validation time)
-
-- Reverse charge
-- Intra-community / cross-border
-- Allowances, charges, or discounts
-- Non-EUR currencies
-- Non-DE countries
-
-Unsupported shapes fail loudly at validation time, before any rendering or XML generation occurs.
-
-## Generation proof
-
-TrustRender can embed a cryptographic generation proof in the PDF metadata, recording which template, which data, which engine version, and when the document was generated. This enables downstream verification that a document was produced from specific inputs without re-rendering.
-
-This is not a digital signature (no PKI required). It is a generation proof: it answers "was this document produced from this data using this template?"
-
-**CLI:**
-
-```
-trustrender render invoice.j2.typ data.json -o out.pdf --provenance
-```
-
-**Python API:**
-
-```python
-pdf = render("invoice.j2.typ", data, output="out.pdf", provenance=True)
-```
-
-**Verification:**
+Embeds a cryptographic generation proof in the PDF: template hash, data hash, engine version, timestamp, and a combined proof hash. Verifiable without re-rendering.
 
 ```python
 from trustrender.provenance import verify_provenance
-
 result = verify_provenance(pdf_bytes, "invoice.j2.typ", original_data)
-print(result.verified)  # True if template + data hashes match
-print(result.reason)    # "match", "data_mismatch", "template_mismatch", "no_provenance"
+# result.verified → True if hashes match
 ```
 
-The proof records: engine name and version, SHA-256 hash of the template file, SHA-256 hash of the canonical JSON data, UTC timestamp, and a combined proof hash. It is embedded in the PDF Info dictionary and survives normal PDF handling.
+Not a digital signature. A generation proof: "was this document produced from this data using this template?"
 
-Provenance works with all render modes — with or without ZUGFeRD, with or without contract validation. All flags compose.
+## CLI
 
----
+```
+trustrender render <template> <data.json> -o <output.pdf> [--zugferd en16931] [--provenance] [--no-validate]
+trustrender preflight <template> <data.json> [--semantic] [--strict]
+trustrender check <template> [--data <data.json>]
+trustrender serve --templates <dir> [--port 8190] [--dashboard] [--history <path>]
+trustrender audit <template> <data.json> -o <output.pdf> [--baseline-dir <dir>]
+trustrender doctor [--smoke]
+```
+
+Full flag reference: `trustrender <command> --help`.
 
 ## HTTP server
 
-The server exposes these endpoints:
-
 | Method | Path | Purpose |
 |--------|------|---------|
-| `POST` | `/render` | Render a template to PDF |
-| `POST` | `/preflight` | Pre-render readiness check (no rendering) |
-| `GET` | `/template-source?name=` | Raw template source (for browser editing) |
+| `POST` | `/render` | Render template to PDF |
+| `POST` | `/preflight` | Pre-render readiness check |
 | `GET` | `/health` | Health check |
-| `GET` | `/history` | Render trace history (requires `--history`) |
-| `GET` | `/history/{id}` | Single trace detail |
-| `GET` | `/stats` | Aggregate render statistics |
-| `GET` | `/dashboard` | Ops dashboard UI (requires `--dashboard`) |
+| `GET` | `/template-source?name=` | Raw template source |
+| `GET` | `/history` | Render trace list (requires `--history`) |
+| `GET` | `/dashboard` | Ops dashboard (requires `--dashboard`) |
 
-Both `/render` and `/preflight` accept an optional `template_source` field for ephemeral template editing — the server writes a temp file, runs the pipeline, and cleans up. The `template` field is still required (for include resolution and preset detection).
+Backpressure: max 8 concurrent renders (configurable), 503 when at capacity.
+Max body: 10 MB (configurable). Timeout: 30s (subprocess killed on expiry).
 
-**Successful render:**
-
-```
-curl -X POST http://localhost:8190/render \
-  -H "Content-Type: application/json" \
-  --data @examples/request_invoice.json \
-  -o invoice.pdf
-```
-
-Returns `application/pdf` on success.
-
-**Error response:**
-
-```json
-{
-  "error": "TEMPLATE_NOT_FOUND",
-  "message": "Template not found: missing.j2.typ",
-  "stage": "execution",
-  "request_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-}
-```
-
-**Request format:** JSON object with fields `template` (required string), `data` (required object), `debug` (optional boolean), `validate` (optional boolean, defaults to true), `zugferd` (optional: `"en16931"`), `provenance` (optional boolean). See `examples/request_invoice.json` for a complete runnable example.
-
-**Request ID:** The server accepts a client-provided `X-Request-ID` header or generates a UUID. It is echoed on both success and error responses for request tracing.
-
-**Backpressure:** The server limits concurrent renders (default 8, configurable via `--max-concurrent`). Requests that arrive while at capacity receive 503. This prevents runaway resource consumption under load.
-
-**Max request body:** 10 MB (default). Configurable via `--max-body-size` or `TRUSTRENDER_MAX_BODY_SIZE` env var.
-
-## Docker
-
-**Build:**
-
-```
-docker build -t trustrender .
-```
-
-**Run with bundled examples:**
-
-```
-docker run -p 8190:8190 trustrender
-```
-
-**Run with custom templates:**
-
-```
-docker run -p 8190:8190 \
-  -v /path/to/templates:/templates \
-  -e TRUSTRENDER_TEMPLATES_DIR=/templates \
-  trustrender
-```
-
-**Mount custom fonts:**
-
-```
-docker run -p 8190:8190 \
-  -v /path/to/fonts:/custom-fonts \
-  -e TRUSTRENDER_FONT_PATH=/custom-fonts \
-  trustrender
-```
-
-The container sets `TRUSTRENDER_FONT_PATH=/app/fonts` and `TRUSTRENDER_TEMPLATES_DIR=/app/examples` by default. Override with your own paths via environment variables as shown above.
-
-## Configuration
-
-### Environment variables
-
-| Variable | Purpose | Default |
-|----------|---------|---------|
-| `TRUSTRENDER_BACKEND` | Backend selection: `typst-py` or `typst-cli` | Auto-detect |
-| `TRUSTRENDER_FONT_PATH` | Font directory path | Bundled fonts dir |
-| `TRUSTRENDER_TEMPLATES_DIR` | Template directory for `serve` command | — |
-| `TRUSTRENDER_MAX_BODY_SIZE` | Max request body in bytes for `serve` | `10485760` (10 MB) |
-
-### Backend selection
-
-TrustRender supports two render backends behind a shared protocol:
-
-| Backend | How it works | Timeout behavior |
-|---------|-------------|-----------------|
-| `typst-py` | In-process Python binding | Not killable (blocks until done) |
-| `typst-cli` | Subprocess calling `typst` binary | Killable via `subprocess.run(timeout=...)` |
-
-**Library and CLI** support both backends. Auto-detect tries `typst-py` first, falls back to `typst-cli`. Override with `TRUSTRENDER_BACKEND`.
-
-**Server always uses `typst-cli`**, regardless of `TRUSTRENDER_BACKEND`. This is intentional: the subprocess boundary is what makes server timeout actually kill a stuck render. This is a deployment-level decision, not a per-request choice.
-
-## Fonts
-
-Fonts are trust infrastructure. Output determinism depends on controlling font availability.
-
-### Precedence
-
-1. Explicit `font_paths` from caller (searched first)
-2. Bundled fonts directory (searched second)
-3. System fonts (Typst default, always available)
-
-### Bundled fonts
-
-TrustRender ships Inter (Regular, Bold, Italic, BoldItalic) as TTF files. All example templates use Inter. Bundled fonts are the deterministic baseline.
-
-### Silent fallback
-
-Typst silently falls back when a requested font is unavailable. The PDF is valid but may use the wrong font. No error is raised in most cases.
-
-Current observed fallback in our tested environment: Libertinus. Do not treat this as a permanent upstream guarantee.
-
-**If you care about deterministic output, rely on bundled or explicitly supplied fonts only. Do not rely on fallback.**
-
-### Custom fonts
-
-| Method | Usage |
-|--------|-------|
-| Python API | `render(..., font_paths=["/path/to/fonts"])` |
-| CLI | `--font-path /path/to/fonts` (repeatable) |
-| Env var | `TRUSTRENDER_FONT_PATH=/path/to/fonts` |
-| Docker | Mount a volume and set `TRUSTRENDER_FONT_PATH` |
-
-## Templates
-
-Templates are Jinja2-preprocessed Typst files (`.j2.typ`). Jinja2 handles data binding; Typst handles layout and PDF generation.
-
-```
-{{ variable }}              Interpolate a value (auto-escaped)
-{% for item in items %}     Loop
-{% if condition %}          Conditional
-{{ value | typst_money }}   Filter
-```
-
-Raw Typst files (`.typ`) are also supported but receive no data binding or escaping. They are for template authors who want direct Typst control. TrustRender's safety guarantees apply to Jinja-interpolated values in `.j2.typ` templates.
-
-### Escaping
-
-All string values interpolated via `{{ }}` are automatically escaped for Typst text/content contexts. This is text-interpolation safety only, not universal Typst sanitization.
-
-11 characters are escaped: `\` `$` `#` `@` `{` `}` `<` `` ` `` `~` `[` `]`
-
-Intentionally not escaped: `_` and `*` (word-boundary emphasis; escaping everywhere would damage normal text like `snake_case`).
-
-**Not in scope:** code mode, math mode, and other context-sensitive Typst syntax. Templates that embed user data in those contexts require author discipline.
-
-### Filters
-
-| Filter | Purpose | Escaping |
-|--------|---------|----------|
-| `typst_money` | Color-wrap negative currency values | Escapes input, returns markup |
-| `typst_color` | Wrap value in colored text | Escapes input, returns markup |
-| `typst_markup` | Bypass auto-escaping | **Unsafe for user input** |
-
-`typst_markup` exists for template authors who need to emit controlled Typst formatting. Never pass arbitrary user data through it.
-
-### Template rules
-
-Templates may format values, loop through rows, conditionally show blocks, and render precomputed strings. Templates must not perform business logic (currency calculation, tax computation, rounding). Those values should arrive precomputed in the data.
-
-## Timeout and debug
-
-### Server timeout
-
-The server render timeout defaults to 30 seconds. Timeout is real: the CLI subprocess is killed via `subprocess.run(timeout=...)`. A secondary async watchdog (`timeout + 5s`) provides a defensive backstop in case subprocess cleanup stalls. The watchdog should never fire in normal operation.
-
-### Artifact policy
-
-| Scenario | Intermediate `.typ` file |
-|----------|-------------------------|
-| Successful render | Cleaned up |
-| Compile error | Preserved (even without debug) |
-| Timeout (no debug) | Cleaned up |
-| Timeout (debug mode) | Preserved |
-| `--debug` flag or `"debug": true` | Always preserved |
-
-Compile errors preserve the intermediate file even without debug mode because the generated Typst markup is often required to diagnose the failure. Timeout behavior is stricter: intermediates are cleaned to prevent accumulating orphan artifacts under repeated timeout failures, unless debug mode is explicitly enabled.
-
-Intermediate files are written next to the template as `_trustrender_*.typ`. They contain the Jinja2-rendered Typst markup before compilation.
-
-## Error model
-
-### Error codes
-
-| Code | Meaning |
-|------|---------|
-| `INVALID_DATA` | Bad input data (not a dict, bad JSON, wrong type) |
-| `TEMPLATE_NOT_FOUND` | Template file does not exist |
-| `TEMPLATE_SYNTAX` | Jinja2 syntax error in the template |
-| `TEMPLATE_VARIABLE` | Undefined variable during Jinja2 rendering |
-| `MISSING_ASSET` | Referenced file (image, etc.) not found |
-| `MISSING_FONT` | Font not available (rare due to silent fallback) |
-| `COMPILE_ERROR` | Typst compilation failed |
-| `DATA_CONTRACT` | Data does not satisfy template's structural contract |
-| `ZUGFERD_ERROR` | ZUGFeRD invoice data validation or XML generation failed |
-| `RENDER_TIMEOUT` | Render exceeded the time limit |
-| `BACKEND_ERROR` | Unexpected backend failure |
-
-### Pipeline stages
-
-| Stage | Where |
-|-------|-------|
-| `data_resolution` | Parsing/validating input data |
-| `data_validation` | Validating data against template contract (default for .j2.typ) |
-| `zugferd_validation` | Validating invoice data against EN 16931 requirements |
-| `template_preprocess` | Jinja2 rendering |
-| `compilation` | Typst compilation to PDF |
-| `zugferd` | ZUGFeRD XML generation and PDF post-processing |
-| `execution` | Server/CLI execution wrapper |
-
-Server error responses include `error`, `message`, `stage`, and `request_id`. With `debug: true`, responses also include `detail` (full Typst diagnostic) and file paths.
-
-## What is working and tested
-
-- `trustrender.render()` produces valid PDFs from dict/JSON + Jinja2 templates
-- CLI `render` and `serve` commands
-- HTTP server with request validation, structured errors, request ID tracking
-- Server timeout kills stuck renders (subprocess boundary)
-- Auto-escaping: 11 Typst special characters in text-interpolation contexts
-- Bundled Inter fonts, deterministic across local and container environments
-- Library and CLI support both backends; server forces typst-cli
-- Docker: builds, runs, produces matching output
-- 5 starter templates: invoice, statement, receipt, letter, report
-- Pre-render contract validation: default for `.j2.typ` — catches missing/wrong fields before Jinja runs
-- Include-aware contract inference: follows `{% include %}` fragments recursively, marks dynamic includes as partial
-- Semantic validation: hint-driven arithmetic, date, completeness, numeric coercion, and balance reconciliation checks
-- Semantic presets: `INVOICE_HINTS`, `RECEIPT_HINTS`, `STATEMENT_HINTS`, `LETTER_HINTS`, `REPORT_HINTS` — auto-detected by template name in CLI
-- `trustrender check` CLI for template introspection and data validation
-- ZUGFeRD / Factur-X: EN 16931 e-invoice generation for DE domestic B2B (PDF/A-3b + embedded CII XML, XSD + Schematron validated in render pipeline)
-- Generation proof: cryptographic provenance embedded in PDF metadata, verifiable without re-rendering
-- Output fingerprinting: SHA-256 of final PDF bytes stored in render trace (input + output hash chain)
-- Safe-by-default text scanning: `preflight()` scans all string values for control/zero-width characters without requiring semantic hints
-- Dynamic font resolution: `preflight()` resolves `font: "{{ field }}"` variable references from data and validates font availability
-- Bundled playground: `trustrender serve` serves interactive dev sandbox at `/` — edit data, edit templates, preflight, render, inspect traces
-- Ops dashboard: production monitoring UI at `/dashboard` — two-tier stat hierarchy, trace detail with commanding header, color-coded pipeline stages, elevated identity chain, auto-refresh with manual override
-- Ephemeral template editing: browser-based template editor sends source for preflight/render without saving to disk
-- `trustrender doctor --smoke`: environment diagnostics + render/server smoke test in one command
-- Benchmarked: 1,000-row invoice renders in 211ms (33 pages, 0.21ms/row), 53.8 RPS server throughput, 69.5 MB peak RSS
-- 837 tests passing (unit, integration, contract, include inference, semantic, ZUGFeRD, credit note, provenance, audit, ugly-data pressure, font verification, text safety, Schematron, diagnostics)
-
-## Development
-
-### Quick setup
-
-```
-make dev
-source .venv/bin/activate
-```
-
-Or manually:
-
-```
-python3.12 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-```
-
-### Verify environment
-
-```
-trustrender doctor           # check everything
-trustrender doctor --smoke   # include render + server health smoke test
-```
-
-### Common tasks
-
-```
-make test     # run pytest
-make lint     # run ruff check + format check
-make smoke    # quick render + server health verification
-make clean    # remove build artifacts
-make docker   # build Docker image
-make help     # list all targets
-```
-
-`make setup` creates a standard (non-editable) install. `make dev` creates an editable install with dev dependencies.
-
-## Caveats
-
-- Silent font fallback means missing fonts may not produce errors — just wrong output
-- Source mapping from generated Typst back to Jinja2 template source is limited
-- `typst_markup()` intentionally bypasses escaping — template author's responsibility
-- Code/math mode contexts are not auto-escaped
-- Line-start markup (`=` headings, `-` lists) is template layout, not auto-escaped
-- Font determinism across arbitrary environments is not fully soak-tested
-- Dynamic `{% include %}` marks contract as partial (warning, not error)
-- Standard install from source is the most reliable local path today
-- Not yet published to PyPI
+See [docs/server.md](docs/server.md) for full API detail, error model, and configuration.
 
 ## Bundled templates
 
-| Template | File | Tests |
-|----------|------|-------|
-| Invoice | `examples/invoice.j2.typ` | Single and multi-page, ugly data |
-| E-Invoice (ZUGFeRD) | `examples/einvoice.j2.typ` | EN 16931, numeric data, VAT IDs |
-| Statement | `examples/statement.j2.typ` | Multi-page tables, negative values |
-| Receipt | `examples/receipt.j2.typ` | Long items, many items |
-| Letter | `examples/letter.j2.typ` | Long subject, many paragraphs, enclosures |
-| Report | `examples/report.j2.typ` | Metrics, incidents, conditional formatting |
+| Template | File | Description |
+|----------|------|-------------|
+| Invoice | `examples/invoice.j2.typ` | Standard invoice with line items |
+| E-Invoice | `examples/einvoice.j2.typ` | ZUGFeRD EN 16931 compliant |
+| Statement | `examples/statement.j2.typ` | Account/transaction statement |
+| Receipt | `examples/receipt.j2.typ` | Point-of-sale receipt |
+| Letter | `examples/letter.j2.typ` | Business letter |
+| Report | `examples/report.j2.typ` | Executive report with metrics |
 
 Each has a matching `_data.json` file in `examples/`.
+
+## Docker
+
+```
+docker build -t trustrender .
+docker run -p 8190:8190 trustrender
+```
+
+Mount custom templates or fonts:
+
+```
+docker run -p 8190:8190 \
+  -v /path/to/templates:/templates -e TRUSTRENDER_TEMPLATES_DIR=/templates \
+  -v /path/to/fonts:/fonts -e TRUSTRENDER_FONT_PATH=/fonts \
+  trustrender
+```
+
+## Configuration
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `TRUSTRENDER_BACKEND` | `typst-py` or `typst-cli` | Auto-detect |
+| `TRUSTRENDER_FONT_PATH` | Font directory | Bundled Inter fonts |
+| `TRUSTRENDER_TEMPLATES_DIR` | Template directory for `serve` | — |
+| `TRUSTRENDER_MAX_BODY_SIZE` | Max request body (bytes) | 10 MB |
+
+## Development
+
+```
+make dev                    # editable install + dev deps
+trustrender doctor --smoke  # verify environment
+make test                   # pytest
+make lint                   # ruff
+make docker                 # build image
+make help                   # all targets
+```
+
+837 tests (unit, integration, contract, semantic, ZUGFeRD, provenance, ugly-data, font, pagination, text safety, Schematron).
+
+## Documentation
+
+| Topic | Link |
+|-------|------|
+| Validation & readiness | [docs/validation.md](docs/validation.md) |
+| E-invoice scope matrix | [docs/einvoice-scope.md](docs/einvoice-scope.md) |
+| HTTP server & error model | [docs/server.md](docs/server.md) |
+| Templates & escaping | [docs/templates.md](docs/templates.md) |
+| Fonts | [docs/fonts.md](docs/fonts.md) |
+| Provenance | [docs/provenance.md](docs/provenance.md) |
+| Known limits | [docs/known-limits.md](docs/known-limits.md) |
+
+## Caveats
+
+- Typst silently substitutes fonts when a declared font is missing — `preflight` and `doctor` catch this for configured font paths, but the render path itself does not error
+- Source mapping from generated Typst back to Jinja2 source is limited
+- `typst_markup()` intentionally bypasses escaping — template author's responsibility
+- Code/math mode contexts are not auto-escaped (text-interpolation only)
+- Not yet published to PyPI — install from source
