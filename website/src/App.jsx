@@ -870,7 +870,7 @@ function HeroReveal() {
   const showErrors = phase === 'fail' && mode === 'invalid'
 
   return (
-    <section className="bg-ink text-panel relative overflow-hidden">
+    <section className="text-panel relative overflow-hidden" style={{ background: 'linear-gradient(180deg, #0e0d0c 0%, #1a1815 40%, #15130f 100%)' }}>
       {/* Animated particle background */}
       <DocumentField />
       {/* Nav */}
