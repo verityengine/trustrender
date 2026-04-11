@@ -1285,7 +1285,7 @@ function ReadyDemo() {
           <h2 className="font-display text-[28px] md:text-[40px] tracking-tight leading-[1.1] mb-3">
             Check readiness before render.
           </h2>
-          <p className="text-[14px] text-mid max-w-md leading-relaxed mb-10">
+          <p className="text-[15px] text-mid max-w-md leading-relaxed mb-10">
             Toggle to an invalid payload and see what Formforge catches before the renderer is ever invoked.
           </p>
         </FadeUp>
@@ -2118,10 +2118,10 @@ function ComplianceWedge() {
               <h2 className="font-display text-[28px] md:text-[36px] tracking-tight leading-[1.1] mb-4">
                 Validated e&#8209;invoicing for the supported German B2B path.
               </h2>
-              <p className="text-[14px] text-mid leading-relaxed mb-6">
+              <p className="text-[15px] text-mid leading-relaxed mb-6">
                 Formforge runs XSD validation and semantic checks before the PDF is created. Structurally invalid data is rejected before a document is produced. Output is PDF/A-3b with embedded CII XML for the supported EN 16931 invoice flow.
               </p>
-              <p className="text-[12px] text-muted leading-relaxed">
+              <p className="text-[13px] text-mid/70 leading-relaxed">
                 Scoped to German domestic B2B invoicing: DE, EUR, mixed VAT rates, standard invoices and credit notes. No Java, no iText, no browser.
               </p>
             </div>
@@ -2134,7 +2134,7 @@ function ComplianceWedge() {
               ].map(c => (
                 <div key={c.l} className="bg-panel rounded-lg border border-rule-light p-5" style={{ boxShadow: '0 1px 4px rgba(20,18,16,0.03)' }}>
                   <div className="text-[14px] font-semibold text-ink">{c.l}</div>
-                  <div className="text-[12px] text-muted mt-1.5 leading-relaxed">{c.d}</div>
+                  <div className="text-[13px] text-mid mt-1.5 leading-relaxed">{c.d}</div>
                 </div>
               ))}
             </div>
@@ -2152,7 +2152,6 @@ function ComplianceWedge() {
                 { standard: 'ZUGFeRD / Factur-X (EN 16931)', status: 'Production-ready', icon: '\u2705', detail: 'XSD-validated, schema-tested, Mustang-verified' },
                 { standard: 'Credit notes (type 381)', status: 'Production-ready', icon: '\u2705', detail: 'Same pipeline, same validation' },
                 { standard: 'Mixed VAT rates (7% + 19%)', status: 'Production-ready', icon: '\u2705', detail: 'Per-item tax rates, multiple tax entries' },
-                { standard: 'XRechnung', status: 'On roadmap', icon: '\uD83D\uDEE4\uFE0F', detail: 'Requires KOSIT Schematron integration' },
               ].map(r => (
                 <div key={r.standard} className="px-6 py-4 flex items-center gap-4">
                   <span className="text-[16px] w-8 text-center">{r.icon}</span>
@@ -2185,7 +2184,7 @@ function PerformanceProof() {
           <h2 className="font-display text-[28px] md:text-[40px] tracking-tight leading-[1.1] mb-6 max-w-lg">
             1,000 line items. 33 pages. 211ms.
           </h2>
-          <p className="text-[14px] text-panel/50 max-w-lg mb-12">
+          <p className="text-[15px] text-panel/60 max-w-lg mb-12 leading-relaxed">
             Every number on this page comes from committed benchmarks, not marketing estimates. Soak-tested at 500+ sequential renders with zero errors and zero temp file leaks.
           </p>
         </FadeUp>
@@ -2275,10 +2274,10 @@ function DeveloperSetup() {
               <h2 className="font-display text-[28px] md:text-[36px] tracking-tight leading-[1.1] mb-4">
                 Verifiable setup in 5 seconds.
               </h2>
-              <p className="text-[14px] text-mid leading-relaxed mb-4">
+              <p className="text-[15px] text-mid leading-relaxed mb-4">
                 No fighting with font paths, broken dependencies, or mysterious failures. One command tells you if everything works.
               </p>
-              <p className="text-[12px] text-muted leading-relaxed">
+              <p className="text-[13px] text-mid/70 leading-relaxed">
                 Checks Python version, both Typst backends, bundled fonts, template font declarations, and environment variables. Add <span className="font-mono">--smoke</span> to render a real PDF and hit the server health endpoint.
               </p>
             </div>
@@ -2328,7 +2327,7 @@ function FinalCTA() {
           <h2 className="font-display text-[32px] md:text-[48px] tracking-tight leading-[1.08] mb-4 max-w-lg">
             Stop shipping documents you cannot trust.
           </h2>
-          <p className="text-[15px] text-panel/40 max-w-md mb-8">
+          <p className="text-[15px] text-panel/55 max-w-md mb-8">
             Readiness. Compliance. Provenance. Validated by default for Jinja2 templates.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 items-start">
