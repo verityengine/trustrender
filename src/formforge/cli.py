@@ -68,6 +68,15 @@ def main(argv: list[str] | None = None) -> int:
         dest="font_paths",
         help="Additional font directory (can be repeated)",
     )
+    serve_cmd.add_argument(
+        "--dashboard",
+        action="store_true",
+        help="Enable read-only dashboard at /dashboard",
+    )
+    serve_cmd.add_argument(
+        "--history",
+        help="Path to SQLite history database (enables render tracing)",
+    )
 
     preflight_cmd = sub.add_parser("preflight", help="Pre-render readiness verification")
     preflight_cmd.add_argument("template", help="Path to template (.j2.typ or .typ)")
@@ -386,10 +395,20 @@ def _run_serve(args: argparse.Namespace) -> int:
 
     from .server import create_app
 
-    app = create_app(args.templates, debug=args.debug, font_paths=args.font_paths)
+    app = create_app(
+        args.templates,
+        debug=args.debug,
+        font_paths=args.font_paths,
+        dashboard=args.dashboard,
+        history_path=args.history,
+    )
     print(f"Formforge server starting on {args.host}:{args.port}")
     print(f"  Templates: {args.templates}")
     print(f"  Debug: {args.debug}")
+    if args.dashboard:
+        print(f"  Dashboard: http://{args.host}:{args.port}/dashboard")
+    if args.history:
+        print(f"  History: {args.history}")
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
     return 0
 

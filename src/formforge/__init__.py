@@ -4,10 +4,19 @@ from __future__ import annotations
 
 import json
 import os
+from dataclasses import dataclass
 from pathlib import Path
 
 from .engine import CompileBackend, compile_typst, compile_typst_file
 from .errors import ErrorCode, FormforgeError
+
+
+@dataclass
+class RenderResult:
+    """Internal result from the render pipeline. Not part of the public API."""
+
+    pdf_bytes: bytes
+    trace_id: str | None = None
 
 # Re-export for public API
 from .errors import ErrorCode as ErrorCode  # noqa: F811
@@ -79,7 +88,7 @@ def _render_document_pipeline(
     provenance: bool = False,
     backend: CompileBackend | None = None,
     timeout: float | None = None,
-) -> bytes:
+) -> RenderResult:
     """Shared render pipeline: validate, preprocess, compile, post-process.
 
     All inputs must be pre-resolved (paths exist, data is a dict, fonts are
@@ -269,7 +278,7 @@ def _render_document_pipeline(
             trace.provenance_hash = prov_record.proof
 
         _record_trace("success", pdf_size=len(pdf_bytes))
-        return pdf_bytes
+        return RenderResult(pdf_bytes=pdf_bytes, trace_id=trace.id)
 
     except FormforgeError as exc:
         if not trace.outcome:  # Not already recorded by a stage
@@ -338,7 +347,7 @@ def render(
     data_dict = _resolve_data(data)
     resolved_fonts = _build_font_paths(font_paths)
 
-    pdf_bytes = _render_document_pipeline(
+    result = _render_document_pipeline(
         template_path,
         data_dict,
         debug=debug,
@@ -351,9 +360,9 @@ def render(
     if output is not None:
         output_path = Path(output)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_bytes(pdf_bytes)
+        output_path.write_bytes(result.pdf_bytes)
 
-    return pdf_bytes
+    return result.pdf_bytes
 
 
 def _resolve_data(data: dict | str | os.PathLike) -> dict:

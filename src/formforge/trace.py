@@ -307,3 +307,5 @@ def init_store(path: str | os.PathLike) -> TraceStore:
     global _store
     _store = TraceStore(path)
     return _store
+
+

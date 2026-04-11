@@ -32,10 +32,9 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
-from . import FormforgeError, __version__, _build_font_paths
-from .engine import TypstCliBackend, compile_typst, compile_typst_file
+from . import FormforgeError, RenderResult, __version__, _build_font_paths, _render_document_pipeline
+from .engine import TypstCliBackend
 from .errors import ErrorCode
-from .templates import render_template
 
 MAX_BODY_SIZE = 1_048_576  # 1 MB
 RENDER_TIMEOUT = 30  # seconds
@@ -55,99 +54,22 @@ def _server_render(
 ) -> bytes:
     """Server render path: CLI subprocess backend for killable execution.
 
-    Replicates ``render()``'s pipeline semantics exactly — same template
-    resolution, Jinja behavior, debug artifacts, font precedence, error
-    classification, and asset resolution.  The only difference is the
-    execution model: subprocess boundary enables real timeout/kill.
-
-    This bypass exists only for killable execution, not to change semantics.
+    Delegates to ``_render_document_pipeline()`` — the shared pipeline that
+    is also used by ``render()``.  The only server-specific concern is
+    forcing the CLI subprocess backend for real timeout/kill behavior.
     """
     backend = TypstCliBackend(compile_timeout=timeout)
-
-    # ZUGFeRD invoice data validation
-    if zugferd:
-        from .zugferd import validate_zugferd_invoice_data
-
-        errors = validate_zugferd_invoice_data(data, profile=zugferd)
-        if errors:
-            detail = "\n".join(f"  {e.path}: {e.message}" for e in errors)
-            raise FormforgeError(
-                f"Invoice data does not satisfy EN 16931: {len(errors)} error(s)",
-                code=ErrorCode.ZUGFERD_ERROR,
-                stage="zugferd_validation",
-                detail=detail,
-                template_path=str(template_path),
-                validation_errors=errors,
-            )
-
-    if validate and template_path.name.endswith(".j2.typ"):
-        from .contract import (
-            format_contract_detail,
-            format_contract_errors,
-            infer_contract,
-            validate_data,
-        )
-
-        contract = infer_contract(template_path)
-        validation_errors = validate_data(contract, data)
-        if validation_errors:
-            raise FormforgeError(
-                format_contract_errors(validation_errors, template_path.name),
-                code=ErrorCode.DATA_CONTRACT,
-                stage="data_validation",
-                template_path=str(template_path),
-                detail=format_contract_detail(validation_errors, contract),
-            )
-
-    pdf_standards = ["a-3b"] if zugferd else None
-
-    if template_path.name.endswith(".j2.typ"):
-        rendered = render_template(template_path, data)
-        pdf_bytes = compile_typst(
-            rendered,
-            template_path.parent,
-            debug=debug,
-            font_paths=font_paths,
-            template_path=template_path,
-            backend=backend,
-            timeout=timeout,
-            pdf_standards=pdf_standards,
-        )
-    else:
-        pdf_bytes = compile_typst_file(
-            template_path,
-            font_paths=font_paths,
-            backend=backend,
-            timeout=timeout,
-            pdf_standards=pdf_standards,
-        )
-
-    # ZUGFeRD post-processing
-    if zugferd:
-        from .zugferd import apply_zugferd, build_invoice_xml
-
-        try:
-            xml_bytes = build_invoice_xml(data, profile=zugferd)
-            pdf_bytes = apply_zugferd(pdf_bytes, xml_bytes)
-        except FormforgeError:
-            raise
-        except Exception as exc:
-            raise FormforgeError(
-                f"ZUGFeRD generation failed: {exc}",
-                code=ErrorCode.ZUGFERD_ERROR,
-                stage="zugferd",
-                detail=str(exc),
-                template_path=str(template_path),
-            ) from exc
-
-    # Generation proof AFTER ZUGFeRD (clone_from preserves ZUGFeRD metadata)
-    if provenance:
-        from .provenance import create_provenance, embed_provenance
-
-        record = create_provenance(template_path, data)
-        pdf_bytes = embed_provenance(pdf_bytes, record)
-
-    return pdf_bytes
+    return _render_document_pipeline(  # returns RenderResult
+        template_path,
+        data,
+        debug=debug,
+        font_paths=font_paths,
+        validate=validate,
+        zugferd=zugferd,
+        provenance=provenance,
+        backend=backend,
+        timeout=timeout,
+    )
 
 
 def create_app(
@@ -156,6 +78,8 @@ def create_app(
     debug: bool = False,
     font_paths: list[str | os.PathLike] | None = None,
     render_timeout: float = RENDER_TIMEOUT,
+    dashboard: bool = False,
+    history_path: str | None = None,
 ) -> Starlette:
     """Create the Starlette application.
 
@@ -300,7 +224,7 @@ def create_app(
         # only, should never fire in normal operation.
         use_debug = debug or req_debug
         try:
-            pdf_bytes = await asyncio.wait_for(
+            result = await asyncio.wait_for(
                 asyncio.to_thread(
                     _server_render,
                     template_path,
@@ -342,13 +266,17 @@ def create_app(
                 headers={"X-Request-ID": request_id},
             )
 
+        headers = {
+            "Content-Disposition": "inline",
+            "X-Request-ID": request_id,
+        }
+        if result.trace_id:
+            headers["X-Trace-ID"] = result.trace_id
+
         return Response(
-            content=pdf_bytes,
+            content=result.pdf_bytes,
             media_type="application/pdf",
-            headers={
-                "Content-Disposition": "inline",
-                "X-Request-ID": request_id,
-            },
+            headers=headers,
         )
 
     async def request_id_middleware(request: Request, call_next):
@@ -360,15 +288,36 @@ def create_app(
 
     from starlette.middleware.base import BaseHTTPMiddleware
 
+    # Initialize trace store for history/dashboard
+    if history_path:
+        from .trace import init_store
+
+        trace_store = init_store(history_path)
+    else:
+        from .trace import get_store
+
+        trace_store = get_store()
+
+    routes = [
+        Route("/health", health, methods=["GET"]),
+        Route("/render", render_endpoint, methods=["POST"]),
+    ]
+
+    if dashboard and trace_store:
+        from .dashboard import dashboard_routes
+
+        routes.extend(dashboard_routes())
+
     app = Starlette(
-        routes=[
-            Route("/health", health, methods=["GET"]),
-            Route("/render", render_endpoint, methods=["POST"]),
-        ],
+        routes=routes,
         middleware=[
             Middleware(BaseHTTPMiddleware, dispatch=request_id_middleware),
         ],
     )
+
+    # Store trace_store on app state for dashboard API access
+    app.state.trace_store = trace_store
+
     return app
 
 
