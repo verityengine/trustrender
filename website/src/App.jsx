@@ -564,17 +564,28 @@ const VALID = {
 }
 
 const INVALID = {
-  invoice_number: "BAD-001",
+  invoice_number: "INV-2026-0042",
   invoice_date: "April 10, 2026",
-  sender: "not an object",
-  items: "not a list",
-  notes: null
+  due_date: "May 10, 2026",
+  payment_terms: "Net 30",
+  sender: { name: "Acme Corp", address: "123 Business Ave, SF 94105" },
+  recipient: { address: "456 Enterprise Blvd, NY 10001", email: "ap@contoso.com" },
+  items: [
+    { num: 1, description: "Website redesign", qty: 1, unit_price: "$4,500", amount: "$4,500" },
+    { num: 2, qty: 1, unit_price: "$2,200", amount: "$2,200" },
+    { num: 3, description: "SEO optimization", qty: 1, unit_price: "$1,800", amount: "$1,800" },
+  ],
+  subtotal: "$8,500",
+  tax_rate: "8.5%",
+  tax_amount: "$722",
+  total: "$8,500",
+  notes: "Payment due within 30 days."
 }
 
 const ERRORS = [
-  { path: 'sender', expected: 'object', got: 'string' },
-  { path: 'items', expected: 'list[object]', got: 'string' },
-  { path: 'notes', expected: 'scalar', got: 'null' },
+  { path: 'sender.email', expected: 'scalar', got: 'missing' },
+  { path: 'recipient.name', expected: 'scalar', got: 'missing' },
+  { path: 'items[1].description', expected: 'scalar', got: 'missing' },
 ]
 
 /* ── JSON syntax coloring ─────────────────────────────────────────── */
@@ -758,11 +769,12 @@ function Connector({ active, blocked }) {
    SECTION 1: HERO = PRODUCT REVEAL
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function HeroReveal() {
-  const [mode, setMode] = useState('valid')
+  const [mode, setMode] = useState(null) // null = no selection yet
   const [phase, setPhase] = useState('idle')
   const [run, setRun] = useState(0)
 
   useEffect(() => {
+    if (mode === null) return // don't auto-run on mount
     setPhase('idle')
     const t = []
     t.push(setTimeout(() => setPhase('validate'), 250))
@@ -771,7 +783,7 @@ function HeroReveal() {
     return () => t.forEach(clearTimeout)
   }, [mode, run])
 
-  const toggle = (m) => { if (m !== mode) { setMode(m); setRun(r => r + 1) } }
+  const toggle = (m) => { setMode(m); setRun(r => r + 1) }
 
   const vSt = phase === 'idle' ? 'waiting' : phase === 'validate' ? 'running' : phase === 'fail' ? 'fail' : 'pass'
   const rSt = phase === 'idle' || phase === 'validate' ? 'waiting' : phase === 'fail' ? 'blocked' : phase === 'render' ? 'running' : 'pass'
@@ -823,7 +835,7 @@ function HeroReveal() {
               Invalid payload
             </button>
             <span className="ml-3 text-[11px] text-panel/30 font-mono hidden md:inline">
-              {mode === 'valid' ? 'invoice_data.json' : 'bad_data.json'} &rarr; invoice.j2.typ
+              {mode === null ? 'choose a payload' : mode === 'valid' ? 'invoice_data.json' : 'bad_data.json'}{mode !== null ? ' \u2192 invoice.j2.typ' : ''}
             </span>
           </div>
         </div>
@@ -840,10 +852,10 @@ function HeroReveal() {
                   <div className="w-2 h-2 rounded-full bg-panel/15" />
                   <div className="w-2 h-2 rounded-full bg-panel/15" />
                 </div>
-                <span className="text-[10px] font-mono text-panel/30 ml-2">{mode === 'valid' ? 'invoice_data.json' : 'bad_data.json'}</span>
+                <span className="text-[10px] font-mono text-panel/30 ml-2">{mode === 'invalid' ? 'bad_data.json' : 'invoice_data.json'}</span>
               </div>
               <div className="p-4 max-h-[520px] overflow-y-auto overflow-x-auto" style={{ colorScheme: 'dark' }}>
-                <JsonDark data={mode === 'valid' ? VALID : INVALID} marks={mode === 'invalid' ? { sender: 1, items: 1, notes: 1 } : {}} />
+                <JsonDark data={mode === 'invalid' ? INVALID : VALID} marks={mode === 'invalid' ? { recipient: 1 } : {}} />
               </div>
               <div className="absolute top-10 bottom-0 right-0 w-6 pointer-events-none" style={{ background: 'linear-gradient(to right, transparent, #282724)' }} />
             </div>
@@ -934,14 +946,15 @@ function TrustLayers() {
     {
       title: 'Readiness',
       desc: 'Structural contract inferred from your template. Missing fields, wrong types, null values — intercepted at the data layer before render.',
-      stats: ['500 soak renders, 0 errors', '53.8 req/s sustained', '56ms avg latency'],
+      stats: ['729 automated tests', '500 soak renders, 0 errors', '56ms avg latency'],
       flourish: <ReadinessFlourish />,
     },
     {
       title: 'Compliance',
-      desc: 'Validator-backed invoice paths for supported shapes. EN 16931, ZUGFeRD, XRechnung. No Java, no iText, no browser stack.',
-      stats: ['EN 16931 validated', 'Factur-X PDF/A-3', 'XRechnung path'],
+      desc: 'Pre-render validated invoice path for German domestic invoicing. EN 16931, ZUGFeRD / Factur-X. No Java, no iText, no browser stack.',
+      stats: ['EN 16931 profile', 'Factur-X PDF/A-3b', 'DE / EUR / single rate'],
       flourish: <ComplianceFlourish />,
+      caption: 'Simplified invoice structure \u2014 not a complete EN 16931 field map',
     },
     {
       title: 'Provenance',
@@ -968,6 +981,7 @@ function TrustLayers() {
                 <div className={`bg-panel rounded-xl border border-rule-light overflow-hidden p-6 md:p-8 ${i % 2 === 1 ? 'md:order-2' : ''}`}
                   style={{ boxShadow: '0 2px 12px rgba(20,18,16,0.05)' }}>
                   {l.flourish}
+                  {l.caption && <p className="text-[10px] text-muted/60 text-center mt-2 italic">{l.caption}</p>}
                 </div>
                 {/* Text */}
                 <div className={i % 2 === 1 ? 'md:order-1' : ''}>
@@ -1010,7 +1024,18 @@ const FIXTURES = {
       subtotal: "$8,500.00", tax_rate: "8.5%", tax_amount: "$722.50", total: "$9,222.50",
       notes: "Payment due within 30 days."
     },
-    invalid: { invoice_number: "BAD-001", sender: "not an object", items: "not a list", notes: null },
+    invalid: {
+      invoice_number: "INV-2026-0042", invoice_date: "April 10, 2026", due_date: "May 10, 2026", payment_terms: "Net 30",
+      sender: { name: "Acme Corp", address_line1: "123 Business Ave", address_line2: "SF, CA 94105" },
+      recipient: { address_line1: "456 Enterprise Blvd", address_line2: "NY, NY 10001", email: "ap@contoso.com" },
+      items: [
+        { num: 1, description: "Website redesign", qty: 1, unit_price: "$4,500.00", amount: "$4,500.00" },
+        { num: 2, qty: 1, unit_price: "$2,200.00", amount: "$2,200.00" },
+        { num: 3, description: "SEO optimization", qty: 1, unit_price: "$1,800.00", amount: "$1,800.00" },
+      ],
+      subtotal: "$8,500.00", tax_rate: "8.5%", tax_amount: "$722.50", total: "$8,500.00",
+      notes: "Payment due within 30 days."
+    },
   },
   'statement.j2.typ': {
     label: 'Statement',
@@ -1027,7 +1052,18 @@ const FIXTURES = {
       aging: { current: "$5,575.00", days_30: "$3,200.00", days_60: "$1,500.00", days_90: "$7,992.50", total: "$18,267.50" },
       notes: "Payment terms: Net 30."
     },
-    invalid: { company: "not an object", customer: null, transactions: "not a list" },
+    invalid: {
+      company: { name: "Acme Corp", address_line1: "123 Business Ave", address_line2: "SF, CA 94105", email: "accounts@acme.com", phone: "(415) 555-0100" },
+      customer: { name: "Contoso Ltd", address_line1: "456 Enterprise Blvd", address_line2: "NY, NY 10001", email: "ap@contoso.com" },
+      statement_date: "April 10, 2026", period: "Mar 1 \u2013 Mar 31, 2026",
+      opening_balance: "$12,450.00", closing_balance: "$18,267.50", total_charges: "$9,225.00", total_payments: "-$3,407.50",
+      transactions: [
+        { date: "Mar 01", description: "Opening Balance", reference: "", amount: "", balance: "$12,450.00" },
+        { date: "Mar 02", reference: "INV-0031", amount: "$1,500.00", balance: "$13,950.00" },
+      ],
+      aging: { current: "$5,575.00", days_30: "$3,200.00", total: "$18,267.50" },
+      notes: null
+    },
   },
   'receipt.j2.typ': {
     label: 'Receipt',
@@ -1042,7 +1078,17 @@ const FIXTURES = {
       payment: { method: "Visa", last_four: "4821", auth_code: "A94721" },
       amount_tendered: "$28.73", change_due: "$0.00", footer_message: "Thank you!"
     },
-    invalid: { company: null, items: "not a list", total: null },
+    invalid: {
+      company: { name: "Daily Grind Coffee", address_line1: "782 Market St", address_line2: "SF, CA 94102", phone: "(415) 555-0187" },
+      receipt_number: "REC-20260410", date: "April 10, 2026", time: "8:47 AM", cashier: "Maria S.", register: "POS-03",
+      items: [
+        { description: "Oat Milk Latte (Large)", qty: 2, unit_price: "$6.75", amount: "$13.50" },
+        { qty: 1, unit_price: "$12.95", amount: "$12.95" },
+      ],
+      subtotal: "$26.45", tax_label: "CA Sales Tax", tax_amount: "$2.28", total: null,
+      payment: { method: "Visa", last_four: "4821" },
+      amount_tendered: "$28.73", change_due: "$0.00", footer_message: "Thank you!"
+    },
   },
   'letter.j2.typ': {
     label: 'Letter',
@@ -1053,7 +1099,13 @@ const FIXTURES = {
       body_paragraphs: ["Your account has an outstanding balance of $18,267.50.", "Please settle at your earliest convenience."],
       closing: "Sincerely,", signature_name: "James Rodriguez", signature_title: "Director of Finance", signature_company: "Acme Corp",
     },
-    invalid: { sender: "not an object", recipient: null, body_paragraphs: "not a list" },
+    invalid: {
+      sender: { name: "Acme Corp", title: "Accounts Receivable", address_line1: "123 Business Ave", address_line2: "SF, CA 94105", phone: "(415) 555-0100" },
+      recipient: { name: "Margaret Chen", title: "CFO", company: "Contoso Ltd", address_line1: "456 Enterprise Blvd", address_line2: "NY, NY 10001" },
+      date: "April 10, 2026", subject: "Outstanding Balance", salutation: "Dear Ms. Chen,",
+      body_paragraphs: "Your account has an outstanding balance.",
+      closing: "Sincerely,", signature_name: "James Rodriguez", signature_title: "Director of Finance",
+    },
   },
   'report.j2.typ': {
     label: 'Report',
@@ -1067,7 +1119,15 @@ const FIXTURES = {
       spend_by_service: [{ service: "Compute", q1_spend: "$52,100", q4_spend: "$58,400", change: "-10.8%" }],
       recommendations: ["Migrate to reserved instances."],
     },
-    invalid: { company: null, metrics: "not a list", incidents: "not a list" },
+    invalid: {
+      company: { name: "Acme Corp", department: "Engineering" },
+      title: "Q1 2026 Infrastructure Review", subtitle: "Quarterly Summary", date: "April 10, 2026",
+      prepared_by: "Sarah Kim, VP Eng", period: "Jan 1 \u2013 Mar 31, 2026",
+      executive_summary: "Uptime 99.94%. Two P1 incidents resolved within SLA.",
+      metrics: [{ label: "Uptime", value: "99.94%", target: "99.9%" }],
+      incidents: [{ id: "INC-0012", date: "Feb 14", severity: "P1", duration: "18 min", description: "DB pool exhaustion." }],
+      spend_by_service: [{ service: "Compute", q1_spend: "$52,100" }],
+    },
   },
 }
 
@@ -1799,17 +1859,17 @@ function ComplianceWedge() {
             <div className="md:w-2/5">
               <p className="text-[11px] tracking-[0.22em] uppercase text-rust mb-4 font-semibold">Compliance</p>
               <h2 className="font-display text-[28px] md:text-[36px] tracking-tight leading-[1.1] mb-4">
-                Validator-backed e&#8209;invoicing
+                Validated e&#8209;invoicing for German B2B
               </h2>
               <p className="text-[14px] text-mid leading-relaxed">
-                Structured data in, compliant artifact out. No Java, no iText, no browser stack. Currently scoped to supported German domestic B2B invoice flows.
+                Pre-render validated invoice data, standards-conformant PDF/A-3b output. No Java, no iText, no browser stack. Currently: DE domestic, EUR, single VAT rate, standard invoices (type 380).
               </p>
             </div>
             <div className="md:w-3/5 grid grid-cols-2 gap-4">
               {[
-                { l: 'EN 16931', d: 'XSD + Schematron validated' },
-                { l: 'ZUGFeRD / Factur-X', d: 'Embedded XML in PDF/A-3' },
-                { l: 'XRechnung', d: 'Supported invoice shapes' },
+                { l: 'EN 16931 profile', d: 'Schema-tested CII XML' },
+                { l: 'ZUGFeRD / Factur-X', d: 'CII XML embedded in PDF/A-3b' },
+                { l: 'Scope', d: 'DE domestic, EUR, single VAT rate' },
                 { l: 'Pure Python pipeline', d: 'No Java, no iText, no Chromium' },
               ].map(c => (
                 <div key={c.l} className="bg-panel rounded-lg border border-rule-light p-5" style={{ boxShadow: '0 1px 4px rgba(20,18,16,0.03)' }}>
@@ -1837,7 +1897,7 @@ function FinalCTA() {
             Stop shipping documents you cannot trust.
           </h2>
           <p className="text-[15px] text-panel/40 max-w-md mb-8">
-            Readiness. Compliance. Provenance. One pipeline, validated end to end.
+            Readiness. Compliance. Provenance. Validated by default for Jinja2 templates.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 items-start">
             <a href="https://github.com/verityengine/formforge" className="px-7 py-3.5 bg-rust hover:bg-rust-light text-white text-[14px] font-semibold rounded transition-colors inline-block">

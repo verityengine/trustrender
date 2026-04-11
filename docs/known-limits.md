@@ -11,7 +11,7 @@ Honest documentation of what Formforge does not do, does partially, or does with
 ### ZUGFeRD scope is narrow
 
 Supported:
-- EN 16931 profile (not XRechnung)
+- EN 16931 profile only
 - German domestic B2B invoices
 - EUR currency only
 - Single VAT rate per invoice
@@ -19,16 +19,28 @@ Supported:
 - SEPA credit transfer and direct debit payment means
 
 Not supported (fails loudly at validation time):
-- Credit notes
+- Credit notes (type 381)
 - Reverse charge invoices
 - Intra-community supply
 - Mixed VAT rates within one invoice
 - Non-EUR currencies
 - Non-DE countries
-- XRechnung profile
+- Allowances, charges, or discounts (hardcoded to zero in XML; rejected at validation if present in data)
 - Extended/Basic/Minimum profiles
 
-Mustang validator compliance is stated in documentation but not proven by automated tests. Internal XSD and Schematron validation passes. External validator integration is a gap.
+### XRechnung not yet validated
+
+Code paths exist for XRechnung (guideline ID, Leitweg-ID, BR-DE-5 contact requirements). However, the generated XML fails Schematron validation against the factur-x Schematron rules because the XRechnung guideline ID is not in the allowed set for the EN 16931 Schematron. Proper XRechnung validation requires KOSIT's XRechnung-specific Schematron rules, which are not currently integrated.
+
+XRechnung is not listed as a supported profile. The `zugferd="xrechnung"` code path exists but should not be used in production until Schematron validation passes.
+
+### Mustang validation is manual
+
+One-time manual validation against the Mustang reference validator has passed for the EN 16931 profile (see `docs/zugferd-prototype.md`). This is not automated in CI. `preflight()` runs XSD validation when `facturx` is installed, but Schematron and Mustang validation are test-suite-only.
+
+### XSD/Schematron validation is not in the render pipeline
+
+The `render()` function validates invoice data fields (required fields, currency, country, tax rates) but does not run XSD or Schematron validation on the generated XML. `preflight()` runs XSD validation when the `facturx` library is available. Schematron validation runs only in the test suite.
 
 ### Font fallback is silent
 

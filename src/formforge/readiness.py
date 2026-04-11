@@ -222,21 +222,47 @@ def _check_compliance(
             message=e.message,
         ))
 
+    # XSD schema validation — verify generated XML is structurally valid.
+    # Only runs when field validation passes (no point generating XML from bad data).
+    if not errors:
+        try:
+            from .zugferd import build_invoice_xml
+
+            xml_bytes = build_invoice_xml(data, profile=zugferd)
+            try:
+                from facturx import xml_check_xsd
+
+                xml_check_xsd(xml_bytes)
+            except ImportError:
+                issues.append(ReadinessIssue(
+                    stage="compliance",
+                    check="xsd_validation",
+                    severity="warning",
+                    path="facturx",
+                    message="facturx not installed — XSD validation skipped",
+                ))
+            except Exception as exc:
+                issues.append(ReadinessIssue(
+                    stage="compliance",
+                    check="xsd_validation",
+                    severity="error",
+                    path="xml",
+                    message=f"XSD validation failed: {exc}",
+                ))
+        except Exception as exc:
+            issues.append(ReadinessIssue(
+                stage="compliance",
+                check="xml_generation",
+                severity="error",
+                path="xml",
+                message=f"XML generation failed: {exc}",
+            ))
+
     # Profile eligibility report
-    for profile in ("en16931", "xrechnung"):
+    for profile in ("en16931",):
         profile_errors = validate_zugferd_invoice_data(data, profile=profile)
         if not profile_errors:
             eligible.append(profile)
-        elif profile != zugferd:
-            # Show what's missing for non-requested profiles as info
-            missing = [e.path for e in profile_errors]
-            issues.append(ReadinessIssue(
-                stage="compliance",
-                check="profile_eligibility",
-                severity="warning",
-                path=profile,
-                message=f"not eligible (missing: {', '.join(missing[:5])})",
-            ))
 
 
 # ---------------------------------------------------------------------------

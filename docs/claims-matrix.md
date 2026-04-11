@@ -60,10 +60,14 @@ Every public or semi-public claim, checked against code.
 
 | Claim | Source | Verdict | Evidence | Action |
 |-------|--------|---------|----------|--------|
-| EN 16931 compliant | README | NARROW | DE/EUR/B2B/single-rate/type-380 only. Unsupported shapes fail loudly. | Ensure scope is always stated alongside claim |
+| EN 16931 compliant | README | NARROW | DE/EUR/B2B/single-rate/type-380 only. Unsupported shapes fail loudly. | **Tightened (2026-04-11)**: README now says "EN 16931 e-invoices for German domestic B2B" |
 | Passes Mustang validator | README (old) | RESOLVED | Wording downgraded to "XSD + Schematron validated." Mustang referenced as one-time manual proof. | **Done** |
+| XSD + Schematron validated | Website | NARROW | XSD/Schematron runs in test suite, not render pipeline. preflight() now runs XSD when facturx available. | **Tightened (2026-04-11)**: Website changed to "Schema-tested CII XML" |
+| XRechnung supported | Website, README | REMOVED | XRechnung Schematron fails — guideline ID rejected by factur-x Schematron rules. KOSIT rules not integrated. Zero tests. | **Removed (2026-04-11)**: Dropped from website and README. Listed as "not yet validated" in known-limits |
+| "Structured data in, compliant artifact out" | Website | REMOVED | Too broad — implies universal compliance. Replaced with scoped language. | **Removed (2026-04-11)** |
 | PDF/A-3b with embedded XML | README | TRUE | `drafthorse.pdf.attach_xml()` used, tested | None |
-| ZUGFeRD unsupported cases fail loudly | zugferd.py comments | TRUE | Tests for non-EUR, non-DE, mixed rates, empty items, missing fields all exist and pass | **Corrected (tests existed)** |
+| ZUGFeRD unsupported cases fail loudly | zugferd.py comments | TRUE | Tests for non-EUR, non-DE, mixed rates, empty items, missing fields, allowances/charges all exist and pass | **Strengthened (2026-04-11)**: allowance/charge rejection added |
+| Allowances/charges silently zeroed | zugferd.py line 388 | RESOLVED | Was silently hardcoded to 0. Now rejected at validation if data contains allowance/charge/discount fields. | **Fixed (2026-04-11)** |
 
 ---
 
@@ -91,18 +95,35 @@ Every public or semi-public claim, checked against code.
 
 ---
 
+---
+
+## Ugly-Data Pressure Test Claims (2026-04-12)
+
+| Claim | Source | Verdict | Evidence | Action |
+|-------|--------|---------|----------|--------|
+| Contract catches data errors before rendering | Outreach | TRUE | 68 pressure tests: None in required fields, type mismatches, empty dicts all blocked by contract with exact paths | **Strengthened** |
+| Ugly data renders without crash | Implicit | TRUE | Control chars, RTL, null bytes, zero-width chars, bidi text, deep nesting — all render valid PDFs | None |
+| Semantic validation catches arithmetic mismatches | Website | TRUE | Arithmetic drift > $0.01 correctly warned in pressure tests | None |
+| Non-finite values rejected | New claim (2026-04-12) | TRUE | Infinity, NaN, -inf rejected by `_try_parse_number` via `math.isfinite()` | **Added** |
+| Semantic currency parsing | Implicit | NARROW | Only `€$£¥` symbols stripped. `₹`, `R$`, `kr` not supported — semantic checks silently skip | Document in known-limits.md |
+| European number format | Implicit | NARROW | `1.234,56` format not parseable — semantic checks silently skip | Document in known-limits.md |
+| Preflight and render agree on readiness | Implicit | TRUE | Tested for both invoice and statement templates under ugly data | None |
+| Extra fields in data are allowed | Implicit | TRUE | 20+ extra keys passed through preflight and render without error | None |
+
+---
+
 ## Summary
 
 | Verdict | Count |
 |---------|-------|
-| TRUE | 14 |
-| NARROW | 8 |
+| TRUE | 22 |
+| NARROW | 10 |
 | MANUAL | 5 |
 | STALE | 3 |
 | ASPIRATIONAL | 1 |
-| UNPROVEN | 4 |
-| **Total claims checked** | **35** |
+| UNPROVEN | 2 |
+| **Total claims checked** | **43** |
 
-**Key takeaway:** 14 claims are solidly true. 8 are true but narrower than stated. 5 are real but only manually proven. 4 are stated without test evidence. 3 are stale numbers. 1 is aspirational.
+**Key takeaway:** 22 claims are solidly true (up from 14 after ugly-data pressure testing). 10 are true but narrower than stated. 5 are real but only manually proven. 2 remain unproven. 1 is aspirational ("production-grade" — to be retired).
 
-No claim is fabricated. The project is honest in code but some public-facing materials present manual results as operational proof and use stale numbers.
+No claim is fabricated. Ugly-data pressure testing on 2026-04-12 strengthened contract validation and semantic validation claims without breaking any existing strong claim.

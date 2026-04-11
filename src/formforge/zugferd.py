@@ -206,6 +206,19 @@ def validate_zugferd_invoice_data(
                 actual="missing",
             ))
 
+    # --- Unsupported features: fail loudly ---
+    # Allowances and charges are hardcoded to zero in XML generation.
+    # If data contains these fields, the visual PDF could show them but the
+    # embedded XML would disagree — a compliance failure.  Reject early.
+    for field in ("allowances", "charges", "discounts"):
+        if data.get(field):
+            errors.append(ContractError(
+                path=field,
+                message=f"allowances/charges/discounts not supported in v1 (field '{field}' present)",
+                expected="absent or empty",
+                actual=f"{len(data[field])} entries" if isinstance(data[field], list) else "present",
+            ))
+
     # --- XRechnung-specific requirements ---
     if profile == "xrechnung":
         if not data.get("buyer_reference"):

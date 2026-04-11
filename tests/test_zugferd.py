@@ -97,6 +97,73 @@ class TestValidateInvoiceData:
         paths = [e.path for e in errors]
         assert "total" in paths
 
+    def test_allowances_rejected(self):
+        data = _load_einvoice_data()
+        data["allowances"] = [{"amount": 100, "reason": "Early payment"}]
+        errors = validate_zugferd_invoice_data(data)
+        paths = [e.path for e in errors]
+        assert "allowances" in paths
+        assert any("not supported" in e.message for e in errors)
+
+    def test_charges_rejected(self):
+        data = _load_einvoice_data()
+        data["charges"] = [{"amount": 50, "reason": "Shipping"}]
+        errors = validate_zugferd_invoice_data(data)
+        paths = [e.path for e in errors]
+        assert "charges" in paths
+
+    def test_discounts_rejected(self):
+        data = _load_einvoice_data()
+        data["discounts"] = [{"percent": 10}]
+        errors = validate_zugferd_invoice_data(data)
+        paths = [e.path for e in errors]
+        assert "discounts" in paths
+
+
+# ---------------------------------------------------------------------------
+# XRechnung: code path exists but Schematron fails
+# ---------------------------------------------------------------------------
+
+
+class TestXRechnungNotValidated:
+    """Document that XRechnung code path exists but does NOT pass Schematron.
+
+    These tests exist to prevent accidental claims of XRechnung support.
+    If KOSIT Schematron is integrated in the future, these tests should
+    be updated to expect passes instead of failures.
+    """
+
+    def _xrechnung_data(self):
+        data = _load_einvoice_data()
+        data["buyer_reference"] = "04011000-12345-67"
+        data["seller"]["contact_name"] = "Max Mustermann"
+        data["buyer"]["email"] = "einkauf@kunde.de"
+        return data
+
+    def test_xrechnung_validation_passes(self):
+        """Field validation passes — the data shape is correct."""
+        errors = validate_zugferd_invoice_data(self._xrechnung_data(), profile="xrechnung")
+        assert errors == []
+
+    def test_xrechnung_xsd_passes(self):
+        """XSD passes — the XML structure is valid CII."""
+        xml = build_invoice_xml(self._xrechnung_data(), profile="xrechnung")
+        from facturx import xml_check_xsd
+
+        xml_check_xsd(xml)
+
+    def test_xrechnung_schematron_fails(self):
+        """Schematron FAILS — guideline ID not in factur-x allowed set.
+
+        This is the reason XRechnung is not claimed as supported.
+        KOSIT XRechnung Schematron rules would be needed to validate properly.
+        """
+        xml = build_invoice_xml(self._xrechnung_data(), profile="xrechnung")
+        from facturx.facturx import xml_check_schematron
+
+        with pytest.raises(Exception, match="not valid against the official schematron"):
+            xml_check_schematron(xml)
+
 
 # ---------------------------------------------------------------------------
 # XML generation
@@ -238,3 +305,130 @@ class TestRegression:
             zugferd=None,
         )
         assert pdf[:5] == b"%PDF-"
+
+
+# ---------------------------------------------------------------------------
+# Fixture variants: prove EN 16931 works beyond one example
+# ---------------------------------------------------------------------------
+
+
+class TestFixtureVariants:
+    """Multiple invoice data shapes to verify EN 16931 isn't one-trick."""
+
+    def _base_data(self):
+        return _load_einvoice_data()
+
+    def test_single_item_invoice(self):
+        """Minimal invoice: 1 item, small amount."""
+        data = self._base_data()
+        data["items"] = [{
+            "description": "Beratungsstunde",
+            "quantity": 1,
+            "unit": "C62",
+            "unit_price": 150.00,
+            "tax_rate": 19,
+            "line_total": 150.00,
+        }]
+        data["subtotal"] = 150.00
+        data["tax_entries"] = [{"rate": 19, "basis": 150.00, "amount": 28.50}]
+        data["tax_total"] = 28.50
+        data["total"] = 178.50
+        errors = validate_zugferd_invoice_data(data)
+        assert errors == []
+        xml = build_invoice_xml(data)
+        from facturx import xml_check_xsd
+        xml_check_xsd(xml)
+
+    def test_many_items_invoice(self):
+        """Invoice with 20 line items."""
+        data = self._base_data()
+        data["items"] = [
+            {
+                "description": f"Posten {i+1}",
+                "quantity": i + 1,
+                "unit": "C62",
+                "unit_price": 10.00,
+                "tax_rate": 19,
+                "line_total": (i + 1) * 10.00,
+            }
+            for i in range(20)
+        ]
+        subtotal = sum(item["line_total"] for item in data["items"])
+        tax = round(subtotal * 0.19, 2)
+        data["subtotal"] = subtotal
+        data["tax_entries"] = [{"rate": 19, "basis": subtotal, "amount": tax}]
+        data["tax_total"] = tax
+        data["total"] = subtotal + tax
+        errors = validate_zugferd_invoice_data(data)
+        assert errors == []
+        xml = build_invoice_xml(data)
+        from facturx import xml_check_xsd
+        xml_check_xsd(xml)
+
+    def test_small_amounts(self):
+        """Invoice with penny-level amounts (boundary values)."""
+        data = self._base_data()
+        data["items"] = [{
+            "description": "Kleinstbetrag",
+            "quantity": 1,
+            "unit": "C62",
+            "unit_price": 0.01,
+            "tax_rate": 19,
+            "line_total": 0.01,
+        }]
+        data["subtotal"] = 0.01
+        data["tax_entries"] = [{"rate": 19, "basis": 0.01, "amount": 0.00}]
+        data["tax_total"] = 0.00
+        data["total"] = 0.01
+        errors = validate_zugferd_invoice_data(data)
+        assert errors == []
+        xml = build_invoice_xml(data)
+        from facturx import xml_check_xsd
+        xml_check_xsd(xml)
+
+    def test_large_amounts(self):
+        """Invoice with large amounts."""
+        data = self._base_data()
+        data["items"] = [{
+            "description": "Enterprise-Lizenz",
+            "quantity": 1,
+            "unit": "C62",
+            "unit_price": 999999.99,
+            "tax_rate": 19,
+            "line_total": 999999.99,
+        }]
+        data["subtotal"] = 999999.99
+        tax = round(999999.99 * 0.19, 2)
+        data["tax_entries"] = [{"rate": 19, "basis": 999999.99, "amount": tax}]
+        data["tax_total"] = tax
+        data["total"] = 999999.99 + tax
+        errors = validate_zugferd_invoice_data(data)
+        assert errors == []
+        xml = build_invoice_xml(data)
+        from facturx import xml_check_xsd
+        xml_check_xsd(xml)
+
+    def test_direct_debit_payment(self):
+        """Invoice with SEPA direct debit instead of credit transfer."""
+        data = self._base_data()
+        data["payment"] = {
+            "means": "direct_debit",
+            "iban": "DE89370400440532013000",
+        }
+        errors = validate_zugferd_invoice_data(data)
+        assert errors == []
+        xml = build_invoice_xml(data)
+        assert b"59" in xml  # Direct debit code
+
+    def test_unicode_company_names(self):
+        """Company names with umlauts and special chars in XML."""
+        data = self._base_data()
+        data["seller"]["name"] = "Müller & Söhne Bürotechnik GmbH"
+        data["buyer"]["name"] = "Ärzte-Abrechnungsgesellschaft mbH"
+        data["items"][0]["description"] = "Büroausstattung für Größe M — inkl. Zubehör"
+        errors = validate_zugferd_invoice_data(data)
+        assert errors == []
+        xml = build_invoice_xml(data)
+        from facturx import xml_check_xsd
+        xml_check_xsd(xml)
+        assert "Müller".encode("utf-8") in xml

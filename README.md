@@ -260,16 +260,17 @@ error[DATA_CONTRACT]: 3 validation error(s)
 
 ## ZUGFeRD / Factur-X e-invoicing
 
-Formforge can generate EN 16931-compliant e-invoices for supported invoice shapes. Generated XML passes XSD and Schematron validation. Two profiles are available:
+Formforge generates EN 16931 e-invoices for German domestic B2B invoicing. Generated XML passes XSD and Schematron validation in the test suite. One profile is currently supported:
 
 | Profile | Standard | Use case |
 |---------|----------|----------|
-| `en16931` | EN 16931 (ZUGFeRD / Factur-X) | B2B invoices in Germany and France |
-| `xrechnung` | XRechnung 3.0 | German government (B2G) invoices |
+| `en16931` | EN 16931 (ZUGFeRD / Factur-X) | Domestic B2B invoices in Germany |
 
-When a `zugferd` profile is set, the pipeline adds two steps after normal PDF rendering: CII XML generation from the invoice data, and embedding the XML into a PDF/A-3b container with ZUGFeRD metadata. Generated XML is validated against EN 16931 XSD and Schematron rules automatically. One-time manual validation against the Mustang reference validator has also passed (see `docs/zugferd-prototype.md`).
+When `zugferd="en16931"` is set, the pipeline adds two steps after normal PDF rendering: CII XML generation from the invoice data, and embedding the XML into a PDF/A-3b container with ZUGFeRD metadata.
 
-ZUGFeRD and Factur-X are the same specification — ZUGFeRD is the German name, Factur-X is the French name. Both are supported by the `en16931` profile.
+Pre-render validation checks required fields, currency, country, tax rate constraints, and data completeness. `preflight()` additionally runs XSD schema validation on the generated XML (requires `facturx`). One-time manual validation against the Mustang reference validator has also passed (see `docs/zugferd-prototype.md`).
+
+ZUGFeRD and Factur-X are the same specification — ZUGFeRD is the German name, Factur-X is the French name.
 
 **CLI:**
 
@@ -298,26 +299,27 @@ pdf = render(
 }
 ```
 
-Returns 422 with `ZUGFERD_ERROR` if invoice data is missing required fields. Bad `zugferd` values return 400.
+Returns 422 with `ZUGFERD_ERROR` if invoice data is missing required fields or contains unsupported shapes (allowances, charges, mixed rates). Bad `zugferd` values return 400.
 
-For XRechnung (German government invoicing), additional fields are required: `buyer_reference` (Leitweg-ID), `seller.contact_name`, and seller/buyer electronic addresses.
-
-The invoice data model uses raw numeric amounts (not pre-formatted strings), explicit currency codes, VAT IDs, and structured tax entries. See `examples/einvoice_data.json` for the full shape.
+The invoice data model uses raw numeric amounts (not pre-formatted strings), explicit currency codes, VAT IDs, and structured tax entries. See `examples/einvoice_data.json` for the full shape. See `docs/einvoice-scope.md` for the full supported/unsupported scenario matrix.
 
 ### Supported scope
 
-- Profiles: EN 16931 (ZUGFeRD / Factur-X) and XRechnung
+- Profile: EN 16931 (ZUGFeRD / Factur-X)
 - Country: Germany (DE)
 - Currency: EUR
 - Tax: standard VAT, single rate per invoice
-- Invoice type: domestic B2B and B2G (type code 380)
+- Invoice type: domestic B2B standard invoice (type code 380)
+- Payment: SEPA credit transfer, SEPA direct debit
 
-### Not supported
+### Not supported (fails loudly at validation time)
 
-- Credit notes
+- XRechnung (code path exists, not yet schema-validated)
+- Credit notes (type 381)
 - Reverse charge
 - Intra-community / cross-border
 - Mixed tax rates within one invoice
+- Allowances, charges, or discounts
 - Non-EUR currencies
 - Non-DE countries
 
@@ -388,7 +390,7 @@ Returns `application/pdf` on success.
 }
 ```
 
-**Request format:** JSON object with fields `template` (required string), `data` (required object), `debug` (optional boolean), `validate` (optional boolean, defaults to true), `zugferd` (optional: `"en16931"` or `"xrechnung"`), `provenance` (optional boolean). See `examples/request_invoice.json` for a complete runnable example.
+**Request format:** JSON object with fields `template` (required string), `data` (required object), `debug` (optional boolean), `validate` (optional boolean, defaults to true), `zugferd` (optional: `"en16931"`), `provenance` (optional boolean). See `examples/request_invoice.json` for a complete runnable example.
 
 **Request ID:** The server accepts a client-provided `X-Request-ID` header or generates a UUID. It is echoed on both success and error responses for request tracing.
 
@@ -585,7 +587,7 @@ Server error responses include `error`, `message`, `stage`, and `request_id`. Wi
 - Semantic validation: hint-driven arithmetic, date, completeness, numeric coercion, and balance reconciliation checks
 - Semantic presets: `INVOICE_HINTS`, `RECEIPT_HINTS`, `STATEMENT_HINTS` — auto-detected by template name in CLI
 - `formforge check` CLI for template introspection and data validation
-- ZUGFeRD / Factur-X: EN 16931 and XRechnung e-invoice generation (PDF/A-3b + embedded CII XML, XSD/Schematron-validated)
+- ZUGFeRD / Factur-X: EN 16931 e-invoice generation for DE domestic B2B (PDF/A-3b + embedded CII XML, schema-tested)
 - Generation proof: cryptographic provenance embedded in PDF metadata, verifiable without re-rendering
 - 688 tests passing (unit, integration, contract, include inference, semantic, ZUGFeRD, provenance, audit, ugly-data pressure, diagnostics)
 
