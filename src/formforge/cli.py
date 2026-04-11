@@ -53,6 +53,13 @@ def main(argv: list[str] | None = None) -> int:
         help="Additional font directory (can be repeated)",
     )
 
+    doctor_cmd = sub.add_parser("doctor", help="Check environment and diagnose issues")
+    doctor_cmd.add_argument(
+        "--smoke",
+        action="store_true",
+        help="Run a quick render and server health smoke test",
+    )
+
     args = parser.parse_args(argv)
 
     if args.command is None:
@@ -64,6 +71,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "serve":
         return _run_serve(args)
+
+    if args.command == "doctor":
+        from .doctor import run_doctor
+        return run_doctor(smoke=args.smoke)
 
     return 1
 
