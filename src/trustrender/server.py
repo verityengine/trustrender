@@ -92,6 +92,7 @@ def create_app(
     max_body_size: int = DEFAULT_MAX_BODY_SIZE,
     dashboard: bool = False,
     history_path: str | None = None,
+    cors_origins: list[str] | None = None,
 ) -> Starlette:
     """Create the Starlette application.
 
@@ -529,11 +530,24 @@ def create_app(
         from starlette.staticfiles import StaticFiles
         routes.append(Mount("/", app=StaticFiles(directory=str(playground_dir), html=True), name="playground"))
 
+    middleware_stack = [
+        Middleware(BaseHTTPMiddleware, dispatch=request_id_middleware),
+    ]
+
+    if cors_origins:
+        from starlette.middleware.cors import CORSMiddleware
+
+        middleware_stack.insert(0, Middleware(
+            CORSMiddleware,
+            allow_origins=cors_origins,
+            allow_methods=["GET", "POST", "OPTIONS"],
+            allow_headers=["Content-Type", "X-Request-ID"],
+        ))
+        logger.info("CORS enabled for origins: %s", cors_origins)
+
     app = Starlette(
         routes=routes,
-        middleware=[
-            Middleware(BaseHTTPMiddleware, dispatch=request_id_middleware),
-        ],
+        middleware=middleware_stack,
     )
 
     # Store trace_store on app state for dashboard API access

@@ -1,0 +1,31 @@
+app = "trustrender-api"
+primary_region = "sjc"
+
+[build]
+
+[env]
+  TRUSTRENDER_TEMPLATES_DIR = "/app/examples"
+  TRUSTRENDER_CORS_ORIGINS = "https://trustrender.dev,https://www.trustrender.dev"
+
+[http_service]
+  internal_port = 8190
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 50
+    soft_limit = 25
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+
+[[services.http_checks]]
+  interval = 15000
+  grace_period = "10s"
+  method = "GET"
+  path = "/health"
+  timeout = 5000

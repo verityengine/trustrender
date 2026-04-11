@@ -118,6 +118,13 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Maximum request body size in bytes (default: 10485760 = 10 MB, or set TRUSTRENDER_MAX_BODY_SIZE)",
     )
+    serve_cmd.add_argument(
+        "--cors-origin",
+        action="append",
+        default=[],
+        dest="cors_origins",
+        help="Allowed CORS origin (repeatable; also set TRUSTRENDER_CORS_ORIGINS as comma-separated list)",
+    )
 
     preflight_cmd = sub.add_parser("preflight", help="Pre-render readiness verification")
     preflight_cmd.add_argument("template", help="Path to template (.j2.typ or .typ)")
@@ -729,6 +736,13 @@ def _run_serve(args: argparse.Namespace) -> int:
     if max_body_size is None:
         max_body_size = DEFAULT_MAX_BODY_SIZE
 
+    # Resolve CORS origins: --cors-origin flags + TRUSTRENDER_CORS_ORIGINS env var
+    cors_origins = list(args.cors_origins)
+    env_cors = os.environ.get("TRUSTRENDER_CORS_ORIGINS", "")
+    if env_cors:
+        cors_origins.extend(o.strip() for o in env_cors.split(",") if o.strip())
+    cors_origins = list(dict.fromkeys(cors_origins))  # dedupe, preserve order
+
     app = create_app(
         args.templates,
         debug=args.debug,
@@ -738,6 +752,7 @@ def _run_serve(args: argparse.Namespace) -> int:
         max_body_size=max_body_size,
         dashboard=args.dashboard,
         history_path=args.history,
+        cors_origins=cors_origins or None,
     )
     # Configure structured logging for trustrender modules.
     import logging
@@ -758,6 +773,8 @@ def _run_serve(args: argparse.Namespace) -> int:
         print(f"  Dashboard: http://{args.host}:{args.port}/dashboard")
     if args.history:
         print(f"  History: {args.history}")
+    if cors_origins:
+        print(f"  CORS origins: {', '.join(cors_origins)}")
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
     return 0
 
