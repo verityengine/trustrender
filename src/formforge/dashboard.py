@@ -229,7 +229,13 @@ async function loadData(){
   let filtered=traces;
   if(filter==='zugferd') filtered=traces.filter(t=>t.zugferd_profile);
   renderEvents(filtered);
-  if(selectedId){const t=traces.find(t=>t.id===selectedId);if(t)showDetail(t)}
+  if(selectedId){
+    const t=filtered.find(t=>t.id===selectedId);
+    if(t){showDetail(t)}
+    else if(filtered.length){selectTrace(filtered[0].id)}
+  } else if(filtered.length){
+    selectTrace(filtered[0].id);
+  }
 }
 
 function renderEvents(traces){
