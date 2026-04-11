@@ -78,6 +78,7 @@ class CompileBackend(Protocol):
         format: str = "pdf",
         font_paths: list[str] | None = None,
         timeout: float | None = None,
+        pdf_standards: list[str] | None = None,
     ) -> bytes: ...
 
 
@@ -101,12 +102,15 @@ class TypstPyBackend:
         format: str = "pdf",
         font_paths: list[str] | None = None,
         timeout: float | None = None,
+        pdf_standards: list[str] | None = None,
     ) -> bytes:
         import typst as _typst
 
         kwargs: dict = {"format": format}
         if font_paths:
             kwargs["font_paths"] = font_paths
+        if pdf_standards:
+            kwargs["pdf_standards"] = pdf_standards
         try:
             return _typst.compile(str(input_path), **kwargs)
         except _typst.TypstError as exc:
@@ -147,12 +151,15 @@ class TypstCliBackend:
         format: str = "pdf",
         font_paths: list[str] | None = None,
         timeout: float | None = None,
+        pdf_standards: list[str] | None = None,
     ) -> bytes:
         effective_timeout = timeout if timeout is not None else self._timeout
         cmd = [self._bin, "compile", str(input_path), "-", "--format", format]
         if font_paths:
             for fp in font_paths:
                 cmd.extend(["--font-path", str(fp)])
+        if pdf_standards:
+            cmd.extend(["--pdf-standard", ",".join(pdf_standards)])
 
         try:
             result = subprocess.run(
@@ -233,6 +240,7 @@ def compile_typst_file(
     font_paths: list[str] | None = None,
     backend: CompileBackend | None = None,
     timeout: float | None = None,
+    pdf_standards: list[str] | None = None,
 ) -> bytes:
     """Compile an existing ``.typ`` file to PDF bytes.
 
@@ -245,10 +253,14 @@ def compile_typst_file(
         backend: Explicit backend instance.  If None, uses ``get_backend()``.
         timeout: Compile timeout in seconds.  Passed to the backend.
             Only honored by ``TypstCliBackend`` (subprocess kill).
+        pdf_standards: PDF standard conformance levels (e.g. ``["a-3b"]``).
     """
     backend = backend or get_backend()
     try:
-        return backend.compile(path, format="pdf", font_paths=font_paths, timeout=timeout)
+        return backend.compile(
+            path, format="pdf", font_paths=font_paths, timeout=timeout,
+            pdf_standards=pdf_standards,
+        )
     except FormforgeError as exc:
         if exc.template_path is None:
             exc.template_path = str(path)
@@ -264,6 +276,7 @@ def compile_typst(
     template_path: str | os.PathLike | None = None,
     backend: CompileBackend | None = None,
     timeout: float | None = None,
+    pdf_standards: list[str] | None = None,
 ) -> bytes:
     """Compile rendered Typst markup to PDF bytes.
 
@@ -303,6 +316,7 @@ def compile_typst(
                 format="pdf",
                 font_paths=resolved_fonts,
                 timeout=timeout,
+                pdf_standards=pdf_standards,
             )
         except FormforgeError as exc:
             if exc.template_path is None and template_path:

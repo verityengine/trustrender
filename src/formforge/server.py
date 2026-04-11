@@ -39,7 +39,7 @@ from .templates import render_template
 
 MAX_BODY_SIZE = 1_048_576  # 1 MB
 RENDER_TIMEOUT = 30  # seconds
-ALLOWED_FIELDS = {"template", "data", "debug", "validate"}
+ALLOWED_FIELDS = {"template", "data", "debug", "validate", "zugferd"}
 
 
 def _server_render(
@@ -48,6 +48,7 @@ def _server_render(
     *,
     debug: bool,
     validate: bool,
+    zugferd: str | None,
     font_paths: list[str] | None,
     timeout: float,
 ) -> bytes:
@@ -61,6 +62,22 @@ def _server_render(
     This bypass exists only for killable execution, not to change semantics.
     """
     backend = TypstCliBackend(compile_timeout=timeout)
+
+    # ZUGFeRD invoice data validation
+    if zugferd:
+        from .zugferd import validate_zugferd_invoice_data
+
+        errors = validate_zugferd_invoice_data(data)
+        if errors:
+            detail = "\n".join(f"  {e.path}: {e.message}" for e in errors)
+            raise FormforgeError(
+                f"Invoice data does not satisfy EN 16931: {len(errors)} error(s)",
+                code=ErrorCode.ZUGFERD_ERROR,
+                stage="zugferd_validation",
+                detail=detail,
+                template_path=str(template_path),
+                validation_errors=errors,
+            )
 
     if validate and template_path.name.endswith(".j2.typ"):
         from .contract import (
@@ -81,9 +98,11 @@ def _server_render(
                 detail=format_contract_detail(validation_errors, contract),
             )
 
+    pdf_standards = ["a-3b"] if zugferd else None
+
     if template_path.name.endswith(".j2.typ"):
         rendered = render_template(template_path, data)
-        return compile_typst(
+        pdf_bytes = compile_typst(
             rendered,
             template_path.parent,
             debug=debug,
@@ -91,14 +110,36 @@ def _server_render(
             template_path=template_path,
             backend=backend,
             timeout=timeout,
+            pdf_standards=pdf_standards,
         )
     else:
-        return compile_typst_file(
+        pdf_bytes = compile_typst_file(
             template_path,
             font_paths=font_paths,
             backend=backend,
             timeout=timeout,
+            pdf_standards=pdf_standards,
         )
+
+    # ZUGFeRD post-processing
+    if zugferd:
+        from .zugferd import apply_zugferd, build_invoice_xml
+
+        try:
+            xml_bytes = build_invoice_xml(data)
+            pdf_bytes = apply_zugferd(pdf_bytes, xml_bytes)
+        except FormforgeError:
+            raise
+        except Exception as exc:
+            raise FormforgeError(
+                f"ZUGFeRD generation failed: {exc}",
+                code=ErrorCode.ZUGFERD_ERROR,
+                stage="zugferd",
+                detail=str(exc),
+                template_path=str(template_path),
+            ) from exc
+
+    return pdf_bytes
 
 
 def create_app(
@@ -190,6 +231,7 @@ def create_app(
         data = payload.get("data")
         req_debug = payload.get("debug", False)
         req_validate = payload.get("validate", False)
+        req_zugferd = payload.get("zugferd")
 
         if not template_name or not isinstance(template_name, str):
             return _error(
@@ -212,6 +254,14 @@ def create_app(
                 400,
                 ErrorCode.INVALID_DATA,
                 "'debug' must be a boolean",
+                request_id,
+                stage="execution",
+            )
+        if req_zugferd is not None and req_zugferd != "en16931":
+            return _error(
+                400,
+                ErrorCode.INVALID_DATA,
+                "'zugferd' must be 'en16931'",
                 request_id,
                 stage="execution",
             )
@@ -248,6 +298,7 @@ def create_app(
                     data,
                     debug=use_debug,
                     validate=req_validate,
+                    zugferd=req_zugferd,
                     font_paths=resolved_fonts,
                     timeout=render_timeout,
                 ),
@@ -267,8 +318,10 @@ def create_app(
         except FormforgeError as exc:
             if exc.code == ErrorCode.RENDER_TIMEOUT:
                 status = 504
-            elif exc.code in (ErrorCode.INVALID_DATA, ErrorCode.DATA_CONTRACT):
-                status = 422 if exc.code == ErrorCode.DATA_CONTRACT else 400
+            elif exc.code in (ErrorCode.DATA_CONTRACT, ErrorCode.ZUGFERD_ERROR):
+                status = 422
+            elif exc.code == ErrorCode.INVALID_DATA:
+                status = 400
             else:
                 status = 500
             error_data = exc.to_dict(include_debug=use_debug)

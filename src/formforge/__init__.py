@@ -76,6 +76,7 @@ def render(
     debug: bool = False,
     font_paths: list[str | os.PathLike] | None = None,
     validate: bool = False,
+    zugferd: str | None = None,
 ) -> bytes:
     """Render a PDF from a template and data.
 
@@ -92,6 +93,9 @@ def render(
         validate: If True, validate data against the template's inferred
             structural contract before rendering.  Raises ``FormforgeError``
             with code ``DATA_CONTRACT`` if validation fails.
+        zugferd: If set to ``"en16931"``, generate a ZUGFeRD-compliant
+            PDF/A-3b with embedded CII XML.  Validates invoice data against
+            EN 16931 requirements before generation.
 
     Returns:
         PDF file contents as bytes.
@@ -101,6 +105,13 @@ def render(
             ``stage`` for where it failed, and ``detail`` for the full diagnostic.
         FileNotFoundError: If the template or data file does not exist.
     """
+    if zugferd is not None and zugferd != "en16931":
+        raise FormforgeError(
+            f"Unsupported zugferd profile: '{zugferd}'. Only 'en16931' is supported.",
+            code=ErrorCode.INVALID_DATA,
+            stage="data_resolution",
+        )
+
     template_path = Path(template)
     if not template_path.exists():
         raise FormforgeError(
@@ -113,6 +124,22 @@ def render(
     data_dict = _resolve_data(data)
     is_jinja = template_path.name.endswith(".j2.typ")
     resolved_fonts = _build_font_paths(font_paths)
+
+    # ZUGFeRD invoice data validation (EN 16931 requirements)
+    if zugferd:
+        from .zugferd import validate_zugferd_invoice_data
+
+        errors = validate_zugferd_invoice_data(data_dict)
+        if errors:
+            detail = "\n".join(f"  {e.path}: {e.message}" for e in errors)
+            raise FormforgeError(
+                f"Invoice data does not satisfy EN 16931: {len(errors)} error(s)",
+                code=ErrorCode.ZUGFERD_ERROR,
+                stage="zugferd_validation",
+                detail=detail,
+                template_path=str(template_path),
+                validation_errors=errors,
+            )
 
     if is_jinja:
         # Pre-render contract validation (opt-in).
@@ -136,18 +163,41 @@ def render(
                 )
 
         rendered = render_template(template_path, data_dict)
+        # Force PDF/A-3b when ZUGFeRD is requested
+        pdf_standards = ["a-3b"] if zugferd else None
         pdf_bytes = compile_typst(
             rendered,
             template_path.parent,
             debug=debug,
             font_paths=resolved_fonts,
             template_path=template_path,
+            pdf_standards=pdf_standards,
         )
     else:
+        pdf_standards = ["a-3b"] if zugferd else None
         pdf_bytes = compile_typst_file(
             template_path,
             font_paths=resolved_fonts,
+            pdf_standards=pdf_standards,
         )
+
+    # ZUGFeRD post-processing: generate XML, embed into PDF
+    if zugferd:
+        from .zugferd import apply_zugferd, build_invoice_xml
+
+        try:
+            xml_bytes = build_invoice_xml(data_dict)
+            pdf_bytes = apply_zugferd(pdf_bytes, xml_bytes)
+        except FormforgeError:
+            raise
+        except Exception as exc:
+            raise FormforgeError(
+                f"ZUGFeRD generation failed: {exc}",
+                code=ErrorCode.ZUGFERD_ERROR,
+                stage="zugferd",
+                detail=str(exc),
+                template_path=str(template_path),
+            ) from exc
 
     if output is not None:
         output_path = Path(output)

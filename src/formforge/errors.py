@@ -19,13 +19,16 @@ Error codes
     COMPILE_ERROR        Typst compilation failed (catch-all for Typst errors)
     RENDER_TIMEOUT       Render exceeded the time limit
     BACKEND_ERROR        Unexpected failure in the render backend
+    ZUGFERD_ERROR        ZUGFeRD post-processing or XML generation failed
 
 Stages
 ~~~~~~
     data_resolution      Resolving/parsing the data argument
     data_validation      Validating data against template contract
+    zugferd_validation   Validating data against EN 16931 invoice requirements
     template_preprocess  Jinja2 template rendering
     compilation          Typst compilation to PDF
+    zugferd              ZUGFeRD XML generation and PDF post-processing
     execution            Server/CLI execution wrapper
 """
 
@@ -47,6 +50,7 @@ class ErrorCode(str, Enum):
     COMPILE_ERROR = "COMPILE_ERROR"
     RENDER_TIMEOUT = "RENDER_TIMEOUT"
     BACKEND_ERROR = "BACKEND_ERROR"
+    ZUGFERD_ERROR = "ZUGFERD_ERROR"
 
 
 class FormforgeError(Exception):

@@ -87,8 +87,10 @@ Both produce `invoice.pdf` from the bundled example template and data. Template 
 ## CLI usage
 
 ```
-formforge render <template> <data.json> -o <output.pdf> [--debug] [--font-path <dir>]
+formforge render <template> <data.json> -o <output.pdf> [--debug] [--validate] [--zugferd en16931] [--font-path <dir>]
+formforge check <template> [--data <data.json>]
 formforge serve --templates <dir> [--host 127.0.0.1] [--port 8190] [--debug] [--font-path <dir>]
+formforge doctor [--smoke]
 ```
 
 Common examples:
@@ -171,6 +173,65 @@ Returns 422 with `DATA_CONTRACT` error code if validation fails.
 - `{% include %}` fragments are not followed — contract may be incomplete for templates that rely on included fragments for data access
 - Validation is opt-in. Default render behavior is unchanged.
 
+## ZUGFeRD EN 16931 e-invoicing
+
+Formforge can generate Mustang-validated EN 16931 e-invoices for a supported German domestic B2B invoice shape.
+
+When `zugferd="en16931"` is set, the pipeline adds two steps after normal PDF rendering: CII XML generation from the invoice data, and embedding the XML into a PDF/A-3b container with ZUGFeRD metadata. The output passes the Mustang validator (exit code 0, PDF valid, XML valid).
+
+**CLI:**
+
+```
+formforge render examples/einvoice.j2.typ examples/einvoice_data.json -o invoice.pdf --zugferd en16931
+```
+
+**Python API:**
+
+```python
+pdf = render(
+    "examples/einvoice.j2.typ",
+    "examples/einvoice_data.json",
+    output="invoice.pdf",
+    zugferd="en16931",
+)
+```
+
+**HTTP server:**
+
+```json
+{
+  "template": "einvoice.j2.typ",
+  "data": { "invoice_number": "RE-2026-0042", "currency": "EUR", "seller": { ... }, ... },
+  "zugferd": "en16931"
+}
+```
+
+Returns 422 with `ZUGFERD_ERROR` if invoice data is missing required EN 16931 fields. Bad `zugferd` values return 400.
+
+The invoice data model uses raw numeric amounts (not pre-formatted strings), explicit currency codes, VAT IDs, and structured tax entries. See `examples/einvoice_data.json` for the full shape.
+
+### Supported scope
+
+- Profile: EN 16931 only
+- Country: Germany (DE)
+- Currency: EUR
+- Tax: standard VAT, single rate per invoice
+- Invoice type: domestic B2B (type code 380)
+
+### Not supported
+
+- Credit notes
+- Reverse charge
+- Intra-community / cross-border
+- Mixed tax rates within one invoice
+- Non-EUR currencies
+- Non-DE countries
+- XRechnung (separate German CIUS, stricter requirements)
+
+Unsupported shapes fail loudly at validation time, before any rendering or XML generation occurs.
+
+---
+
 ## HTTP server
 
 The server exposes two endpoints:
@@ -202,7 +263,7 @@ Returns `application/pdf` on success.
 }
 ```
 
-**Request format:** JSON object with fields `template` (required string), `data` (required object), `debug` (optional boolean). See `examples/request_invoice.json` for a complete runnable example.
+**Request format:** JSON object with fields `template` (required string), `data` (required object), `debug` (optional boolean), `validate` (optional boolean), `zugferd` (optional, only `"en16931"`). See `examples/request_invoice.json` for a complete runnable example.
 
 **Request ID:** The server accepts a client-provided `X-Request-ID` header or generates a UUID. It is echoed on both success and error responses for request tracing.
 
@@ -365,6 +426,7 @@ Intermediate files are written next to the template as `_formforge_*.typ`. They 
 | `MISSING_FONT` | Font not available (rare due to silent fallback) |
 | `COMPILE_ERROR` | Typst compilation failed |
 | `DATA_CONTRACT` | Data does not satisfy template's structural contract |
+| `ZUGFERD_ERROR` | ZUGFeRD invoice data validation or XML generation failed |
 | `RENDER_TIMEOUT` | Render exceeded the time limit |
 | `BACKEND_ERROR` | Unexpected backend failure |
 
@@ -374,8 +436,10 @@ Intermediate files are written next to the template as `_formforge_*.typ`. They 
 |-------|-------|
 | `data_resolution` | Parsing/validating input data |
 | `data_validation` | Validating data against template contract (opt-in) |
+| `zugferd_validation` | Validating invoice data against EN 16931 requirements |
 | `template_preprocess` | Jinja2 rendering |
 | `compilation` | Typst compilation to PDF |
+| `zugferd` | ZUGFeRD XML generation and PDF post-processing |
 | `execution` | Server/CLI execution wrapper |
 
 Server error responses include `error`, `message`, `stage`, and `request_id`. With `debug: true`, responses also include `detail` (full Typst diagnostic) and file paths.
@@ -393,7 +457,8 @@ Server error responses include `error`, `message`, `stage`, and `request_id`. Wi
 - 5 starter templates: invoice, statement, receipt, letter, report
 - Pre-render contract validation: opt-in structural check catches missing/wrong fields before Jinja runs
 - `formforge check` CLI for template introspection and data validation
-- 288 tests passing (unit, integration, contract, ugly-data stress, environment diagnostics)
+- ZUGFeRD EN 16931: Mustang-validated German domestic B2B e-invoice generation (PDF/A-3b + embedded CII XML)
+- 312 tests passing (unit, integration, contract, ZUGFeRD, ugly-data stress, environment diagnostics)
 
 ## Development
 
@@ -448,6 +513,7 @@ make help     # list all targets
 | Template | File | Tests |
 |----------|------|-------|
 | Invoice | `examples/invoice.j2.typ` | Single and multi-page, ugly data |
+| E-Invoice (ZUGFeRD) | `examples/einvoice.j2.typ` | EN 16931, numeric data, VAT IDs |
 | Statement | `examples/statement.j2.typ` | Multi-page tables, negative values |
 | Receipt | `examples/receipt.j2.typ` | Long items, many items |
 | Letter | `examples/letter.j2.typ` | Long subject, many paragraphs, enclosures |

@@ -38,6 +38,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Validate data against template contract before rendering",
     )
+    render_cmd.add_argument(
+        "--zugferd",
+        choices=["en16931"],
+        help="Generate ZUGFeRD EN 16931 compliant PDF with embedded XML",
+    )
 
     check_cmd = sub.add_parser("check", help="Inspect or validate template data contract")
     check_cmd.add_argument("template", help="Path to .j2.typ template")
@@ -175,6 +180,7 @@ def _run_render(args: argparse.Namespace) -> int:
             debug=args.debug,
             font_paths=args.font_paths,
             validate=args.validate,
+            zugferd=args.zugferd,
         )
         print(f"Rendered {len(pdf_bytes):,} bytes -> {args.output}")
         if args.debug:

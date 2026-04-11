@@ -12,6 +12,7 @@ dependencies = [
     "jinja2>=3.1",
     "starlette>=0.40",
     "uvicorn>=0.30",
+    "drafthorse>=2024.0",
 ]
 
 [project.scripts]
