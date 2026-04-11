@@ -1036,8 +1036,8 @@ function TrustLayers() {
     },
     {
       title: 'Provenance',
-      desc: 'Verifiable lineage from inputs to output. Know what data went in, what template was used, and what artifact was produced.',
-      stats: ['Input hash tracking', 'Template versioning', 'Output fingerprint'],
+      desc: 'Traceable input-to-output lineage within the render pipeline. Know what data went in, what template was used, and fingerprint the artifact produced.',
+      stats: ['Input fingerprinting', 'Template fingerprinting', 'Output SHA-256'],
       flourish: <ProvenanceFlourish />,
     },
   ]
@@ -2029,6 +2029,7 @@ function AppWorkspace() {
                           <div>trace: {selectedTrace.id}</div>
                           {selectedTrace.template_hash && <div>template: {selectedTrace.template_hash}</div>}
                           {selectedTrace.data_hash && <div>data: {selectedTrace.data_hash}</div>}
+                          {selectedTrace.output_hash ? <div>output: {selectedTrace.output_hash}</div> : <div className="text-muted/40">output hash: not recorded</div>}
                           {selectedTrace.engine_version && <div>engine: formforge {selectedTrace.engine_version}</div>}
                         </div>
                       </div>

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -56,7 +57,11 @@ def main(argv: list[str] | None = None) -> int:
     check_cmd.add_argument("--data", help="Path to JSON data file to validate against")
 
     serve_cmd = sub.add_parser("serve", help="Start HTTP render server")
-    serve_cmd.add_argument("--templates", required=True, help="Template directory root")
+    serve_cmd.add_argument(
+        "--templates",
+        default=os.environ.get("FORMFORGE_TEMPLATES_DIR"),
+        help="Template directory root (or set FORMFORGE_TEMPLATES_DIR env var)",
+    )
     serve_cmd.add_argument(
         "--port", type=int, default=8190, help="Port to listen on (default: 8190)"
     )
@@ -90,6 +95,12 @@ def main(argv: list[str] | None = None) -> int:
     serve_cmd.add_argument(
         "--history",
         help="Path to SQLite history database (enables render tracing)",
+    )
+    serve_cmd.add_argument(
+        "--max-body-size",
+        type=int,
+        default=None,
+        help="Maximum request body size in bytes (default: 10485760 = 10 MB, or set FORMFORGE_MAX_BODY_SIZE)",
     )
 
     preflight_cmd = sub.add_parser("preflight", help="Pre-render readiness verification")
@@ -721,7 +732,27 @@ def _run_render(args: argparse.Namespace) -> int:
 def _run_serve(args: argparse.Namespace) -> int:
     import uvicorn
 
-    from .server import create_app
+    from .server import DEFAULT_MAX_BODY_SIZE, create_app
+
+    if not args.templates:
+        print(
+            "error: --templates is required (or set FORMFORGE_TEMPLATES_DIR env var)",
+            file=sys.stderr,
+        )
+        return 1
+
+    # Resolve max body size: CLI arg > env var > default
+    max_body_size = args.max_body_size
+    if max_body_size is None:
+        env_val = os.environ.get("FORMFORGE_MAX_BODY_SIZE")
+        if env_val is not None:
+            try:
+                max_body_size = int(env_val)
+            except ValueError:
+                print(f"error: FORMFORGE_MAX_BODY_SIZE must be an integer, got: {env_val}", file=sys.stderr)
+                return 1
+    if max_body_size is None:
+        max_body_size = DEFAULT_MAX_BODY_SIZE
 
     app = create_app(
         args.templates,
@@ -729,6 +760,7 @@ def _run_serve(args: argparse.Namespace) -> int:
         font_paths=args.font_paths,
         render_timeout=args.render_timeout,
         max_concurrent_renders=args.max_concurrent,
+        max_body_size=max_body_size,
         dashboard=args.dashboard,
         history_path=args.history,
     )
@@ -737,6 +769,7 @@ def _run_serve(args: argparse.Namespace) -> int:
     print(f"  Debug: {args.debug}")
     print(f"  Render timeout: {args.render_timeout}s")
     print(f"  Max concurrent: {args.max_concurrent}")
+    print(f"  Max body size: {max_body_size:,} bytes")
     if args.dashboard:
         print(f"  Dashboard: http://{args.host}:{args.port}/dashboard")
     if args.history:

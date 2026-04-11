@@ -67,6 +67,7 @@ class RenderTrace:
     backend: str = ""
     zugferd_profile: str = ""
     provenance_hash: str = ""
+    output_hash: str = ""  # SHA-256 of final PDF bytes (after all post-processing)
     validated: bool = False
     stages: list[StageTrace] = field(default_factory=list)
 
@@ -101,6 +102,7 @@ CREATE TABLE IF NOT EXISTS render_traces (
     backend         TEXT,
     zugferd_profile TEXT,
     provenance_hash TEXT,
+    output_hash     TEXT DEFAULT '',
     validated       BOOLEAN,
     stages_json     TEXT
 );
@@ -130,6 +132,11 @@ class TraceStore:
     def _init_db(self) -> None:
         with self._connect() as conn:
             conn.executescript(_SCHEMA)
+            # Migration: add output_hash column to existing databases
+            try:
+                conn.execute("ALTER TABLE render_traces ADD COLUMN output_hash TEXT DEFAULT ''")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(str(self._db_path))
@@ -147,8 +154,8 @@ class TraceStore:
                     id, timestamp, template_name, template_hash, data_hash,
                     outcome, error_code, error_stage, error_message,
                     total_ms, pdf_size, engine_version, backend,
-                    zugferd_profile, provenance_hash, validated, stages_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    zugferd_profile, provenance_hash, output_hash, validated, stages_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     trace.id,
                     trace.timestamp,
@@ -165,6 +172,7 @@ class TraceStore:
                     trace.backend,
                     trace.zugferd_profile,
                     trace.provenance_hash,
+                    trace.output_hash,
                     trace.validated,
                     stages_json,
                 ),
@@ -218,6 +226,7 @@ class TraceStore:
                 backend=row["backend"] or "",
                 zugferd_profile=row["zugferd_profile"] or "",
                 provenance_hash=row["provenance_hash"] or "",
+                output_hash=row["output_hash"] if "output_hash" in row.keys() else "",
                 validated=bool(row["validated"]),
                 stages=[StageTrace(**s) for s in stages],
             ))
@@ -249,6 +258,7 @@ class TraceStore:
             backend=row["backend"] or "",
             zugferd_profile=row["zugferd_profile"] or "",
             provenance_hash=row["provenance_hash"] or "",
+            output_hash=row["output_hash"] if "output_hash" in row.keys() else "",
             validated=bool(row["validated"]),
             stages=[StageTrace(**s) for s in stages],
         )

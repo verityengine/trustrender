@@ -160,3 +160,37 @@ class TestRenderWithTrace:
         pdf = render("examples/invoice.j2.typ", "examples/invoice_data.json")
         assert pdf[:5] == b"%PDF-"
         # No store, no crash, no problem
+
+    def test_output_hash_recorded(self, _history_env):
+        """Successful render records a non-empty output SHA-256."""
+        from formforge.trace import get_store
+
+        render("examples/invoice.j2.typ", "examples/invoice_data.json")
+        store = get_store()
+        traces = store.query()
+        assert len(traces) == 1
+        assert traces[0].output_hash.startswith("sha256:")
+        assert len(traces[0].output_hash) > 10
+
+    def test_output_hash_stable(self, _history_env):
+        """Same inputs produce the same output hash (deterministic render)."""
+        from formforge.trace import get_store
+
+        render("examples/invoice.j2.typ", "examples/invoice_data.json")
+        render("examples/invoice.j2.typ", "examples/invoice_data.json")
+        store = get_store()
+        traces = store.query(limit=2)
+        assert len(traces) == 2
+        assert traces[0].output_hash == traces[1].output_hash
+        assert traces[0].output_hash != ""
+
+    def test_output_hash_changes_with_data(self, _history_env):
+        """Different data produces a different output hash."""
+        from formforge.trace import get_store
+
+        render("examples/invoice.j2.typ", "examples/invoice_data.json")
+        render("examples/receipt.j2.typ", "examples/receipt_data.json")
+        store = get_store()
+        traces = store.query(limit=2)
+        assert len(traces) == 2
+        assert traces[0].output_hash != traces[1].output_hash

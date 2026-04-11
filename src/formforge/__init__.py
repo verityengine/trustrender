@@ -281,6 +281,9 @@ def _render_document_pipeline(
             ))
             trace.provenance_hash = prov_record.proof
 
+        # Output fingerprint: hash the final PDF bytes after all post-processing
+        trace.output_hash = f"sha256:{hashlib.sha256(pdf_bytes).hexdigest()[:16]}"
+
         _record_trace("success", pdf_size=len(pdf_bytes))
         return RenderResult(pdf_bytes=pdf_bytes, trace_id=trace.id)
 

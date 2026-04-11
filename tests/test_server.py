@@ -511,3 +511,46 @@ class TestBackpressure:
             acquired.clear()  # release the hold
             t.join(timeout=2)
             loop.close()
+
+
+# --- Body size limit ---
+
+
+class TestBodySizeLimit:
+    """Verify configurable max body size."""
+
+    def test_custom_small_limit_rejects_render(self):
+        """Custom small limit rejects oversized render requests."""
+        app = create_app(EXAMPLES, max_body_size=100)
+        client = TestClient(app, raise_server_exceptions=False)
+        resp = client.post(
+            "/render",
+            json={"template": "hello.typ", "data": {"x": "a" * 200}},
+        )
+        assert resp.status_code == 400
+        body = resp.json()
+        assert "too large" in body["message"]
+        assert "100" in body["message"]  # limit shown in error
+
+    def test_custom_small_limit_rejects_preflight(self):
+        """Preflight endpoint also enforces body size limit."""
+        app = create_app(EXAMPLES, max_body_size=100)
+        client = TestClient(app, raise_server_exceptions=False)
+        resp = client.post(
+            "/preflight",
+            json={"template": "hello.typ", "data": {"x": "a" * 200}},
+        )
+        assert resp.status_code == 400
+        body = resp.json()
+        assert "too large" in body["message"]
+
+    @pytest.mark.skipif(not HAS_TYPST_CLI, reason="typst CLI not installed")
+    def test_default_limit_accepts_normal_request(self):
+        """Default 10 MB limit accepts normal requests."""
+        app = create_app(EXAMPLES)
+        client = TestClient(app)
+        resp = client.post(
+            "/render",
+            json={"template": "hello.typ", "data": {}},
+        )
+        assert resp.status_code == 200

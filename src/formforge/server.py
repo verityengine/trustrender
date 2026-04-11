@@ -37,7 +37,7 @@ from . import FormforgeError, RenderResult, __version__, _build_font_paths, _ren
 from .engine import TypstCliBackend
 from .errors import ErrorCode
 
-MAX_BODY_SIZE = 1_048_576  # 1 MB
+DEFAULT_MAX_BODY_SIZE = 10_485_760  # 10 MB
 MAX_TEMPLATE_SOURCE_SIZE = 262_144  # 256 KB — templates should be small
 RENDER_TIMEOUT = 30  # seconds
 MAX_CONCURRENT_RENDERS = 8  # backpressure: reject with 503 when at capacity
@@ -85,6 +85,7 @@ def create_app(
     font_paths: list[str | os.PathLike] | None = None,
     render_timeout: float = RENDER_TIMEOUT,
     max_concurrent_renders: int = MAX_CONCURRENT_RENDERS,
+    max_body_size: int = DEFAULT_MAX_BODY_SIZE,
     dashboard: bool = False,
     history_path: str | None = None,
 ) -> Starlette:
@@ -151,22 +152,22 @@ def create_app(
 
         # Enforce body size before parsing
         content_length = request.headers.get("content-length")
-        if content_length and int(content_length) > MAX_BODY_SIZE:
+        if content_length and int(content_length) > max_body_size:
             return _error(
                 400,
                 ErrorCode.INVALID_DATA,
-                "Request body too large",
+                f"Request body too large (limit: {max_body_size:,} bytes)",
                 request_id,
                 stage="execution",
             )
 
         # Parse JSON body
         body = await request.body()
-        if len(body) > MAX_BODY_SIZE:
+        if len(body) > max_body_size:
             return _error(
                 400,
                 ErrorCode.INVALID_DATA,
-                "Request body too large",
+                f"Request body too large (limit: {max_body_size:,} bytes)",
                 request_id,
                 stage="execution",
             )
@@ -363,12 +364,12 @@ def create_app(
 
         # Same body parsing as /render
         content_length = request.headers.get("content-length")
-        if content_length and int(content_length) > MAX_BODY_SIZE:
-            return _error(400, ErrorCode.INVALID_DATA, "Request body too large", request_id, stage="execution")
+        if content_length and int(content_length) > max_body_size:
+            return _error(400, ErrorCode.INVALID_DATA, f"Request body too large (limit: {max_body_size:,} bytes)", request_id, stage="execution")
 
         body = await request.body()
-        if len(body) > MAX_BODY_SIZE:
-            return _error(400, ErrorCode.INVALID_DATA, "Request body too large", request_id, stage="execution")
+        if len(body) > max_body_size:
+            return _error(400, ErrorCode.INVALID_DATA, f"Request body too large (limit: {max_body_size:,} bytes)", request_id, stage="execution")
 
         try:
             payload = json.loads(body)
