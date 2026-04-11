@@ -13,11 +13,15 @@ Backend selection:
 
 from __future__ import annotations
 
+import logging
 import os
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 from typing import Protocol, runtime_checkable
+
+logger = logging.getLogger("trustrender.engine")
 
 from .errors import ErrorCode, TrustRenderError
 
@@ -111,11 +115,17 @@ class TypstPyBackend:
             kwargs["font_paths"] = font_paths
         if pdf_standards:
             kwargs["pdf_standards"] = pdf_standards
+        t0 = time.monotonic()
         try:
-            return _typst.compile(str(input_path), **kwargs)
+            result = _typst.compile(str(input_path), **kwargs)
+            elapsed_ms = (time.monotonic() - t0) * 1000
+            logger.debug("compile.ok backend=typst-py path=%s elapsed_ms=%.0f bytes=%d", input_path, elapsed_ms, len(result))
+            return result
         except _typst.TypstError as exc:
+            elapsed_ms = (time.monotonic() - t0) * 1000
             raw = str(exc)
             code = _classify_typst_error(raw)
+            logger.warning("compile.error backend=typst-py path=%s code=%s elapsed_ms=%.0f", input_path, code.value, elapsed_ms)
             raise TrustRenderError(
                 raw.split("\n")[0],
                 code=code,
@@ -161,6 +171,7 @@ class TypstCliBackend:
         if pdf_standards:
             cmd.extend(["--pdf-standard", ",".join(pdf_standards)])
 
+        t0 = time.monotonic()
         try:
             result = subprocess.run(
                 cmd,
@@ -175,15 +186,19 @@ class TypstCliBackend:
                 stage="compilation",
             )
         except subprocess.TimeoutExpired as exc:
+            elapsed_ms = (time.monotonic() - t0) * 1000
+            logger.error("compile.timeout backend=typst-cli path=%s timeout=%ss elapsed_ms=%.0f", input_path, effective_timeout, elapsed_ms)
             raise TrustRenderError(
                 f"Typst compilation timed out after {effective_timeout}s",
                 code=ErrorCode.RENDER_TIMEOUT,
                 stage="compilation",
             ) from exc
 
+        elapsed_ms = (time.monotonic() - t0) * 1000
         if result.returncode != 0:
             raw = result.stderr.decode("utf-8", errors="replace")
             code = _classify_typst_error(raw)
+            logger.warning("compile.error backend=typst-cli path=%s code=%s elapsed_ms=%.0f", input_path, code.value, elapsed_ms)
             raise TrustRenderError(
                 raw.split("\n")[0],
                 code=code,
@@ -192,6 +207,7 @@ class TypstCliBackend:
                 source_path=str(input_path),
             )
 
+        logger.debug("compile.ok backend=typst-cli path=%s elapsed_ms=%.0f bytes=%d", input_path, elapsed_ms, len(result.stdout))
         return result.stdout
 
 
@@ -214,8 +230,10 @@ def get_backend(*, force: str | None = None) -> CompileBackend:
     choice = force or os.environ.get("TRUSTRENDER_BACKEND")
 
     if choice == "typst-cli":
+        logger.info("backend.selected backend=typst-cli source=%s", "force" if force else "env")
         return TypstCliBackend()
     if choice == "typst-py":
+        logger.info("backend.selected backend=typst-py source=%s", "force" if force else "env")
         return TypstPyBackend()
     if choice is not None:
         raise ValueError(f"Unknown backend: {choice!r}. Use 'typst-py' or 'typst-cli'.")
@@ -224,8 +242,10 @@ def get_backend(*, force: str | None = None) -> CompileBackend:
     try:
         import typst  # noqa: F401
 
+        logger.info("backend.selected backend=typst-py source=auto-detect")
         return TypstPyBackend()
     except ImportError:
+        logger.info("backend.selected backend=typst-cli source=auto-detect-fallback")
         return TypstCliBackend()
 
 

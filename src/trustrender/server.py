@@ -23,7 +23,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
+import time
 import uuid
 from pathlib import Path
 
@@ -36,6 +38,8 @@ from starlette.routing import Mount, Route
 from . import TrustRenderError, RenderResult, __version__, _build_font_paths, _render_document_pipeline
 from .engine import TypstCliBackend
 from .errors import ErrorCode
+
+logger = logging.getLogger("trustrender.server")
 
 DEFAULT_MAX_BODY_SIZE = 10_485_760  # 10 MB
 MAX_TEMPLATE_SOURCE_SIZE = 262_144  # 256 KB — templates should be small
@@ -110,6 +114,11 @@ def create_app(
     # explicit paths + bundled fonts + system fonts (Typst default)
     resolved_fonts = _build_font_paths(font_paths)
     render_semaphore = asyncio.Semaphore(max_concurrent_renders)
+
+    logger.info(
+        "server.startup templates_dir=%s max_concurrent=%d timeout=%ds debug=%s version=%s",
+        templates_dir, max_concurrent_renders, render_timeout, debug, __version__,
+    )
 
     async def health(request: Request) -> JSONResponse:
         return JSONResponse({"status": "ok", "version": __version__})
@@ -288,6 +297,10 @@ def create_app(
         if render_semaphore.locked():
             if ephemeral_path:
                 ephemeral_path.unlink(missing_ok=True)
+            logger.warning(
+                "render.backpressure request_id=%s template=%s concurrent=%d",
+                request_id, template_name, max_concurrent_renders,
+            )
             return _error(
                 503,
                 ErrorCode.RENDER_TIMEOUT,
@@ -295,6 +308,8 @@ def create_app(
                 request_id,
                 stage="execution",
             )
+        t_start = time.monotonic()
+        logger.info("render.start request_id=%s template=%s zugferd=%s", request_id, template_name, req_zugferd)
         try:
             try:
                 async with render_semaphore:
@@ -314,6 +329,11 @@ def create_app(
                         timeout=render_timeout + 5,  # watchdog — subprocess kill is primary
                     )
             except asyncio.TimeoutError:
+                elapsed_ms = (time.monotonic() - t_start) * 1000
+                logger.error(
+                    "render.timeout request_id=%s template=%s elapsed_ms=%.0f",
+                    request_id, template_name, elapsed_ms,
+                )
                 return _error(
                     504,
                     ErrorCode.RENDER_TIMEOUT,
@@ -322,6 +342,7 @@ def create_app(
                     stage="execution",
                 )
             except TrustRenderError as exc:
+                elapsed_ms = (time.monotonic() - t_start) * 1000
                 if exc.code == ErrorCode.RENDER_TIMEOUT:
                     status = 504
                 elif exc.code in (ErrorCode.DATA_CONTRACT, ErrorCode.ZUGFERD_ERROR):
@@ -330,6 +351,10 @@ def create_app(
                     status = 400
                 else:
                     status = 500
+                logger.warning(
+                    "render.error request_id=%s template=%s code=%s status=%d elapsed_ms=%.0f",
+                    request_id, template_name, exc.code.value, status, elapsed_ms,
+                )
                 error_data = exc.to_dict(include_debug=use_debug)
                 error_data["request_id"] = request_id
                 return JSONResponse(
@@ -337,6 +362,13 @@ def create_app(
                     status_code=status,
                     headers={"X-Request-ID": request_id},
                 )
+
+            elapsed_ms = (time.monotonic() - t_start) * 1000
+            pdf_size = len(result.pdf_bytes)
+            logger.info(
+                "render.ok request_id=%s template=%s elapsed_ms=%.0f pdf_bytes=%d",
+                request_id, template_name, elapsed_ms, pdf_size,
+            )
 
             headers = {
                 "Content-Disposition": "inline",

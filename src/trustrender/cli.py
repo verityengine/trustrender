@@ -739,6 +739,15 @@ def _run_serve(args: argparse.Namespace) -> int:
         dashboard=args.dashboard,
         history_path=args.history,
     )
+    # Configure structured logging for trustrender modules.
+    import logging
+
+    logging.basicConfig(
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        level=logging.INFO,
+    )
+
     print(f"TrustRender server starting on {args.host}:{args.port}")
     print(f"  Templates: {args.templates}")
     print(f"  Debug: {args.debug}")
