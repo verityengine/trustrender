@@ -1,0 +1,695 @@
+{
+  "company": {
+    "name": "Acme Corporation",
+    "department": "Engineering Operations"
+  },
+  "title": "FY2026 Comprehensive Infrastructure Review",
+  "subtitle": "Annual Performance, Incident, and Spend Analysis",
+  "date": "April 11, 2026",
+  "prepared_by": "Sarah Kim, VP of Engineering",
+  "period": "January 1 - December 31, 2026",
+  "executive_summary": "This annual review covers 50 operational metrics across all production services. Infrastructure availability remained above target at 99.94%. Twenty incidents were logged, with root causes spanning traffic spikes, deployment issues, and dependency failures. Cloud spend totaled $1.2M across 30 service categories. Fifteen recommendations are provided for the next fiscal year.",
+  "metrics": [
+    {
+      "label": "Uptime",
+      "value": "1825",
+      "target": "<4",
+      "status": "below"
+    },
+    {
+      "label": "P1 Incidents",
+      "value": "4507",
+      "target": "<32",
+      "status": "above"
+    },
+    {
+      "label": "Mean Time to Resolve",
+      "value": "2287",
+      "target": "<95",
+      "status": "above"
+    },
+    {
+      "label": "Cloud Spend",
+      "value": "8936",
+      "target": "<12",
+      "status": "below"
+    },
+    {
+      "label": "Deployments",
+      "value": "6913",
+      "target": "<5",
+      "status": "above"
+    },
+    {
+      "label": "Change Failure Rate",
+      "value": "9.8%",
+      "target": "23.6%",
+      "status": "below"
+    },
+    {
+      "label": "Error Rate",
+      "value": "3.1%",
+      "target": "20.3%",
+      "status": "below"
+    },
+    {
+      "label": "Latency P99",
+      "value": "8929",
+      "target": "<54",
+      "status": "above"
+    },
+    {
+      "label": "Throughput",
+      "value": "7360",
+      "target": "<76",
+      "status": "met"
+    },
+    {
+      "label": "Cache Hit Rate",
+      "value": "81.0%",
+      "target": "1.1%",
+      "status": "above"
+    },
+    {
+      "label": "CPU Utilization",
+      "value": "69.9%",
+      "target": "34.3%",
+      "status": "above"
+    },
+    {
+      "label": "Memory Utilization",
+      "value": "21.9%",
+      "target": "76.4%",
+      "status": "above"
+    },
+    {
+      "label": "Disk I/O",
+      "value": "1520",
+      "target": "<49",
+      "status": "above"
+    },
+    {
+      "label": "Network Throughput",
+      "value": "5882",
+      "target": "<45",
+      "status": "below"
+    },
+    {
+      "label": "Container Restarts",
+      "value": "4334",
+      "target": "<6",
+      "status": "below"
+    },
+    {
+      "label": "Pod Count",
+      "value": "7528",
+      "target": "<69",
+      "status": "above"
+    },
+    {
+      "label": "Node Count",
+      "value": "6202",
+      "target": "<11",
+      "status": "below"
+    },
+    {
+      "label": "Failed Deployments",
+      "value": "4804",
+      "target": "<81",
+      "status": "below"
+    },
+    {
+      "label": "Rollback Rate",
+      "value": "88.5%",
+      "target": "36.4%",
+      "status": "above"
+    },
+    {
+      "label": "Test Coverage",
+      "value": "70.5%",
+      "target": "5.1%",
+      "status": "above"
+    },
+    {
+      "label": "Build Time",
+      "value": "4742",
+      "target": "<11",
+      "status": "above"
+    },
+    {
+      "label": "Deploy Frequency",
+      "value": "1655",
+      "target": "<49",
+      "status": "met"
+    },
+    {
+      "label": "Lead Time",
+      "value": "7429",
+      "target": "<82",
+      "status": "met"
+    },
+    {
+      "label": "MTTR",
+      "value": "2665",
+      "target": "<48",
+      "status": "met"
+    },
+    {
+      "label": "Availability SLA",
+      "value": "3433",
+      "target": "<86",
+      "status": "met"
+    },
+    {
+      "label": "Customer Tickets",
+      "value": "1170",
+      "target": "<78",
+      "status": "below"
+    },
+    {
+      "label": "Alert Noise Ratio",
+      "value": "2804",
+      "target": "<69",
+      "status": "below"
+    },
+    {
+      "label": "On-Call Pages",
+      "value": "4011",
+      "target": "<21",
+      "status": "met"
+    },
+    {
+      "label": "Postmortem Count",
+      "value": "6217",
+      "target": "<35",
+      "status": "below"
+    },
+    {
+      "label": "Runbook Coverage",
+      "value": "68.9%",
+      "target": "22.3%",
+      "status": "met"
+    },
+    {
+      "label": "DNS Resolution Time",
+      "value": "917",
+      "target": "<30",
+      "status": "above"
+    },
+    {
+      "label": "TLS Handshake Time",
+      "value": "5169",
+      "target": "<52",
+      "status": "met"
+    },
+    {
+      "label": "CDN Hit Rate",
+      "value": "7.1%",
+      "target": "91.3%",
+      "status": "below"
+    },
+    {
+      "label": "Origin Latency",
+      "value": "5156",
+      "target": "<28",
+      "status": "below"
+    },
+    {
+      "label": "Database Connections",
+      "value": "8180",
+      "target": "<51",
+      "status": "below"
+    },
+    {
+      "label": "Query P95",
+      "value": "7518",
+      "target": "<19",
+      "status": "met"
+    },
+    {
+      "label": "Replication Lag",
+      "value": "2288",
+      "target": "<32",
+      "status": "below"
+    },
+    {
+      "label": "Backup Success Rate",
+      "value": "56.3%",
+      "target": "26.6%",
+      "status": "below"
+    },
+    {
+      "label": "Recovery Point",
+      "value": "7020",
+      "target": "<75",
+      "status": "met"
+    },
+    {
+      "label": "Recovery Time",
+      "value": "5931",
+      "target": "<29",
+      "status": "above"
+    },
+    {
+      "label": "Security Patches",
+      "value": "8349",
+      "target": "<64",
+      "status": "above"
+    },
+    {
+      "label": "Vulnerability Count",
+      "value": "772",
+      "target": "<15",
+      "status": "above"
+    },
+    {
+      "label": "Compliance Score",
+      "value": "2622",
+      "target": "<88",
+      "status": "met"
+    },
+    {
+      "label": "Audit Findings",
+      "value": "9772",
+      "target": "<9",
+      "status": "met"
+    },
+    {
+      "label": "Cost Per Transaction",
+      "value": "6253",
+      "target": "<77",
+      "status": "met"
+    },
+    {
+      "label": "Revenue Impact",
+      "value": "8670",
+      "target": "<33",
+      "status": "below"
+    },
+    {
+      "label": "User Sessions",
+      "value": "189",
+      "target": "<88",
+      "status": "below"
+    },
+    {
+      "label": "API Calls",
+      "value": "1877",
+      "target": "<88",
+      "status": "below"
+    },
+    {
+      "label": "Webhook Deliveries",
+      "value": "4372",
+      "target": "<99",
+      "status": "below"
+    },
+    {
+      "label": "Queue Depth",
+      "value": "5574",
+      "target": "<15",
+      "status": "met"
+    }
+  ],
+  "incidents": [
+    {
+      "id": "INC-2026-0001",
+      "date": "Jan 15",
+      "severity": "P2",
+      "duration": "25 min",
+      "description": "Service degradation in Compute (EC2/ECS) caused elevated error rates for approximately 2257 users.",
+      "root_cause": "Resource contention triggered by capacity limit.",
+      "resolution": "Mitigated via rollback. Postmortem completed."
+    },
+    {
+      "id": "INC-2026-0002",
+      "date": "Feb 28",
+      "severity": "P3",
+      "duration": "18 min",
+      "description": "Service degradation in KMS caused elevated error rates for approximately 2544 users.",
+      "root_cause": "Resource contention triggered by capacity limit.",
+      "resolution": "Mitigated via configuration update. Postmortem completed."
+    },
+    {
+      "id": "INC-2026-0003",
+      "date": "Mar 12",
+      "severity": "P1",
+      "duration": "24 min",
+      "description": "Service degradation in Route 53 caused elevated error rates for approximately 1423 users.",
+      "root_cause": "Resource contention triggered by capacity limit.",
+      "resolution": "Mitigated via configuration update. Postmortem completed."
+    },
+    {
+      "id": "INC-2026-0004",
+      "date": "Apr 11",
+      "severity": "P1",
+      "duration": "81 min",
+      "description": "Service degradation in Elasticsearch caused elevated error rates for approximately 259 users.",
+      "root_cause": "Resource contention triggered by traffic spike.",
+      "resolution": "Mitigated via scaling. Postmortem completed."
+    },
+    {
+      "id": "INC-2026-0005",
+      "date": "May 2",
+      "severity": "P2",
+      "duration": "35 min",
+      "description": "Service degradation in Networking (CloudFront/ALB) caused elevated error rates for approximately 4747 users.",
+      "root_cause": "Resource contention triggered by traffic spike.",
+      "resolution": "Mitigated via hotfix. Postmortem completed."
+    },
+    {
+      "id": "INC-2026-0006",
+      "date": "Jun 27",
+      "severity": "P3",
+      "duration": "67 min",
+      "description": "Service degradation in Database (RDS/DynamoDB) caused elevated error rates for approximately 4463 users.",
+      "root_cause": "Resource contention triggered by deployment.",
+      "resolution": "Mitigated via rollback. Postmortem completed."
+    },
+    {
+      "id": "INC-2026-0007",
+      "date": "Jul 18",
+      "severity": "P3",
+      "duration": "65 min",
+      "description": "Service degradation in Storage (S3/EBS) caused elevated error rates for approximately 2271 users.",
+      "root_cause": "Resource contention triggered by capacity limit.",
+      "resolution": "Mitigated via configuration update. Postmortem completed."
+    },
+    {
+      "id": "INC-2026-0008",
+      "date": "Aug 18",
+      "severity": "P2",
+      "duration": "32 min",
+      "description": "Service degradation in Route 53 caused elevated error rates for approximately 1747 users.",
+      "root_cause": "Resource contention triggered by dependency failure.",
+      "resolution": "Mitigated via failover. Postmortem completed."
+    },
+    {
+      "id": "INC-2026-0009",
+      "date": "Sep 12",
+      "severity": "P3",
+      "duration": "88 min",
+      "description": "Service degradation in Elasticsearch caused elevated error rates for approximately 4339 users.",
+      "root_cause": "Resource contention triggered by configuration drift.",
+      "resolution": "Mitigated via hotfix. Postmortem completed."
+    },
+    {
+      "id": "INC-2026-0010",
+      "date": "Oct 3",
+      "severity": "P1",
+      "duration": "33 min",
+      "description": "Service degradation in SQS/SNS caused elevated error rates for approximately 272 users.",
+      "root_cause": "Resource contention triggered by capacity limit.",
+      "resolution": "Mitigated via configuration update. Postmortem completed."
+    },
+    {
+      "id": "INC-2026-0011",
+      "date": "Nov 8",
+      "severity": "P1",
+      "duration": "80 min",
+      "description": "Service degradation in Compute (EC2/ECS) caused elevated error rates for approximately 681 users.",
+      "root_cause": "Resource contention triggered by traffic spike.",
+      "resolution": "Mitigated via rollback. Postmortem completed."
+    },
+    {
+      "id": "INC-2026-0012",
+      "date": "Dec 2",
+      "severity": "P1",
+      "duration": "120 min",
+      "description": "Service degradation in WAF/Shield caused elevated error rates for approximately 2806 users.",
+      "root_cause": "Resource contention triggered by traffic spike.",
+      "resolution": "Mitigated via configuration update. Postmortem completed."
+    },
+    {
+      "id": "INC-2026-0013",
+      "date": "Jan 22",
+      "severity": "P1",
+      "duration": "40 min",
+      "description": "Service degradation in Elasticsearch caused elevated error rates for approximately 1855 users.",
+      "root_cause": "Resource contention triggered by capacity limit.",
+      "resolution": "Mitigated via rollback. Postmortem completed."
+    },
+    {
+      "id": "INC-2026-0014",
+      "date": "Feb 19",
+      "severity": "P3",
+      "duration": "117 min",
+      "description": "Service degradation in Secrets Manager caused elevated error rates for approximately 3972 users.",
+      "root_cause": "Resource contention triggered by deployment.",
+      "resolution": "Mitigated via failover. Postmortem completed."
+    },
+    {
+      "id": "INC-2026-0015",
+      "date": "Mar 4",
+      "severity": "P2",
+      "duration": "29 min",
+      "description": "Service degradation in Database (RDS/DynamoDB) caused elevated error rates for approximately 3631 users.",
+      "root_cause": "Resource contention triggered by dependency failure.",
+      "resolution": "Mitigated via failover. Postmortem completed."
+    },
+    {
+      "id": "INC-2026-0016",
+      "date": "Apr 28",
+      "severity": "P2",
+      "duration": "64 min",
+      "description": "Service degradation in IAM caused elevated error rates for approximately 543 users.",
+      "root_cause": "Resource contention triggered by traffic spike.",
+      "resolution": "Mitigated via hotfix. Postmortem completed."
+    },
+    {
+      "id": "INC-2026-0017",
+      "date": "May 11",
+      "severity": "P2",
+      "duration": "98 min",
+      "description": "Service degradation in Route 53 caused elevated error rates for approximately 995 users.",
+      "root_cause": "Resource contention triggered by deployment.",
+      "resolution": "Mitigated via rollback. Postmortem completed."
+    },
+    {
+      "id": "INC-2026-0018",
+      "date": "Jun 15",
+      "severity": "P1",
+      "duration": "73 min",
+      "description": "Service degradation in Storage (S3/EBS) caused elevated error rates for approximately 3556 users.",
+      "root_cause": "Resource contention triggered by deployment.",
+      "resolution": "Mitigated via scaling. Postmortem completed."
+    },
+    {
+      "id": "INC-2026-0019",
+      "date": "Jul 28",
+      "severity": "P2",
+      "duration": "36 min",
+      "description": "Service degradation in API Gateway caused elevated error rates for approximately 717 users.",
+      "root_cause": "Resource contention triggered by configuration drift.",
+      "resolution": "Mitigated via configuration update. Postmortem completed."
+    },
+    {
+      "id": "INC-2026-0020",
+      "date": "Aug 21",
+      "severity": "P1",
+      "duration": "11 min",
+      "description": "Service degradation in CloudWatch caused elevated error rates for approximately 220 users.",
+      "root_cause": "Resource contention triggered by traffic spike.",
+      "resolution": "Mitigated via rollback. Postmortem completed."
+    }
+  ],
+  "spend_by_service": [
+    {
+      "service": "Compute (EC2/ECS)",
+      "q1_spend": "$15,899",
+      "q4_spend": "$31,634",
+      "change": "-49.7%"
+    },
+    {
+      "service": "Database (RDS/DynamoDB)",
+      "q1_spend": "$36,826",
+      "q4_spend": "$36,546",
+      "change": "+0.8%"
+    },
+    {
+      "service": "Storage (S3/EBS)",
+      "q1_spend": "$19,008",
+      "q4_spend": "$31,282",
+      "change": "-39.2%"
+    },
+    {
+      "service": "Networking (CloudFront/ALB)",
+      "q1_spend": "$8,842",
+      "q4_spend": "$15,789",
+      "change": "-44.0%"
+    },
+    {
+      "service": "Lambda Functions",
+      "q1_spend": "$29,836",
+      "q4_spend": "$5,141",
+      "change": "+480.4%"
+    },
+    {
+      "service": "SQS/SNS",
+      "q1_spend": "$30,586",
+      "q4_spend": "$22,380",
+      "change": "+36.7%"
+    },
+    {
+      "service": "ElastiCache",
+      "q1_spend": "$56,384",
+      "q4_spend": "$56,454",
+      "change": "-0.1%"
+    },
+    {
+      "service": "Elasticsearch",
+      "q1_spend": "$34,819",
+      "q4_spend": "$23,694",
+      "change": "+47.0%"
+    },
+    {
+      "service": "CloudWatch",
+      "q1_spend": "$32,722",
+      "q4_spend": "$50,651",
+      "change": "-35.4%"
+    },
+    {
+      "service": "Secrets Manager",
+      "q1_spend": "$52,874",
+      "q4_spend": "$56,338",
+      "change": "-6.1%"
+    },
+    {
+      "service": "KMS",
+      "q1_spend": "$41,422",
+      "q4_spend": "$48,376",
+      "change": "-14.4%"
+    },
+    {
+      "service": "IAM",
+      "q1_spend": "$52,081",
+      "q4_spend": "$36,894",
+      "change": "+41.2%"
+    },
+    {
+      "service": "Route 53",
+      "q1_spend": "$15,144",
+      "q4_spend": "$17,445",
+      "change": "-13.2%"
+    },
+    {
+      "service": "WAF/Shield",
+      "q1_spend": "$24,445",
+      "q4_spend": "$19,267",
+      "change": "+26.9%"
+    },
+    {
+      "service": "API Gateway",
+      "q1_spend": "$8,832",
+      "q4_spend": "$42,957",
+      "change": "-79.4%"
+    },
+    {
+      "service": "Step Functions",
+      "q1_spend": "$53,217",
+      "q4_spend": "$40,533",
+      "change": "+31.3%"
+    },
+    {
+      "service": "EventBridge",
+      "q1_spend": "$8,994",
+      "q4_spend": "$54,019",
+      "change": "-83.4%"
+    },
+    {
+      "service": "Kinesis",
+      "q1_spend": "$25,552",
+      "q4_spend": "$8,746",
+      "change": "+192.2%"
+    },
+    {
+      "service": "Glue",
+      "q1_spend": "$8,286",
+      "q4_spend": "$43,284",
+      "change": "-80.9%"
+    },
+    {
+      "service": "Athena",
+      "q1_spend": "$36,246",
+      "q4_spend": "$37,954",
+      "change": "-4.5%"
+    },
+    {
+      "service": "Redshift",
+      "q1_spend": "$39,807",
+      "q4_spend": "$15,317",
+      "change": "+159.9%"
+    },
+    {
+      "service": "SageMaker",
+      "q1_spend": "$8,727",
+      "q4_spend": "$38,281",
+      "change": "-77.2%"
+    },
+    {
+      "service": "CodePipeline",
+      "q1_spend": "$10,250",
+      "q4_spend": "$17,178",
+      "change": "-40.3%"
+    },
+    {
+      "service": "CodeBuild",
+      "q1_spend": "$9,490",
+      "q4_spend": "$43,996",
+      "change": "-78.4%"
+    },
+    {
+      "service": "ECR",
+      "q1_spend": "$9,453",
+      "q4_spend": "$49,250",
+      "change": "-80.8%"
+    },
+    {
+      "service": "EKS",
+      "q1_spend": "$20,414",
+      "q4_spend": "$31,461",
+      "change": "-35.1%"
+    },
+    {
+      "service": "App Mesh",
+      "q1_spend": "$12,856",
+      "q4_spend": "$42,334",
+      "change": "-69.6%"
+    },
+    {
+      "service": "X-Ray",
+      "q1_spend": "$21,135",
+      "q4_spend": "$42,940",
+      "change": "-50.8%"
+    },
+    {
+      "service": "CloudFormation",
+      "q1_spend": "$43,962",
+      "q4_spend": "$7,604",
+      "change": "+478.1%"
+    },
+    {
+      "service": "Systems Manager",
+      "q1_spend": "$45,591",
+      "q4_spend": "$10,372",
+      "change": "+339.6%"
+    }
+  ],
+  "recommendations": [
+    "Recommendation 1: Replace KMS to reduce cost and improve reliability.",
+    "Recommendation 2: Deprecate Secrets Manager to reduce cost and improve reliability.",
+    "Recommendation 3: Scale SQS/SNS to reduce cost and improve reliability.",
+    "Recommendation 4: Audit Lambda Functions to reduce cost and improve reliability.",
+    "Recommendation 5: Automate KMS to reduce cost and improve reliability.",
+    "Recommendation 6: Evaluate SQS/SNS to reduce cost and improve reliability.",
+    "Recommendation 7: Automate Lambda Functions to reduce cost and improve reliability.",
+    "Recommendation 8: Replace Storage (S3/EBS) to reduce cost and improve reliability.",
+    "Recommendation 9: Implement KMS to reduce cost and improve reliability.",
+    "Recommendation 10: Review Elasticsearch to reduce cost and improve reliability.",
+    "Recommendation 11: Upgrade API Gateway to reduce cost and improve reliability.",
+    "Recommendation 12: Standardize API Gateway to reduce cost and improve reliability.",
+    "Recommendation 13: Migrate Compute (EC2/ECS) to reduce cost and improve reliability.",
+    "Recommendation 14: Monitor Secrets Manager to reduce cost and improve reliability.",
+    "Recommendation 15: Deprecate Database (RDS/DynamoDB) to reduce cost and improve reliability."
+  ]
+}

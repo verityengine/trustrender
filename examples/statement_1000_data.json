@@ -1,0 +1,7031 @@
+{
+  "company": {
+    "name": "Acme Corporation",
+    "address_line1": "123 Business Ave, Suite 400",
+    "address_line2": "San Francisco, CA 94105",
+    "email": "billing@acme.com",
+    "phone": "(415) 555-0142"
+  },
+  "customer": {
+    "name": "Contoso Ltd.",
+    "account_number": "ACCT-78291",
+    "address_line1": "456 Enterprise Blvd",
+    "address_line2": "New York, NY 10001"
+  },
+  "statement_date": "December 31, 2026",
+  "period": "January 1 - December 31, 2026",
+  "opening_balance": "$12,450.00",
+  "closing_balance": "$455,950.00",
+  "total_charges": "693 charges",
+  "total_payments": "306 payments",
+  "transactions": [
+    {
+      "date": "Jan 01",
+      "reference": "",
+      "description": "Opening Balance",
+      "amount": "",
+      "balance": "$12,450.00"
+    },
+    {
+      "date": "Jan 01",
+      "reference": "REF-2824",
+      "description": "Payment received — thank you",
+      "amount": "$150.00",
+      "balance": "$12,600.00"
+    },
+    {
+      "date": "Feb 02",
+      "reference": "FEE-4657",
+      "description": "Professional services — consulting",
+      "amount": "$500.00",
+      "balance": "$13,100.00"
+    },
+    {
+      "date": "Mar 03",
+      "reference": "REF-9935",
+      "description": "Software license renewal",
+      "amount": "$250.00",
+      "balance": "$13,350.00"
+    },
+    {
+      "date": "Apr 04",
+      "reference": "ADJ-1488",
+      "description": "Data storage overage charge",
+      "amount": "-$250.00",
+      "balance": "$13,100.00"
+    },
+    {
+      "date": "May 05",
+      "reference": "INV-1434",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$750.00",
+      "balance": "$13,850.00"
+    },
+    {
+      "date": "Jun 06",
+      "reference": "REF-9928",
+      "description": "API usage — metered billing",
+      "amount": "-$2,000.00",
+      "balance": "$11,850.00"
+    },
+    {
+      "date": "Jul 07",
+      "reference": "INV-5557",
+      "description": "Infrastructure maintenance",
+      "amount": "$150.00",
+      "balance": "$12,000.00"
+    },
+    {
+      "date": "Aug 08",
+      "reference": "FEE-7924",
+      "description": "SSL certificate renewal",
+      "amount": "-$1,500.00",
+      "balance": "$10,500.00"
+    },
+    {
+      "date": "Sep 09",
+      "reference": "FEE-6514",
+      "description": "Domain registration fee",
+      "amount": "-$250.00",
+      "balance": "$10,250.00"
+    },
+    {
+      "date": "Oct 10",
+      "reference": "ADJ-6881",
+      "description": "Bandwidth overage charge",
+      "amount": "$1,500.00",
+      "balance": "$11,750.00"
+    },
+    {
+      "date": "Nov 11",
+      "reference": "ADJ-8527",
+      "description": "Cloud compute — on-demand",
+      "amount": "$250.00",
+      "balance": "$12,000.00"
+    },
+    {
+      "date": "Dec 12",
+      "reference": "CR-2291",
+      "description": "Database backup service",
+      "amount": "$1,200.00",
+      "balance": "$13,200.00"
+    },
+    {
+      "date": "Jan 13",
+      "reference": "INV-6925",
+      "description": "CDN usage fee",
+      "amount": "$750.00",
+      "balance": "$13,950.00"
+    },
+    {
+      "date": "Feb 14",
+      "reference": "ADJ-4733",
+      "description": "Security scanning service",
+      "amount": "$1,200.00",
+      "balance": "$15,150.00"
+    },
+    {
+      "date": "Mar 15",
+      "reference": "FEE-2654",
+      "description": "Email delivery service",
+      "amount": "-$2,000.00",
+      "balance": "$13,150.00"
+    },
+    {
+      "date": "Apr 16",
+      "reference": "REF-6977",
+      "description": "Load balancer fee",
+      "amount": "$500.00",
+      "balance": "$13,650.00"
+    },
+    {
+      "date": "May 17",
+      "reference": "FEE-5374",
+      "description": "Container orchestration",
+      "amount": "$250.00",
+      "balance": "$13,900.00"
+    },
+    {
+      "date": "Jun 18",
+      "reference": "FEE-9751",
+      "description": "Log management service",
+      "amount": "-$750.00",
+      "balance": "$13,150.00"
+    },
+    {
+      "date": "Jul 19",
+      "reference": "CR-5422",
+      "description": "Compliance audit fee",
+      "amount": "$750.00",
+      "balance": "$13,900.00"
+    },
+    {
+      "date": "Aug 20",
+      "reference": "ADJ-4752",
+      "description": "Monthly hosting fee",
+      "amount": "$150.00",
+      "balance": "$14,050.00"
+    },
+    {
+      "date": "Sep 21",
+      "reference": "CR-5386",
+      "description": "Payment received — thank you",
+      "amount": "-$250.00",
+      "balance": "$13,800.00"
+    },
+    {
+      "date": "Oct 22",
+      "reference": "INV-6155",
+      "description": "Professional services — consulting",
+      "amount": "$750.00",
+      "balance": "$14,550.00"
+    },
+    {
+      "date": "Nov 23",
+      "reference": "CR-8517",
+      "description": "Software license renewal",
+      "amount": "-$500.00",
+      "balance": "$14,050.00"
+    },
+    {
+      "date": "Dec 24",
+      "reference": "FEE-9830",
+      "description": "Data storage overage charge",
+      "amount": "$1,200.00",
+      "balance": "$15,250.00"
+    },
+    {
+      "date": "Jan 25",
+      "reference": "CR-7543",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "-$1,500.00",
+      "balance": "$13,750.00"
+    },
+    {
+      "date": "Feb 26",
+      "reference": "FEE-9348",
+      "description": "API usage — metered billing",
+      "amount": "-$3,500.00",
+      "balance": "$10,250.00"
+    },
+    {
+      "date": "Mar 27",
+      "reference": "ADJ-2796",
+      "description": "Infrastructure maintenance",
+      "amount": "$500.00",
+      "balance": "$10,750.00"
+    },
+    {
+      "date": "Apr 28",
+      "reference": "REF-7916",
+      "description": "SSL certificate renewal",
+      "amount": "$250.00",
+      "balance": "$11,000.00"
+    },
+    {
+      "date": "May 01",
+      "reference": "INV-8668",
+      "description": "Domain registration fee",
+      "amount": "$1,200.00",
+      "balance": "$12,200.00"
+    },
+    {
+      "date": "Jun 02",
+      "reference": "ADJ-2876",
+      "description": "Bandwidth overage charge",
+      "amount": "$1,200.00",
+      "balance": "$13,400.00"
+    },
+    {
+      "date": "Jul 03",
+      "reference": "PMT-2827",
+      "description": "Cloud compute — on-demand",
+      "amount": "$1,200.00",
+      "balance": "$14,600.00"
+    },
+    {
+      "date": "Aug 04",
+      "reference": "CR-1053",
+      "description": "Database backup service",
+      "amount": "$1,200.00",
+      "balance": "$15,800.00"
+    },
+    {
+      "date": "Sep 05",
+      "reference": "FEE-9317",
+      "description": "CDN usage fee",
+      "amount": "$250.00",
+      "balance": "$16,050.00"
+    },
+    {
+      "date": "Oct 06",
+      "reference": "PMT-9317",
+      "description": "Security scanning service",
+      "amount": "-$750.00",
+      "balance": "$15,300.00"
+    },
+    {
+      "date": "Nov 07",
+      "reference": "FEE-9837",
+      "description": "Email delivery service",
+      "amount": "$150.00",
+      "balance": "$15,450.00"
+    },
+    {
+      "date": "Dec 08",
+      "reference": "CR-1319",
+      "description": "Load balancer fee",
+      "amount": "$250.00",
+      "balance": "$15,700.00"
+    },
+    {
+      "date": "Jan 09",
+      "reference": "PMT-4923",
+      "description": "Container orchestration",
+      "amount": "-$150.00",
+      "balance": "$15,550.00"
+    },
+    {
+      "date": "Feb 10",
+      "reference": "INV-2290",
+      "description": "Log management service",
+      "amount": "$250.00",
+      "balance": "$15,800.00"
+    },
+    {
+      "date": "Mar 11",
+      "reference": "ADJ-9727",
+      "description": "Compliance audit fee",
+      "amount": "-$500.00",
+      "balance": "$15,300.00"
+    },
+    {
+      "date": "Apr 12",
+      "reference": "CR-3705",
+      "description": "Monthly hosting fee",
+      "amount": "$1,200.00",
+      "balance": "$16,500.00"
+    },
+    {
+      "date": "May 13",
+      "reference": "INV-7932",
+      "description": "Payment received — thank you",
+      "amount": "$750.00",
+      "balance": "$17,250.00"
+    },
+    {
+      "date": "Jun 14",
+      "reference": "REF-4295",
+      "description": "Professional services — consulting",
+      "amount": "$1,200.00",
+      "balance": "$18,450.00"
+    },
+    {
+      "date": "Jul 15",
+      "reference": "REF-7118",
+      "description": "Software license renewal",
+      "amount": "$3,500.00",
+      "balance": "$21,950.00"
+    },
+    {
+      "date": "Aug 16",
+      "reference": "CR-2982",
+      "description": "Data storage overage charge",
+      "amount": "-$750.00",
+      "balance": "$21,200.00"
+    },
+    {
+      "date": "Sep 17",
+      "reference": "PMT-1344",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$750.00",
+      "balance": "$21,950.00"
+    },
+    {
+      "date": "Oct 18",
+      "reference": "ADJ-2163",
+      "description": "API usage — metered billing",
+      "amount": "-$150.00",
+      "balance": "$21,800.00"
+    },
+    {
+      "date": "Nov 19",
+      "reference": "ADJ-6413",
+      "description": "Infrastructure maintenance",
+      "amount": "$250.00",
+      "balance": "$22,050.00"
+    },
+    {
+      "date": "Dec 20",
+      "reference": "PMT-8953",
+      "description": "SSL certificate renewal",
+      "amount": "$750.00",
+      "balance": "$22,800.00"
+    },
+    {
+      "date": "Jan 21",
+      "reference": "REF-8744",
+      "description": "Domain registration fee",
+      "amount": "$750.00",
+      "balance": "$23,550.00"
+    },
+    {
+      "date": "Feb 22",
+      "reference": "CR-4119",
+      "description": "Bandwidth overage charge",
+      "amount": "-$250.00",
+      "balance": "$23,300.00"
+    },
+    {
+      "date": "Mar 23",
+      "reference": "CR-6804",
+      "description": "Cloud compute — on-demand",
+      "amount": "$2,000.00",
+      "balance": "$25,300.00"
+    },
+    {
+      "date": "Apr 24",
+      "reference": "REF-1887",
+      "description": "Database backup service",
+      "amount": "-$250.00",
+      "balance": "$25,050.00"
+    },
+    {
+      "date": "May 25",
+      "reference": "REF-6559",
+      "description": "CDN usage fee",
+      "amount": "-$250.00",
+      "balance": "$24,800.00"
+    },
+    {
+      "date": "Jun 26",
+      "reference": "FEE-9786",
+      "description": "Security scanning service",
+      "amount": "-$3,500.00",
+      "balance": "$21,300.00"
+    },
+    {
+      "date": "Jul 27",
+      "reference": "FEE-5563",
+      "description": "Email delivery service",
+      "amount": "-$3,500.00",
+      "balance": "$17,800.00"
+    },
+    {
+      "date": "Aug 28",
+      "reference": "ADJ-8260",
+      "description": "Load balancer fee",
+      "amount": "-$250.00",
+      "balance": "$17,550.00"
+    },
+    {
+      "date": "Sep 01",
+      "reference": "INV-1241",
+      "description": "Container orchestration",
+      "amount": "$250.00",
+      "balance": "$17,800.00"
+    },
+    {
+      "date": "Oct 02",
+      "reference": "FEE-3724",
+      "description": "Log management service",
+      "amount": "$2,000.00",
+      "balance": "$19,800.00"
+    },
+    {
+      "date": "Nov 03",
+      "reference": "FEE-7570",
+      "description": "Compliance audit fee",
+      "amount": "-$150.00",
+      "balance": "$19,650.00"
+    },
+    {
+      "date": "Dec 04",
+      "reference": "ADJ-7396",
+      "description": "Monthly hosting fee",
+      "amount": "$1,200.00",
+      "balance": "$20,850.00"
+    },
+    {
+      "date": "Jan 05",
+      "reference": "CR-5673",
+      "description": "Payment received — thank you",
+      "amount": "$2,000.00",
+      "balance": "$22,850.00"
+    },
+    {
+      "date": "Feb 06",
+      "reference": "REF-8973",
+      "description": "Professional services — consulting",
+      "amount": "-$500.00",
+      "balance": "$22,350.00"
+    },
+    {
+      "date": "Mar 07",
+      "reference": "FEE-1958",
+      "description": "Software license renewal",
+      "amount": "$150.00",
+      "balance": "$22,500.00"
+    },
+    {
+      "date": "Apr 08",
+      "reference": "ADJ-1821",
+      "description": "Data storage overage charge",
+      "amount": "$3,500.00",
+      "balance": "$26,000.00"
+    },
+    {
+      "date": "May 09",
+      "reference": "INV-3579",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$150.00",
+      "balance": "$26,150.00"
+    },
+    {
+      "date": "Jun 10",
+      "reference": "ADJ-4044",
+      "description": "API usage — metered billing",
+      "amount": "$250.00",
+      "balance": "$26,400.00"
+    },
+    {
+      "date": "Jul 11",
+      "reference": "REF-4853",
+      "description": "Infrastructure maintenance",
+      "amount": "-$2,000.00",
+      "balance": "$24,400.00"
+    },
+    {
+      "date": "Aug 12",
+      "reference": "INV-5033",
+      "description": "SSL certificate renewal",
+      "amount": "$150.00",
+      "balance": "$24,550.00"
+    },
+    {
+      "date": "Sep 13",
+      "reference": "CR-9565",
+      "description": "Domain registration fee",
+      "amount": "$1,500.00",
+      "balance": "$26,050.00"
+    },
+    {
+      "date": "Oct 14",
+      "reference": "FEE-6147",
+      "description": "Bandwidth overage charge",
+      "amount": "-$750.00",
+      "balance": "$25,300.00"
+    },
+    {
+      "date": "Nov 15",
+      "reference": "FEE-5915",
+      "description": "Cloud compute — on-demand",
+      "amount": "$3,500.00",
+      "balance": "$28,800.00"
+    },
+    {
+      "date": "Dec 16",
+      "reference": "ADJ-1152",
+      "description": "Database backup service",
+      "amount": "$3,500.00",
+      "balance": "$32,300.00"
+    },
+    {
+      "date": "Jan 17",
+      "reference": "INV-2638",
+      "description": "CDN usage fee",
+      "amount": "$250.00",
+      "balance": "$32,550.00"
+    },
+    {
+      "date": "Feb 18",
+      "reference": "INV-5345",
+      "description": "Security scanning service",
+      "amount": "$500.00",
+      "balance": "$33,050.00"
+    },
+    {
+      "date": "Mar 19",
+      "reference": "ADJ-5002",
+      "description": "Email delivery service",
+      "amount": "-$1,500.00",
+      "balance": "$31,550.00"
+    },
+    {
+      "date": "Apr 20",
+      "reference": "CR-9900",
+      "description": "Load balancer fee",
+      "amount": "$1,200.00",
+      "balance": "$32,750.00"
+    },
+    {
+      "date": "May 21",
+      "reference": "REF-9666",
+      "description": "Container orchestration",
+      "amount": "$150.00",
+      "balance": "$32,900.00"
+    },
+    {
+      "date": "Jun 22",
+      "reference": "INV-5905",
+      "description": "Log management service",
+      "amount": "$250.00",
+      "balance": "$33,150.00"
+    },
+    {
+      "date": "Jul 23",
+      "reference": "FEE-5333",
+      "description": "Compliance audit fee",
+      "amount": "$250.00",
+      "balance": "$33,400.00"
+    },
+    {
+      "date": "Aug 24",
+      "reference": "REF-3546",
+      "description": "Monthly hosting fee",
+      "amount": "-$1,200.00",
+      "balance": "$32,200.00"
+    },
+    {
+      "date": "Sep 25",
+      "reference": "FEE-6617",
+      "description": "Payment received — thank you",
+      "amount": "$750.00",
+      "balance": "$32,950.00"
+    },
+    {
+      "date": "Oct 26",
+      "reference": "PMT-9280",
+      "description": "Professional services — consulting",
+      "amount": "-$3,500.00",
+      "balance": "$29,450.00"
+    },
+    {
+      "date": "Nov 27",
+      "reference": "ADJ-2512",
+      "description": "Software license renewal",
+      "amount": "$2,000.00",
+      "balance": "$31,450.00"
+    },
+    {
+      "date": "Dec 28",
+      "reference": "ADJ-1058",
+      "description": "Data storage overage charge",
+      "amount": "$1,500.00",
+      "balance": "$32,950.00"
+    },
+    {
+      "date": "Jan 01",
+      "reference": "REF-5291",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$500.00",
+      "balance": "$33,450.00"
+    },
+    {
+      "date": "Feb 02",
+      "reference": "INV-8007",
+      "description": "API usage — metered billing",
+      "amount": "-$150.00",
+      "balance": "$33,300.00"
+    },
+    {
+      "date": "Mar 03",
+      "reference": "REF-3442",
+      "description": "Infrastructure maintenance",
+      "amount": "$150.00",
+      "balance": "$33,450.00"
+    },
+    {
+      "date": "Apr 04",
+      "reference": "INV-3426",
+      "description": "SSL certificate renewal",
+      "amount": "-$2,000.00",
+      "balance": "$31,450.00"
+    },
+    {
+      "date": "May 05",
+      "reference": "PMT-6974",
+      "description": "Domain registration fee",
+      "amount": "$150.00",
+      "balance": "$31,600.00"
+    },
+    {
+      "date": "Jun 06",
+      "reference": "FEE-5088",
+      "description": "Bandwidth overage charge",
+      "amount": "$250.00",
+      "balance": "$31,850.00"
+    },
+    {
+      "date": "Jul 07",
+      "reference": "INV-7658",
+      "description": "Cloud compute — on-demand",
+      "amount": "$500.00",
+      "balance": "$32,350.00"
+    },
+    {
+      "date": "Aug 08",
+      "reference": "FEE-3662",
+      "description": "Database backup service",
+      "amount": "$500.00",
+      "balance": "$32,850.00"
+    },
+    {
+      "date": "Sep 09",
+      "reference": "ADJ-3938",
+      "description": "CDN usage fee",
+      "amount": "$1,500.00",
+      "balance": "$34,350.00"
+    },
+    {
+      "date": "Oct 10",
+      "reference": "CR-5065",
+      "description": "Security scanning service",
+      "amount": "-$1,200.00",
+      "balance": "$33,150.00"
+    },
+    {
+      "date": "Nov 11",
+      "reference": "REF-2771",
+      "description": "Email delivery service",
+      "amount": "$2,000.00",
+      "balance": "$35,150.00"
+    },
+    {
+      "date": "Dec 12",
+      "reference": "CR-4644",
+      "description": "Load balancer fee",
+      "amount": "$750.00",
+      "balance": "$35,900.00"
+    },
+    {
+      "date": "Jan 13",
+      "reference": "CR-6728",
+      "description": "Container orchestration",
+      "amount": "$1,200.00",
+      "balance": "$37,100.00"
+    },
+    {
+      "date": "Feb 14",
+      "reference": "FEE-4652",
+      "description": "Log management service",
+      "amount": "$150.00",
+      "balance": "$37,250.00"
+    },
+    {
+      "date": "Mar 15",
+      "reference": "CR-6378",
+      "description": "Compliance audit fee",
+      "amount": "$1,200.00",
+      "balance": "$38,450.00"
+    },
+    {
+      "date": "Apr 16",
+      "reference": "PMT-6753",
+      "description": "Monthly hosting fee",
+      "amount": "$2,000.00",
+      "balance": "$40,450.00"
+    },
+    {
+      "date": "May 17",
+      "reference": "INV-6425",
+      "description": "Payment received — thank you",
+      "amount": "-$150.00",
+      "balance": "$40,300.00"
+    },
+    {
+      "date": "Jun 18",
+      "reference": "PMT-3925",
+      "description": "Professional services — consulting",
+      "amount": "-$1,200.00",
+      "balance": "$39,100.00"
+    },
+    {
+      "date": "Jul 19",
+      "reference": "INV-8119",
+      "description": "Software license renewal",
+      "amount": "$1,500.00",
+      "balance": "$40,600.00"
+    },
+    {
+      "date": "Aug 20",
+      "reference": "PMT-8149",
+      "description": "Data storage overage charge",
+      "amount": "$250.00",
+      "balance": "$40,850.00"
+    },
+    {
+      "date": "Sep 21",
+      "reference": "INV-4114",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "-$1,200.00",
+      "balance": "$39,650.00"
+    },
+    {
+      "date": "Oct 22",
+      "reference": "CR-1027",
+      "description": "API usage — metered billing",
+      "amount": "$750.00",
+      "balance": "$40,400.00"
+    },
+    {
+      "date": "Nov 23",
+      "reference": "ADJ-6409",
+      "description": "Infrastructure maintenance",
+      "amount": "$1,500.00",
+      "balance": "$41,900.00"
+    },
+    {
+      "date": "Dec 24",
+      "reference": "ADJ-5920",
+      "description": "SSL certificate renewal",
+      "amount": "$1,200.00",
+      "balance": "$43,100.00"
+    },
+    {
+      "date": "Jan 25",
+      "reference": "PMT-7592",
+      "description": "Domain registration fee",
+      "amount": "$1,200.00",
+      "balance": "$44,300.00"
+    },
+    {
+      "date": "Feb 26",
+      "reference": "FEE-7888",
+      "description": "Bandwidth overage charge",
+      "amount": "$2,000.00",
+      "balance": "$46,300.00"
+    },
+    {
+      "date": "Mar 27",
+      "reference": "FEE-5930",
+      "description": "Cloud compute — on-demand",
+      "amount": "$2,000.00",
+      "balance": "$48,300.00"
+    },
+    {
+      "date": "Apr 28",
+      "reference": "ADJ-5978",
+      "description": "Database backup service",
+      "amount": "-$1,200.00",
+      "balance": "$47,100.00"
+    },
+    {
+      "date": "May 01",
+      "reference": "INV-6279",
+      "description": "CDN usage fee",
+      "amount": "$3,500.00",
+      "balance": "$50,600.00"
+    },
+    {
+      "date": "Jun 02",
+      "reference": "REF-4501",
+      "description": "Security scanning service",
+      "amount": "$3,500.00",
+      "balance": "$54,100.00"
+    },
+    {
+      "date": "Jul 03",
+      "reference": "REF-3780",
+      "description": "Email delivery service",
+      "amount": "-$250.00",
+      "balance": "$53,850.00"
+    },
+    {
+      "date": "Aug 04",
+      "reference": "REF-6491",
+      "description": "Load balancer fee",
+      "amount": "$250.00",
+      "balance": "$54,100.00"
+    },
+    {
+      "date": "Sep 05",
+      "reference": "FEE-6085",
+      "description": "Container orchestration",
+      "amount": "$750.00",
+      "balance": "$54,850.00"
+    },
+    {
+      "date": "Oct 06",
+      "reference": "FEE-1400",
+      "description": "Log management service",
+      "amount": "-$150.00",
+      "balance": "$54,700.00"
+    },
+    {
+      "date": "Nov 07",
+      "reference": "CR-2193",
+      "description": "Compliance audit fee",
+      "amount": "$3,500.00",
+      "balance": "$58,200.00"
+    },
+    {
+      "date": "Dec 08",
+      "reference": "REF-4185",
+      "description": "Monthly hosting fee",
+      "amount": "$2,000.00",
+      "balance": "$60,200.00"
+    },
+    {
+      "date": "Jan 09",
+      "reference": "FEE-3417",
+      "description": "Payment received — thank you",
+      "amount": "$150.00",
+      "balance": "$60,350.00"
+    },
+    {
+      "date": "Feb 10",
+      "reference": "ADJ-7965",
+      "description": "Professional services — consulting",
+      "amount": "-$750.00",
+      "balance": "$59,600.00"
+    },
+    {
+      "date": "Mar 11",
+      "reference": "REF-9486",
+      "description": "Software license renewal",
+      "amount": "-$3,500.00",
+      "balance": "$56,100.00"
+    },
+    {
+      "date": "Apr 12",
+      "reference": "FEE-2988",
+      "description": "Data storage overage charge",
+      "amount": "-$3,500.00",
+      "balance": "$52,600.00"
+    },
+    {
+      "date": "May 13",
+      "reference": "CR-9702",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$1,500.00",
+      "balance": "$54,100.00"
+    },
+    {
+      "date": "Jun 14",
+      "reference": "CR-9270",
+      "description": "API usage — metered billing",
+      "amount": "$2,000.00",
+      "balance": "$56,100.00"
+    },
+    {
+      "date": "Jul 15",
+      "reference": "INV-8305",
+      "description": "Infrastructure maintenance",
+      "amount": "$500.00",
+      "balance": "$56,600.00"
+    },
+    {
+      "date": "Aug 16",
+      "reference": "CR-8373",
+      "description": "SSL certificate renewal",
+      "amount": "$1,200.00",
+      "balance": "$57,800.00"
+    },
+    {
+      "date": "Sep 17",
+      "reference": "REF-5543",
+      "description": "Domain registration fee",
+      "amount": "$3,500.00",
+      "balance": "$61,300.00"
+    },
+    {
+      "date": "Oct 18",
+      "reference": "PMT-8206",
+      "description": "Bandwidth overage charge",
+      "amount": "$250.00",
+      "balance": "$61,550.00"
+    },
+    {
+      "date": "Nov 19",
+      "reference": "FEE-5451",
+      "description": "Cloud compute — on-demand",
+      "amount": "$1,500.00",
+      "balance": "$63,050.00"
+    },
+    {
+      "date": "Dec 20",
+      "reference": "INV-2320",
+      "description": "Database backup service",
+      "amount": "-$500.00",
+      "balance": "$62,550.00"
+    },
+    {
+      "date": "Jan 21",
+      "reference": "CR-3503",
+      "description": "CDN usage fee",
+      "amount": "-$750.00",
+      "balance": "$61,800.00"
+    },
+    {
+      "date": "Feb 22",
+      "reference": "CR-6421",
+      "description": "Security scanning service",
+      "amount": "$3,500.00",
+      "balance": "$65,300.00"
+    },
+    {
+      "date": "Mar 23",
+      "reference": "FEE-7883",
+      "description": "Email delivery service",
+      "amount": "$2,000.00",
+      "balance": "$67,300.00"
+    },
+    {
+      "date": "Apr 24",
+      "reference": "INV-1320",
+      "description": "Load balancer fee",
+      "amount": "$2,000.00",
+      "balance": "$69,300.00"
+    },
+    {
+      "date": "May 25",
+      "reference": "PMT-5892",
+      "description": "Container orchestration",
+      "amount": "$2,000.00",
+      "balance": "$71,300.00"
+    },
+    {
+      "date": "Jun 26",
+      "reference": "CR-9818",
+      "description": "Log management service",
+      "amount": "$750.00",
+      "balance": "$72,050.00"
+    },
+    {
+      "date": "Jul 27",
+      "reference": "PMT-8140",
+      "description": "Compliance audit fee",
+      "amount": "-$3,500.00",
+      "balance": "$68,550.00"
+    },
+    {
+      "date": "Aug 28",
+      "reference": "PMT-7624",
+      "description": "Monthly hosting fee",
+      "amount": "$500.00",
+      "balance": "$69,050.00"
+    },
+    {
+      "date": "Sep 01",
+      "reference": "FEE-9751",
+      "description": "Payment received — thank you",
+      "amount": "$150.00",
+      "balance": "$69,200.00"
+    },
+    {
+      "date": "Oct 02",
+      "reference": "INV-1444",
+      "description": "Professional services — consulting",
+      "amount": "$250.00",
+      "balance": "$69,450.00"
+    },
+    {
+      "date": "Nov 03",
+      "reference": "FEE-8564",
+      "description": "Software license renewal",
+      "amount": "-$500.00",
+      "balance": "$68,950.00"
+    },
+    {
+      "date": "Dec 04",
+      "reference": "CR-6363",
+      "description": "Data storage overage charge",
+      "amount": "$750.00",
+      "balance": "$69,700.00"
+    },
+    {
+      "date": "Jan 05",
+      "reference": "PMT-7211",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$1,200.00",
+      "balance": "$70,900.00"
+    },
+    {
+      "date": "Feb 06",
+      "reference": "CR-5133",
+      "description": "API usage — metered billing",
+      "amount": "$250.00",
+      "balance": "$71,150.00"
+    },
+    {
+      "date": "Mar 07",
+      "reference": "REF-9837",
+      "description": "Infrastructure maintenance",
+      "amount": "$150.00",
+      "balance": "$71,300.00"
+    },
+    {
+      "date": "Apr 08",
+      "reference": "PMT-4673",
+      "description": "SSL certificate renewal",
+      "amount": "$250.00",
+      "balance": "$71,550.00"
+    },
+    {
+      "date": "May 09",
+      "reference": "REF-1659",
+      "description": "Domain registration fee",
+      "amount": "$150.00",
+      "balance": "$71,700.00"
+    },
+    {
+      "date": "Jun 10",
+      "reference": "FEE-1333",
+      "description": "Bandwidth overage charge",
+      "amount": "-$500.00",
+      "balance": "$71,200.00"
+    },
+    {
+      "date": "Jul 11",
+      "reference": "CR-2874",
+      "description": "Cloud compute — on-demand",
+      "amount": "$750.00",
+      "balance": "$71,950.00"
+    },
+    {
+      "date": "Aug 12",
+      "reference": "PMT-7043",
+      "description": "Database backup service",
+      "amount": "$500.00",
+      "balance": "$72,450.00"
+    },
+    {
+      "date": "Sep 13",
+      "reference": "REF-2876",
+      "description": "CDN usage fee",
+      "amount": "$500.00",
+      "balance": "$72,950.00"
+    },
+    {
+      "date": "Oct 14",
+      "reference": "ADJ-1420",
+      "description": "Security scanning service",
+      "amount": "$1,200.00",
+      "balance": "$74,150.00"
+    },
+    {
+      "date": "Nov 15",
+      "reference": "CR-7498",
+      "description": "Email delivery service",
+      "amount": "-$750.00",
+      "balance": "$73,400.00"
+    },
+    {
+      "date": "Dec 16",
+      "reference": "REF-4978",
+      "description": "Load balancer fee",
+      "amount": "$250.00",
+      "balance": "$73,650.00"
+    },
+    {
+      "date": "Jan 17",
+      "reference": "PMT-2983",
+      "description": "Container orchestration",
+      "amount": "$150.00",
+      "balance": "$73,800.00"
+    },
+    {
+      "date": "Feb 18",
+      "reference": "CR-7071",
+      "description": "Log management service",
+      "amount": "$250.00",
+      "balance": "$74,050.00"
+    },
+    {
+      "date": "Mar 19",
+      "reference": "PMT-1207",
+      "description": "Compliance audit fee",
+      "amount": "$2,000.00",
+      "balance": "$76,050.00"
+    },
+    {
+      "date": "Apr 20",
+      "reference": "ADJ-8102",
+      "description": "Monthly hosting fee",
+      "amount": "$1,500.00",
+      "balance": "$77,550.00"
+    },
+    {
+      "date": "May 21",
+      "reference": "CR-3506",
+      "description": "Payment received — thank you",
+      "amount": "-$2,000.00",
+      "balance": "$75,550.00"
+    },
+    {
+      "date": "Jun 22",
+      "reference": "INV-5425",
+      "description": "Professional services — consulting",
+      "amount": "$3,500.00",
+      "balance": "$79,050.00"
+    },
+    {
+      "date": "Jul 23",
+      "reference": "REF-5397",
+      "description": "Software license renewal",
+      "amount": "$1,500.00",
+      "balance": "$80,550.00"
+    },
+    {
+      "date": "Aug 24",
+      "reference": "ADJ-5569",
+      "description": "Data storage overage charge",
+      "amount": "-$3,500.00",
+      "balance": "$77,050.00"
+    },
+    {
+      "date": "Sep 25",
+      "reference": "CR-7209",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "-$1,500.00",
+      "balance": "$75,550.00"
+    },
+    {
+      "date": "Oct 26",
+      "reference": "PMT-3979",
+      "description": "API usage — metered billing",
+      "amount": "-$3,500.00",
+      "balance": "$72,050.00"
+    },
+    {
+      "date": "Nov 27",
+      "reference": "PMT-6576",
+      "description": "Infrastructure maintenance",
+      "amount": "$1,200.00",
+      "balance": "$73,250.00"
+    },
+    {
+      "date": "Dec 28",
+      "reference": "REF-5526",
+      "description": "SSL certificate renewal",
+      "amount": "$150.00",
+      "balance": "$73,400.00"
+    },
+    {
+      "date": "Jan 01",
+      "reference": "FEE-2402",
+      "description": "Domain registration fee",
+      "amount": "$750.00",
+      "balance": "$74,150.00"
+    },
+    {
+      "date": "Feb 02",
+      "reference": "CR-4937",
+      "description": "Bandwidth overage charge",
+      "amount": "$3,500.00",
+      "balance": "$77,650.00"
+    },
+    {
+      "date": "Mar 03",
+      "reference": "CR-8342",
+      "description": "Cloud compute — on-demand",
+      "amount": "-$150.00",
+      "balance": "$77,500.00"
+    },
+    {
+      "date": "Apr 04",
+      "reference": "FEE-7625",
+      "description": "Database backup service",
+      "amount": "$750.00",
+      "balance": "$78,250.00"
+    },
+    {
+      "date": "May 05",
+      "reference": "INV-7046",
+      "description": "CDN usage fee",
+      "amount": "$3,500.00",
+      "balance": "$81,750.00"
+    },
+    {
+      "date": "Jun 06",
+      "reference": "PMT-7971",
+      "description": "Security scanning service",
+      "amount": "$1,500.00",
+      "balance": "$83,250.00"
+    },
+    {
+      "date": "Jul 07",
+      "reference": "CR-5438",
+      "description": "Email delivery service",
+      "amount": "-$1,200.00",
+      "balance": "$82,050.00"
+    },
+    {
+      "date": "Aug 08",
+      "reference": "ADJ-4155",
+      "description": "Load balancer fee",
+      "amount": "-$1,500.00",
+      "balance": "$80,550.00"
+    },
+    {
+      "date": "Sep 09",
+      "reference": "INV-4033",
+      "description": "Container orchestration",
+      "amount": "-$750.00",
+      "balance": "$79,800.00"
+    },
+    {
+      "date": "Oct 10",
+      "reference": "CR-5530",
+      "description": "Log management service",
+      "amount": "$1,200.00",
+      "balance": "$81,000.00"
+    },
+    {
+      "date": "Nov 11",
+      "reference": "FEE-5853",
+      "description": "Compliance audit fee",
+      "amount": "$750.00",
+      "balance": "$81,750.00"
+    },
+    {
+      "date": "Dec 12",
+      "reference": "PMT-1231",
+      "description": "Monthly hosting fee",
+      "amount": "-$500.00",
+      "balance": "$81,250.00"
+    },
+    {
+      "date": "Jan 13",
+      "reference": "ADJ-5786",
+      "description": "Payment received — thank you",
+      "amount": "$500.00",
+      "balance": "$81,750.00"
+    },
+    {
+      "date": "Feb 14",
+      "reference": "CR-2680",
+      "description": "Professional services — consulting",
+      "amount": "$150.00",
+      "balance": "$81,900.00"
+    },
+    {
+      "date": "Mar 15",
+      "reference": "CR-8843",
+      "description": "Software license renewal",
+      "amount": "$3,500.00",
+      "balance": "$85,400.00"
+    },
+    {
+      "date": "Apr 16",
+      "reference": "ADJ-5136",
+      "description": "Data storage overage charge",
+      "amount": "-$3,500.00",
+      "balance": "$81,900.00"
+    },
+    {
+      "date": "May 17",
+      "reference": "ADJ-7565",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "-$3,500.00",
+      "balance": "$78,400.00"
+    },
+    {
+      "date": "Jun 18",
+      "reference": "REF-1878",
+      "description": "API usage — metered billing",
+      "amount": "-$500.00",
+      "balance": "$77,900.00"
+    },
+    {
+      "date": "Jul 19",
+      "reference": "INV-5978",
+      "description": "Infrastructure maintenance",
+      "amount": "$250.00",
+      "balance": "$78,150.00"
+    },
+    {
+      "date": "Aug 20",
+      "reference": "ADJ-7818",
+      "description": "SSL certificate renewal",
+      "amount": "$750.00",
+      "balance": "$78,900.00"
+    },
+    {
+      "date": "Sep 21",
+      "reference": "CR-8381",
+      "description": "Domain registration fee",
+      "amount": "-$3,500.00",
+      "balance": "$75,400.00"
+    },
+    {
+      "date": "Oct 22",
+      "reference": "INV-8025",
+      "description": "Bandwidth overage charge",
+      "amount": "$1,200.00",
+      "balance": "$76,600.00"
+    },
+    {
+      "date": "Nov 23",
+      "reference": "ADJ-2625",
+      "description": "Cloud compute — on-demand",
+      "amount": "$750.00",
+      "balance": "$77,350.00"
+    },
+    {
+      "date": "Dec 24",
+      "reference": "PMT-2330",
+      "description": "Database backup service",
+      "amount": "-$500.00",
+      "balance": "$76,850.00"
+    },
+    {
+      "date": "Jan 25",
+      "reference": "INV-2229",
+      "description": "CDN usage fee",
+      "amount": "-$500.00",
+      "balance": "$76,350.00"
+    },
+    {
+      "date": "Feb 26",
+      "reference": "CR-8699",
+      "description": "Security scanning service",
+      "amount": "-$1,200.00",
+      "balance": "$75,150.00"
+    },
+    {
+      "date": "Mar 27",
+      "reference": "PMT-5632",
+      "description": "Email delivery service",
+      "amount": "-$3,500.00",
+      "balance": "$71,650.00"
+    },
+    {
+      "date": "Apr 28",
+      "reference": "FEE-5334",
+      "description": "Load balancer fee",
+      "amount": "$750.00",
+      "balance": "$72,400.00"
+    },
+    {
+      "date": "May 01",
+      "reference": "INV-4683",
+      "description": "Container orchestration",
+      "amount": "$500.00",
+      "balance": "$72,900.00"
+    },
+    {
+      "date": "Jun 02",
+      "reference": "FEE-2169",
+      "description": "Log management service",
+      "amount": "-$150.00",
+      "balance": "$72,750.00"
+    },
+    {
+      "date": "Jul 03",
+      "reference": "PMT-5728",
+      "description": "Compliance audit fee",
+      "amount": "-$3,500.00",
+      "balance": "$69,250.00"
+    },
+    {
+      "date": "Aug 04",
+      "reference": "REF-5982",
+      "description": "Monthly hosting fee",
+      "amount": "$2,000.00",
+      "balance": "$71,250.00"
+    },
+    {
+      "date": "Sep 05",
+      "reference": "INV-9847",
+      "description": "Payment received — thank you",
+      "amount": "$3,500.00",
+      "balance": "$74,750.00"
+    },
+    {
+      "date": "Oct 06",
+      "reference": "INV-1653",
+      "description": "Professional services — consulting",
+      "amount": "$2,000.00",
+      "balance": "$76,750.00"
+    },
+    {
+      "date": "Nov 07",
+      "reference": "INV-5102",
+      "description": "Software license renewal",
+      "amount": "-$150.00",
+      "balance": "$76,600.00"
+    },
+    {
+      "date": "Dec 08",
+      "reference": "REF-1339",
+      "description": "Data storage overage charge",
+      "amount": "$1,200.00",
+      "balance": "$77,800.00"
+    },
+    {
+      "date": "Jan 09",
+      "reference": "FEE-8708",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$3,500.00",
+      "balance": "$81,300.00"
+    },
+    {
+      "date": "Feb 10",
+      "reference": "FEE-8141",
+      "description": "API usage — metered billing",
+      "amount": "$3,500.00",
+      "balance": "$84,800.00"
+    },
+    {
+      "date": "Mar 11",
+      "reference": "CR-6700",
+      "description": "Infrastructure maintenance",
+      "amount": "$2,000.00",
+      "balance": "$86,800.00"
+    },
+    {
+      "date": "Apr 12",
+      "reference": "REF-2713",
+      "description": "SSL certificate renewal",
+      "amount": "$500.00",
+      "balance": "$87,300.00"
+    },
+    {
+      "date": "May 13",
+      "reference": "REF-9117",
+      "description": "Domain registration fee",
+      "amount": "$1,200.00",
+      "balance": "$88,500.00"
+    },
+    {
+      "date": "Jun 14",
+      "reference": "CR-1601",
+      "description": "Bandwidth overage charge",
+      "amount": "-$3,500.00",
+      "balance": "$85,000.00"
+    },
+    {
+      "date": "Jul 15",
+      "reference": "PMT-6296",
+      "description": "Cloud compute — on-demand",
+      "amount": "$250.00",
+      "balance": "$85,250.00"
+    },
+    {
+      "date": "Aug 16",
+      "reference": "CR-9431",
+      "description": "Database backup service",
+      "amount": "$150.00",
+      "balance": "$85,400.00"
+    },
+    {
+      "date": "Sep 17",
+      "reference": "INV-8569",
+      "description": "CDN usage fee",
+      "amount": "-$2,000.00",
+      "balance": "$83,400.00"
+    },
+    {
+      "date": "Oct 18",
+      "reference": "INV-6927",
+      "description": "Security scanning service",
+      "amount": "$3,500.00",
+      "balance": "$86,900.00"
+    },
+    {
+      "date": "Nov 19",
+      "reference": "ADJ-4335",
+      "description": "Email delivery service",
+      "amount": "$1,200.00",
+      "balance": "$88,100.00"
+    },
+    {
+      "date": "Dec 20",
+      "reference": "PMT-8178",
+      "description": "Load balancer fee",
+      "amount": "-$3,500.00",
+      "balance": "$84,600.00"
+    },
+    {
+      "date": "Jan 21",
+      "reference": "REF-4920",
+      "description": "Container orchestration",
+      "amount": "$500.00",
+      "balance": "$85,100.00"
+    },
+    {
+      "date": "Feb 22",
+      "reference": "ADJ-7684",
+      "description": "Log management service",
+      "amount": "-$250.00",
+      "balance": "$84,850.00"
+    },
+    {
+      "date": "Mar 23",
+      "reference": "ADJ-8560",
+      "description": "Compliance audit fee",
+      "amount": "$250.00",
+      "balance": "$85,100.00"
+    },
+    {
+      "date": "Apr 24",
+      "reference": "FEE-9165",
+      "description": "Monthly hosting fee",
+      "amount": "$1,200.00",
+      "balance": "$86,300.00"
+    },
+    {
+      "date": "May 25",
+      "reference": "PMT-7807",
+      "description": "Payment received — thank you",
+      "amount": "$3,500.00",
+      "balance": "$89,800.00"
+    },
+    {
+      "date": "Jun 26",
+      "reference": "FEE-8483",
+      "description": "Professional services — consulting",
+      "amount": "$500.00",
+      "balance": "$90,300.00"
+    },
+    {
+      "date": "Jul 27",
+      "reference": "INV-9327",
+      "description": "Software license renewal",
+      "amount": "$500.00",
+      "balance": "$90,800.00"
+    },
+    {
+      "date": "Aug 28",
+      "reference": "PMT-7798",
+      "description": "Data storage overage charge",
+      "amount": "$1,500.00",
+      "balance": "$92,300.00"
+    },
+    {
+      "date": "Sep 01",
+      "reference": "INV-5377",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "-$150.00",
+      "balance": "$92,150.00"
+    },
+    {
+      "date": "Oct 02",
+      "reference": "PMT-9022",
+      "description": "API usage — metered billing",
+      "amount": "$500.00",
+      "balance": "$92,650.00"
+    },
+    {
+      "date": "Nov 03",
+      "reference": "CR-6654",
+      "description": "Infrastructure maintenance",
+      "amount": "$1,500.00",
+      "balance": "$94,150.00"
+    },
+    {
+      "date": "Dec 04",
+      "reference": "INV-7180",
+      "description": "SSL certificate renewal",
+      "amount": "$3,500.00",
+      "balance": "$97,650.00"
+    },
+    {
+      "date": "Jan 05",
+      "reference": "FEE-4912",
+      "description": "Domain registration fee",
+      "amount": "-$2,000.00",
+      "balance": "$95,650.00"
+    },
+    {
+      "date": "Feb 06",
+      "reference": "CR-1715",
+      "description": "Bandwidth overage charge",
+      "amount": "$1,500.00",
+      "balance": "$97,150.00"
+    },
+    {
+      "date": "Mar 07",
+      "reference": "REF-7246",
+      "description": "Cloud compute — on-demand",
+      "amount": "$2,000.00",
+      "balance": "$99,150.00"
+    },
+    {
+      "date": "Apr 08",
+      "reference": "REF-3492",
+      "description": "Database backup service",
+      "amount": "$3,500.00",
+      "balance": "$102,650.00"
+    },
+    {
+      "date": "May 09",
+      "reference": "FEE-9229",
+      "description": "CDN usage fee",
+      "amount": "$1,500.00",
+      "balance": "$104,150.00"
+    },
+    {
+      "date": "Jun 10",
+      "reference": "CR-2633",
+      "description": "Security scanning service",
+      "amount": "-$3,500.00",
+      "balance": "$100,650.00"
+    },
+    {
+      "date": "Jul 11",
+      "reference": "FEE-7717",
+      "description": "Email delivery service",
+      "amount": "-$500.00",
+      "balance": "$100,150.00"
+    },
+    {
+      "date": "Aug 12",
+      "reference": "PMT-6546",
+      "description": "Load balancer fee",
+      "amount": "$2,000.00",
+      "balance": "$102,150.00"
+    },
+    {
+      "date": "Sep 13",
+      "reference": "PMT-9742",
+      "description": "Container orchestration",
+      "amount": "$2,000.00",
+      "balance": "$104,150.00"
+    },
+    {
+      "date": "Oct 14",
+      "reference": "REF-8994",
+      "description": "Log management service",
+      "amount": "$150.00",
+      "balance": "$104,300.00"
+    },
+    {
+      "date": "Nov 15",
+      "reference": "FEE-5708",
+      "description": "Compliance audit fee",
+      "amount": "$750.00",
+      "balance": "$105,050.00"
+    },
+    {
+      "date": "Dec 16",
+      "reference": "CR-2612",
+      "description": "Monthly hosting fee",
+      "amount": "$250.00",
+      "balance": "$105,300.00"
+    },
+    {
+      "date": "Jan 17",
+      "reference": "REF-5906",
+      "description": "Payment received — thank you",
+      "amount": "-$150.00",
+      "balance": "$105,150.00"
+    },
+    {
+      "date": "Feb 18",
+      "reference": "ADJ-5806",
+      "description": "Professional services — consulting",
+      "amount": "$1,500.00",
+      "balance": "$106,650.00"
+    },
+    {
+      "date": "Mar 19",
+      "reference": "FEE-5000",
+      "description": "Software license renewal",
+      "amount": "$2,000.00",
+      "balance": "$108,650.00"
+    },
+    {
+      "date": "Apr 20",
+      "reference": "FEE-3785",
+      "description": "Data storage overage charge",
+      "amount": "-$500.00",
+      "balance": "$108,150.00"
+    },
+    {
+      "date": "May 21",
+      "reference": "CR-4945",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$3,500.00",
+      "balance": "$111,650.00"
+    },
+    {
+      "date": "Jun 22",
+      "reference": "FEE-4804",
+      "description": "API usage — metered billing",
+      "amount": "$3,500.00",
+      "balance": "$115,150.00"
+    },
+    {
+      "date": "Jul 23",
+      "reference": "CR-5183",
+      "description": "Infrastructure maintenance",
+      "amount": "$150.00",
+      "balance": "$115,300.00"
+    },
+    {
+      "date": "Aug 24",
+      "reference": "CR-5712",
+      "description": "SSL certificate renewal",
+      "amount": "-$500.00",
+      "balance": "$114,800.00"
+    },
+    {
+      "date": "Sep 25",
+      "reference": "PMT-5901",
+      "description": "Domain registration fee",
+      "amount": "$2,000.00",
+      "balance": "$116,800.00"
+    },
+    {
+      "date": "Oct 26",
+      "reference": "CR-5949",
+      "description": "Bandwidth overage charge",
+      "amount": "$750.00",
+      "balance": "$117,550.00"
+    },
+    {
+      "date": "Nov 27",
+      "reference": "CR-2747",
+      "description": "Cloud compute — on-demand",
+      "amount": "$750.00",
+      "balance": "$118,300.00"
+    },
+    {
+      "date": "Dec 28",
+      "reference": "PMT-5847",
+      "description": "Database backup service",
+      "amount": "-$1,200.00",
+      "balance": "$117,100.00"
+    },
+    {
+      "date": "Jan 01",
+      "reference": "REF-7484",
+      "description": "CDN usage fee",
+      "amount": "-$1,200.00",
+      "balance": "$115,900.00"
+    },
+    {
+      "date": "Feb 02",
+      "reference": "REF-1803",
+      "description": "Security scanning service",
+      "amount": "$3,500.00",
+      "balance": "$119,400.00"
+    },
+    {
+      "date": "Mar 03",
+      "reference": "PMT-4770",
+      "description": "Email delivery service",
+      "amount": "-$1,500.00",
+      "balance": "$117,900.00"
+    },
+    {
+      "date": "Apr 04",
+      "reference": "FEE-5106",
+      "description": "Load balancer fee",
+      "amount": "$500.00",
+      "balance": "$118,400.00"
+    },
+    {
+      "date": "May 05",
+      "reference": "REF-1645",
+      "description": "Container orchestration",
+      "amount": "$1,200.00",
+      "balance": "$119,600.00"
+    },
+    {
+      "date": "Jun 06",
+      "reference": "ADJ-6977",
+      "description": "Log management service",
+      "amount": "-$500.00",
+      "balance": "$119,100.00"
+    },
+    {
+      "date": "Jul 07",
+      "reference": "PMT-6352",
+      "description": "Compliance audit fee",
+      "amount": "-$2,000.00",
+      "balance": "$117,100.00"
+    },
+    {
+      "date": "Aug 08",
+      "reference": "FEE-9837",
+      "description": "Monthly hosting fee",
+      "amount": "$1,500.00",
+      "balance": "$118,600.00"
+    },
+    {
+      "date": "Sep 09",
+      "reference": "PMT-3695",
+      "description": "Payment received — thank you",
+      "amount": "$1,200.00",
+      "balance": "$119,800.00"
+    },
+    {
+      "date": "Oct 10",
+      "reference": "CR-5835",
+      "description": "Professional services — consulting",
+      "amount": "$1,500.00",
+      "balance": "$121,300.00"
+    },
+    {
+      "date": "Nov 11",
+      "reference": "CR-2233",
+      "description": "Software license renewal",
+      "amount": "$500.00",
+      "balance": "$121,800.00"
+    },
+    {
+      "date": "Dec 12",
+      "reference": "FEE-7511",
+      "description": "Data storage overage charge",
+      "amount": "-$1,500.00",
+      "balance": "$120,300.00"
+    },
+    {
+      "date": "Jan 13",
+      "reference": "CR-1228",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$1,200.00",
+      "balance": "$121,500.00"
+    },
+    {
+      "date": "Feb 14",
+      "reference": "CR-7038",
+      "description": "API usage — metered billing",
+      "amount": "$1,200.00",
+      "balance": "$122,700.00"
+    },
+    {
+      "date": "Mar 15",
+      "reference": "REF-7086",
+      "description": "Infrastructure maintenance",
+      "amount": "$250.00",
+      "balance": "$122,950.00"
+    },
+    {
+      "date": "Apr 16",
+      "reference": "CR-1410",
+      "description": "SSL certificate renewal",
+      "amount": "$1,500.00",
+      "balance": "$124,450.00"
+    },
+    {
+      "date": "May 17",
+      "reference": "FEE-2035",
+      "description": "Domain registration fee",
+      "amount": "$3,500.00",
+      "balance": "$127,950.00"
+    },
+    {
+      "date": "Jun 18",
+      "reference": "PMT-7689",
+      "description": "Bandwidth overage charge",
+      "amount": "-$250.00",
+      "balance": "$127,700.00"
+    },
+    {
+      "date": "Jul 19",
+      "reference": "ADJ-5986",
+      "description": "Cloud compute — on-demand",
+      "amount": "-$3,500.00",
+      "balance": "$124,200.00"
+    },
+    {
+      "date": "Aug 20",
+      "reference": "FEE-9807",
+      "description": "Database backup service",
+      "amount": "$500.00",
+      "balance": "$124,700.00"
+    },
+    {
+      "date": "Sep 21",
+      "reference": "PMT-9850",
+      "description": "CDN usage fee",
+      "amount": "$2,000.00",
+      "balance": "$126,700.00"
+    },
+    {
+      "date": "Oct 22",
+      "reference": "REF-3531",
+      "description": "Security scanning service",
+      "amount": "$2,000.00",
+      "balance": "$128,700.00"
+    },
+    {
+      "date": "Nov 23",
+      "reference": "CR-7686",
+      "description": "Email delivery service",
+      "amount": "-$1,200.00",
+      "balance": "$127,500.00"
+    },
+    {
+      "date": "Dec 24",
+      "reference": "PMT-4559",
+      "description": "Load balancer fee",
+      "amount": "$3,500.00",
+      "balance": "$131,000.00"
+    },
+    {
+      "date": "Jan 25",
+      "reference": "FEE-6942",
+      "description": "Container orchestration",
+      "amount": "$250.00",
+      "balance": "$131,250.00"
+    },
+    {
+      "date": "Feb 26",
+      "reference": "PMT-9920",
+      "description": "Log management service",
+      "amount": "-$1,500.00",
+      "balance": "$129,750.00"
+    },
+    {
+      "date": "Mar 27",
+      "reference": "PMT-4109",
+      "description": "Compliance audit fee",
+      "amount": "$250.00",
+      "balance": "$130,000.00"
+    },
+    {
+      "date": "Apr 28",
+      "reference": "CR-2501",
+      "description": "Monthly hosting fee",
+      "amount": "$750.00",
+      "balance": "$130,750.00"
+    },
+    {
+      "date": "May 01",
+      "reference": "INV-1349",
+      "description": "Payment received — thank you",
+      "amount": "$150.00",
+      "balance": "$130,900.00"
+    },
+    {
+      "date": "Jun 02",
+      "reference": "FEE-3063",
+      "description": "Professional services — consulting",
+      "amount": "-$750.00",
+      "balance": "$130,150.00"
+    },
+    {
+      "date": "Jul 03",
+      "reference": "INV-4394",
+      "description": "Software license renewal",
+      "amount": "$750.00",
+      "balance": "$130,900.00"
+    },
+    {
+      "date": "Aug 04",
+      "reference": "FEE-6383",
+      "description": "Data storage overage charge",
+      "amount": "$500.00",
+      "balance": "$131,400.00"
+    },
+    {
+      "date": "Sep 05",
+      "reference": "INV-1046",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$1,200.00",
+      "balance": "$132,600.00"
+    },
+    {
+      "date": "Oct 06",
+      "reference": "FEE-3129",
+      "description": "API usage — metered billing",
+      "amount": "$1,200.00",
+      "balance": "$133,800.00"
+    },
+    {
+      "date": "Nov 07",
+      "reference": "ADJ-1422",
+      "description": "Infrastructure maintenance",
+      "amount": "-$500.00",
+      "balance": "$133,300.00"
+    },
+    {
+      "date": "Dec 08",
+      "reference": "FEE-6304",
+      "description": "SSL certificate renewal",
+      "amount": "-$150.00",
+      "balance": "$133,150.00"
+    },
+    {
+      "date": "Jan 09",
+      "reference": "ADJ-3076",
+      "description": "Domain registration fee",
+      "amount": "$2,000.00",
+      "balance": "$135,150.00"
+    },
+    {
+      "date": "Feb 10",
+      "reference": "REF-2041",
+      "description": "Bandwidth overage charge",
+      "amount": "$3,500.00",
+      "balance": "$138,650.00"
+    },
+    {
+      "date": "Mar 11",
+      "reference": "PMT-9408",
+      "description": "Cloud compute — on-demand",
+      "amount": "$250.00",
+      "balance": "$138,900.00"
+    },
+    {
+      "date": "Apr 12",
+      "reference": "FEE-1710",
+      "description": "Database backup service",
+      "amount": "$1,200.00",
+      "balance": "$140,100.00"
+    },
+    {
+      "date": "May 13",
+      "reference": "ADJ-1996",
+      "description": "CDN usage fee",
+      "amount": "$3,500.00",
+      "balance": "$143,600.00"
+    },
+    {
+      "date": "Jun 14",
+      "reference": "CR-2768",
+      "description": "Security scanning service",
+      "amount": "$3,500.00",
+      "balance": "$147,100.00"
+    },
+    {
+      "date": "Jul 15",
+      "reference": "CR-2204",
+      "description": "Email delivery service",
+      "amount": "$250.00",
+      "balance": "$147,350.00"
+    },
+    {
+      "date": "Aug 16",
+      "reference": "FEE-2076",
+      "description": "Load balancer fee",
+      "amount": "-$500.00",
+      "balance": "$146,850.00"
+    },
+    {
+      "date": "Sep 17",
+      "reference": "REF-9984",
+      "description": "Container orchestration",
+      "amount": "$1,500.00",
+      "balance": "$148,350.00"
+    },
+    {
+      "date": "Oct 18",
+      "reference": "INV-9692",
+      "description": "Log management service",
+      "amount": "$1,200.00",
+      "balance": "$149,550.00"
+    },
+    {
+      "date": "Nov 19",
+      "reference": "INV-8048",
+      "description": "Compliance audit fee",
+      "amount": "$250.00",
+      "balance": "$149,800.00"
+    },
+    {
+      "date": "Dec 20",
+      "reference": "ADJ-4522",
+      "description": "Monthly hosting fee",
+      "amount": "$2,000.00",
+      "balance": "$151,800.00"
+    },
+    {
+      "date": "Jan 21",
+      "reference": "FEE-7779",
+      "description": "Payment received — thank you",
+      "amount": "$1,500.00",
+      "balance": "$153,300.00"
+    },
+    {
+      "date": "Feb 22",
+      "reference": "CR-7815",
+      "description": "Professional services — consulting",
+      "amount": "$250.00",
+      "balance": "$153,550.00"
+    },
+    {
+      "date": "Mar 23",
+      "reference": "PMT-5176",
+      "description": "Software license renewal",
+      "amount": "$1,500.00",
+      "balance": "$155,050.00"
+    },
+    {
+      "date": "Apr 24",
+      "reference": "REF-8770",
+      "description": "Data storage overage charge",
+      "amount": "-$250.00",
+      "balance": "$154,800.00"
+    },
+    {
+      "date": "May 25",
+      "reference": "ADJ-2527",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "-$2,000.00",
+      "balance": "$152,800.00"
+    },
+    {
+      "date": "Jun 26",
+      "reference": "REF-7105",
+      "description": "API usage — metered billing",
+      "amount": "$500.00",
+      "balance": "$153,300.00"
+    },
+    {
+      "date": "Jul 27",
+      "reference": "INV-6400",
+      "description": "Infrastructure maintenance",
+      "amount": "$250.00",
+      "balance": "$153,550.00"
+    },
+    {
+      "date": "Aug 28",
+      "reference": "REF-7929",
+      "description": "SSL certificate renewal",
+      "amount": "$150.00",
+      "balance": "$153,700.00"
+    },
+    {
+      "date": "Sep 01",
+      "reference": "INV-6119",
+      "description": "Domain registration fee",
+      "amount": "-$1,500.00",
+      "balance": "$152,200.00"
+    },
+    {
+      "date": "Oct 02",
+      "reference": "INV-4485",
+      "description": "Bandwidth overage charge",
+      "amount": "$500.00",
+      "balance": "$152,700.00"
+    },
+    {
+      "date": "Nov 03",
+      "reference": "FEE-2773",
+      "description": "Cloud compute — on-demand",
+      "amount": "$1,500.00",
+      "balance": "$154,200.00"
+    },
+    {
+      "date": "Dec 04",
+      "reference": "PMT-2882",
+      "description": "Database backup service",
+      "amount": "$1,200.00",
+      "balance": "$155,400.00"
+    },
+    {
+      "date": "Jan 05",
+      "reference": "CR-1430",
+      "description": "CDN usage fee",
+      "amount": "-$1,200.00",
+      "balance": "$154,200.00"
+    },
+    {
+      "date": "Feb 06",
+      "reference": "PMT-6062",
+      "description": "Security scanning service",
+      "amount": "$1,500.00",
+      "balance": "$155,700.00"
+    },
+    {
+      "date": "Mar 07",
+      "reference": "FEE-3347",
+      "description": "Email delivery service",
+      "amount": "-$2,000.00",
+      "balance": "$153,700.00"
+    },
+    {
+      "date": "Apr 08",
+      "reference": "REF-1502",
+      "description": "Load balancer fee",
+      "amount": "$250.00",
+      "balance": "$153,950.00"
+    },
+    {
+      "date": "May 09",
+      "reference": "FEE-7163",
+      "description": "Container orchestration",
+      "amount": "$2,000.00",
+      "balance": "$155,950.00"
+    },
+    {
+      "date": "Jun 10",
+      "reference": "FEE-7062",
+      "description": "Log management service",
+      "amount": "$1,200.00",
+      "balance": "$157,150.00"
+    },
+    {
+      "date": "Jul 11",
+      "reference": "INV-2391",
+      "description": "Compliance audit fee",
+      "amount": "-$150.00",
+      "balance": "$157,000.00"
+    },
+    {
+      "date": "Aug 12",
+      "reference": "INV-1815",
+      "description": "Monthly hosting fee",
+      "amount": "-$250.00",
+      "balance": "$156,750.00"
+    },
+    {
+      "date": "Sep 13",
+      "reference": "REF-7947",
+      "description": "Payment received — thank you",
+      "amount": "$3,500.00",
+      "balance": "$160,250.00"
+    },
+    {
+      "date": "Oct 14",
+      "reference": "CR-5475",
+      "description": "Professional services — consulting",
+      "amount": "$750.00",
+      "balance": "$161,000.00"
+    },
+    {
+      "date": "Nov 15",
+      "reference": "ADJ-6655",
+      "description": "Software license renewal",
+      "amount": "-$2,000.00",
+      "balance": "$159,000.00"
+    },
+    {
+      "date": "Dec 16",
+      "reference": "REF-8972",
+      "description": "Data storage overage charge",
+      "amount": "-$1,200.00",
+      "balance": "$157,800.00"
+    },
+    {
+      "date": "Jan 17",
+      "reference": "CR-1897",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "-$150.00",
+      "balance": "$157,650.00"
+    },
+    {
+      "date": "Feb 18",
+      "reference": "FEE-3248",
+      "description": "API usage — metered billing",
+      "amount": "-$1,200.00",
+      "balance": "$156,450.00"
+    },
+    {
+      "date": "Mar 19",
+      "reference": "ADJ-1126",
+      "description": "Infrastructure maintenance",
+      "amount": "$3,500.00",
+      "balance": "$159,950.00"
+    },
+    {
+      "date": "Apr 20",
+      "reference": "FEE-3116",
+      "description": "SSL certificate renewal",
+      "amount": "$2,000.00",
+      "balance": "$161,950.00"
+    },
+    {
+      "date": "May 21",
+      "reference": "FEE-9196",
+      "description": "Domain registration fee",
+      "amount": "-$1,500.00",
+      "balance": "$160,450.00"
+    },
+    {
+      "date": "Jun 22",
+      "reference": "REF-1693",
+      "description": "Bandwidth overage charge",
+      "amount": "-$2,000.00",
+      "balance": "$158,450.00"
+    },
+    {
+      "date": "Jul 23",
+      "reference": "ADJ-6129",
+      "description": "Cloud compute — on-demand",
+      "amount": "$2,000.00",
+      "balance": "$160,450.00"
+    },
+    {
+      "date": "Aug 24",
+      "reference": "REF-7843",
+      "description": "Database backup service",
+      "amount": "-$1,200.00",
+      "balance": "$159,250.00"
+    },
+    {
+      "date": "Sep 25",
+      "reference": "ADJ-6321",
+      "description": "CDN usage fee",
+      "amount": "$500.00",
+      "balance": "$159,750.00"
+    },
+    {
+      "date": "Oct 26",
+      "reference": "INV-8538",
+      "description": "Security scanning service",
+      "amount": "-$1,500.00",
+      "balance": "$158,250.00"
+    },
+    {
+      "date": "Nov 27",
+      "reference": "ADJ-4986",
+      "description": "Email delivery service",
+      "amount": "$2,000.00",
+      "balance": "$160,250.00"
+    },
+    {
+      "date": "Dec 28",
+      "reference": "INV-2288",
+      "description": "Load balancer fee",
+      "amount": "$2,000.00",
+      "balance": "$162,250.00"
+    },
+    {
+      "date": "Jan 01",
+      "reference": "REF-6562",
+      "description": "Container orchestration",
+      "amount": "$750.00",
+      "balance": "$163,000.00"
+    },
+    {
+      "date": "Feb 02",
+      "reference": "FEE-2251",
+      "description": "Log management service",
+      "amount": "$250.00",
+      "balance": "$163,250.00"
+    },
+    {
+      "date": "Mar 03",
+      "reference": "FEE-6724",
+      "description": "Compliance audit fee",
+      "amount": "$1,500.00",
+      "balance": "$164,750.00"
+    },
+    {
+      "date": "Apr 04",
+      "reference": "REF-3419",
+      "description": "Monthly hosting fee",
+      "amount": "-$750.00",
+      "balance": "$164,000.00"
+    },
+    {
+      "date": "May 05",
+      "reference": "PMT-4232",
+      "description": "Payment received — thank you",
+      "amount": "$500.00",
+      "balance": "$164,500.00"
+    },
+    {
+      "date": "Jun 06",
+      "reference": "REF-2234",
+      "description": "Professional services — consulting",
+      "amount": "$500.00",
+      "balance": "$165,000.00"
+    },
+    {
+      "date": "Jul 07",
+      "reference": "REF-9095",
+      "description": "Software license renewal",
+      "amount": "$3,500.00",
+      "balance": "$168,500.00"
+    },
+    {
+      "date": "Aug 08",
+      "reference": "INV-8354",
+      "description": "Data storage overage charge",
+      "amount": "$1,500.00",
+      "balance": "$170,000.00"
+    },
+    {
+      "date": "Sep 09",
+      "reference": "REF-6179",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$500.00",
+      "balance": "$170,500.00"
+    },
+    {
+      "date": "Oct 10",
+      "reference": "CR-8245",
+      "description": "API usage — metered billing",
+      "amount": "$1,200.00",
+      "balance": "$171,700.00"
+    },
+    {
+      "date": "Nov 11",
+      "reference": "INV-1920",
+      "description": "Infrastructure maintenance",
+      "amount": "$1,500.00",
+      "balance": "$173,200.00"
+    },
+    {
+      "date": "Dec 12",
+      "reference": "PMT-8565",
+      "description": "SSL certificate renewal",
+      "amount": "-$3,500.00",
+      "balance": "$169,700.00"
+    },
+    {
+      "date": "Jan 13",
+      "reference": "PMT-5703",
+      "description": "Domain registration fee",
+      "amount": "$250.00",
+      "balance": "$169,950.00"
+    },
+    {
+      "date": "Feb 14",
+      "reference": "ADJ-9307",
+      "description": "Bandwidth overage charge",
+      "amount": "$2,000.00",
+      "balance": "$171,950.00"
+    },
+    {
+      "date": "Mar 15",
+      "reference": "INV-1672",
+      "description": "Cloud compute — on-demand",
+      "amount": "$3,500.00",
+      "balance": "$175,450.00"
+    },
+    {
+      "date": "Apr 16",
+      "reference": "INV-4084",
+      "description": "Database backup service",
+      "amount": "$1,500.00",
+      "balance": "$176,950.00"
+    },
+    {
+      "date": "May 17",
+      "reference": "INV-3471",
+      "description": "CDN usage fee",
+      "amount": "$150.00",
+      "balance": "$177,100.00"
+    },
+    {
+      "date": "Jun 18",
+      "reference": "PMT-2381",
+      "description": "Security scanning service",
+      "amount": "-$500.00",
+      "balance": "$176,600.00"
+    },
+    {
+      "date": "Jul 19",
+      "reference": "REF-8172",
+      "description": "Email delivery service",
+      "amount": "$3,500.00",
+      "balance": "$180,100.00"
+    },
+    {
+      "date": "Aug 20",
+      "reference": "INV-3600",
+      "description": "Load balancer fee",
+      "amount": "$1,500.00",
+      "balance": "$181,600.00"
+    },
+    {
+      "date": "Sep 21",
+      "reference": "PMT-7347",
+      "description": "Container orchestration",
+      "amount": "$2,000.00",
+      "balance": "$183,600.00"
+    },
+    {
+      "date": "Oct 22",
+      "reference": "REF-1857",
+      "description": "Log management service",
+      "amount": "-$1,500.00",
+      "balance": "$182,100.00"
+    },
+    {
+      "date": "Nov 23",
+      "reference": "ADJ-7333",
+      "description": "Compliance audit fee",
+      "amount": "-$1,200.00",
+      "balance": "$180,900.00"
+    },
+    {
+      "date": "Dec 24",
+      "reference": "REF-3463",
+      "description": "Monthly hosting fee",
+      "amount": "-$1,500.00",
+      "balance": "$179,400.00"
+    },
+    {
+      "date": "Jan 25",
+      "reference": "REF-3317",
+      "description": "Payment received — thank you",
+      "amount": "$1,500.00",
+      "balance": "$180,900.00"
+    },
+    {
+      "date": "Feb 26",
+      "reference": "REF-7421",
+      "description": "Professional services — consulting",
+      "amount": "$500.00",
+      "balance": "$181,400.00"
+    },
+    {
+      "date": "Mar 27",
+      "reference": "ADJ-6072",
+      "description": "Software license renewal",
+      "amount": "$2,000.00",
+      "balance": "$183,400.00"
+    },
+    {
+      "date": "Apr 28",
+      "reference": "PMT-3093",
+      "description": "Data storage overage charge",
+      "amount": "$250.00",
+      "balance": "$183,650.00"
+    },
+    {
+      "date": "May 01",
+      "reference": "CR-9331",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "-$1,500.00",
+      "balance": "$182,150.00"
+    },
+    {
+      "date": "Jun 02",
+      "reference": "PMT-3953",
+      "description": "API usage — metered billing",
+      "amount": "$750.00",
+      "balance": "$182,900.00"
+    },
+    {
+      "date": "Jul 03",
+      "reference": "CR-4145",
+      "description": "Infrastructure maintenance",
+      "amount": "$750.00",
+      "balance": "$183,650.00"
+    },
+    {
+      "date": "Aug 04",
+      "reference": "FEE-2264",
+      "description": "SSL certificate renewal",
+      "amount": "$1,200.00",
+      "balance": "$184,850.00"
+    },
+    {
+      "date": "Sep 05",
+      "reference": "ADJ-9317",
+      "description": "Domain registration fee",
+      "amount": "$150.00",
+      "balance": "$185,000.00"
+    },
+    {
+      "date": "Oct 06",
+      "reference": "INV-3147",
+      "description": "Bandwidth overage charge",
+      "amount": "-$2,000.00",
+      "balance": "$183,000.00"
+    },
+    {
+      "date": "Nov 07",
+      "reference": "FEE-3712",
+      "description": "Cloud compute — on-demand",
+      "amount": "-$3,500.00",
+      "balance": "$179,500.00"
+    },
+    {
+      "date": "Dec 08",
+      "reference": "PMT-4891",
+      "description": "Database backup service",
+      "amount": "$3,500.00",
+      "balance": "$183,000.00"
+    },
+    {
+      "date": "Jan 09",
+      "reference": "REF-8355",
+      "description": "CDN usage fee",
+      "amount": "$750.00",
+      "balance": "$183,750.00"
+    },
+    {
+      "date": "Feb 10",
+      "reference": "PMT-8684",
+      "description": "Security scanning service",
+      "amount": "$750.00",
+      "balance": "$184,500.00"
+    },
+    {
+      "date": "Mar 11",
+      "reference": "INV-8218",
+      "description": "Email delivery service",
+      "amount": "$3,500.00",
+      "balance": "$188,000.00"
+    },
+    {
+      "date": "Apr 12",
+      "reference": "CR-9239",
+      "description": "Load balancer fee",
+      "amount": "$2,000.00",
+      "balance": "$190,000.00"
+    },
+    {
+      "date": "May 13",
+      "reference": "FEE-3267",
+      "description": "Container orchestration",
+      "amount": "-$1,200.00",
+      "balance": "$188,800.00"
+    },
+    {
+      "date": "Jun 14",
+      "reference": "CR-7081",
+      "description": "Log management service",
+      "amount": "$250.00",
+      "balance": "$189,050.00"
+    },
+    {
+      "date": "Jul 15",
+      "reference": "INV-3042",
+      "description": "Compliance audit fee",
+      "amount": "-$1,200.00",
+      "balance": "$187,850.00"
+    },
+    {
+      "date": "Aug 16",
+      "reference": "FEE-5469",
+      "description": "Monthly hosting fee",
+      "amount": "$3,500.00",
+      "balance": "$191,350.00"
+    },
+    {
+      "date": "Sep 17",
+      "reference": "FEE-8167",
+      "description": "Payment received — thank you",
+      "amount": "$250.00",
+      "balance": "$191,600.00"
+    },
+    {
+      "date": "Oct 18",
+      "reference": "FEE-8391",
+      "description": "Professional services — consulting",
+      "amount": "$1,500.00",
+      "balance": "$193,100.00"
+    },
+    {
+      "date": "Nov 19",
+      "reference": "CR-1872",
+      "description": "Software license renewal",
+      "amount": "$2,000.00",
+      "balance": "$195,100.00"
+    },
+    {
+      "date": "Dec 20",
+      "reference": "FEE-7326",
+      "description": "Data storage overage charge",
+      "amount": "$250.00",
+      "balance": "$195,350.00"
+    },
+    {
+      "date": "Jan 21",
+      "reference": "ADJ-6221",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$250.00",
+      "balance": "$195,600.00"
+    },
+    {
+      "date": "Feb 22",
+      "reference": "REF-6493",
+      "description": "API usage — metered billing",
+      "amount": "-$500.00",
+      "balance": "$195,100.00"
+    },
+    {
+      "date": "Mar 23",
+      "reference": "PMT-8740",
+      "description": "Infrastructure maintenance",
+      "amount": "$500.00",
+      "balance": "$195,600.00"
+    },
+    {
+      "date": "Apr 24",
+      "reference": "CR-8349",
+      "description": "SSL certificate renewal",
+      "amount": "$150.00",
+      "balance": "$195,750.00"
+    },
+    {
+      "date": "May 25",
+      "reference": "ADJ-5193",
+      "description": "Domain registration fee",
+      "amount": "$750.00",
+      "balance": "$196,500.00"
+    },
+    {
+      "date": "Jun 26",
+      "reference": "INV-9647",
+      "description": "Bandwidth overage charge",
+      "amount": "-$2,000.00",
+      "balance": "$194,500.00"
+    },
+    {
+      "date": "Jul 27",
+      "reference": "PMT-4893",
+      "description": "Cloud compute — on-demand",
+      "amount": "-$1,200.00",
+      "balance": "$193,300.00"
+    },
+    {
+      "date": "Aug 28",
+      "reference": "FEE-7878",
+      "description": "Database backup service",
+      "amount": "-$3,500.00",
+      "balance": "$189,800.00"
+    },
+    {
+      "date": "Sep 01",
+      "reference": "CR-9782",
+      "description": "CDN usage fee",
+      "amount": "$150.00",
+      "balance": "$189,950.00"
+    },
+    {
+      "date": "Oct 02",
+      "reference": "INV-4963",
+      "description": "Security scanning service",
+      "amount": "-$500.00",
+      "balance": "$189,450.00"
+    },
+    {
+      "date": "Nov 03",
+      "reference": "ADJ-6780",
+      "description": "Email delivery service",
+      "amount": "$750.00",
+      "balance": "$190,200.00"
+    },
+    {
+      "date": "Dec 04",
+      "reference": "FEE-2402",
+      "description": "Load balancer fee",
+      "amount": "-$1,500.00",
+      "balance": "$188,700.00"
+    },
+    {
+      "date": "Jan 05",
+      "reference": "INV-9914",
+      "description": "Container orchestration",
+      "amount": "$150.00",
+      "balance": "$188,850.00"
+    },
+    {
+      "date": "Feb 06",
+      "reference": "CR-1713",
+      "description": "Log management service",
+      "amount": "$2,000.00",
+      "balance": "$190,850.00"
+    },
+    {
+      "date": "Mar 07",
+      "reference": "PMT-1266",
+      "description": "Compliance audit fee",
+      "amount": "$1,500.00",
+      "balance": "$192,350.00"
+    },
+    {
+      "date": "Apr 08",
+      "reference": "PMT-4950",
+      "description": "Monthly hosting fee",
+      "amount": "$250.00",
+      "balance": "$192,600.00"
+    },
+    {
+      "date": "May 09",
+      "reference": "REF-6447",
+      "description": "Payment received — thank you",
+      "amount": "-$500.00",
+      "balance": "$192,100.00"
+    },
+    {
+      "date": "Jun 10",
+      "reference": "INV-6546",
+      "description": "Professional services — consulting",
+      "amount": "$500.00",
+      "balance": "$192,600.00"
+    },
+    {
+      "date": "Jul 11",
+      "reference": "REF-8612",
+      "description": "Software license renewal",
+      "amount": "$3,500.00",
+      "balance": "$196,100.00"
+    },
+    {
+      "date": "Aug 12",
+      "reference": "FEE-2033",
+      "description": "Data storage overage charge",
+      "amount": "-$3,500.00",
+      "balance": "$192,600.00"
+    },
+    {
+      "date": "Sep 13",
+      "reference": "FEE-1717",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$750.00",
+      "balance": "$193,350.00"
+    },
+    {
+      "date": "Oct 14",
+      "reference": "PMT-6080",
+      "description": "API usage — metered billing",
+      "amount": "$2,000.00",
+      "balance": "$195,350.00"
+    },
+    {
+      "date": "Nov 15",
+      "reference": "INV-8756",
+      "description": "Infrastructure maintenance",
+      "amount": "-$1,200.00",
+      "balance": "$194,150.00"
+    },
+    {
+      "date": "Dec 16",
+      "reference": "REF-4131",
+      "description": "SSL certificate renewal",
+      "amount": "$1,200.00",
+      "balance": "$195,350.00"
+    },
+    {
+      "date": "Jan 17",
+      "reference": "ADJ-6438",
+      "description": "Domain registration fee",
+      "amount": "-$1,200.00",
+      "balance": "$194,150.00"
+    },
+    {
+      "date": "Feb 18",
+      "reference": "PMT-8159",
+      "description": "Bandwidth overage charge",
+      "amount": "$2,000.00",
+      "balance": "$196,150.00"
+    },
+    {
+      "date": "Mar 19",
+      "reference": "CR-6554",
+      "description": "Cloud compute — on-demand",
+      "amount": "$500.00",
+      "balance": "$196,650.00"
+    },
+    {
+      "date": "Apr 20",
+      "reference": "CR-7018",
+      "description": "Database backup service",
+      "amount": "$1,200.00",
+      "balance": "$197,850.00"
+    },
+    {
+      "date": "May 21",
+      "reference": "REF-7955",
+      "description": "CDN usage fee",
+      "amount": "$250.00",
+      "balance": "$198,100.00"
+    },
+    {
+      "date": "Jun 22",
+      "reference": "FEE-9937",
+      "description": "Security scanning service",
+      "amount": "$1,200.00",
+      "balance": "$199,300.00"
+    },
+    {
+      "date": "Jul 23",
+      "reference": "ADJ-6372",
+      "description": "Email delivery service",
+      "amount": "$1,200.00",
+      "balance": "$200,500.00"
+    },
+    {
+      "date": "Aug 24",
+      "reference": "INV-7981",
+      "description": "Load balancer fee",
+      "amount": "$500.00",
+      "balance": "$201,000.00"
+    },
+    {
+      "date": "Sep 25",
+      "reference": "PMT-8325",
+      "description": "Container orchestration",
+      "amount": "$150.00",
+      "balance": "$201,150.00"
+    },
+    {
+      "date": "Oct 26",
+      "reference": "PMT-8126",
+      "description": "Log management service",
+      "amount": "$1,200.00",
+      "balance": "$202,350.00"
+    },
+    {
+      "date": "Nov 27",
+      "reference": "ADJ-2229",
+      "description": "Compliance audit fee",
+      "amount": "$2,000.00",
+      "balance": "$204,350.00"
+    },
+    {
+      "date": "Dec 28",
+      "reference": "REF-3621",
+      "description": "Monthly hosting fee",
+      "amount": "-$150.00",
+      "balance": "$204,200.00"
+    },
+    {
+      "date": "Jan 01",
+      "reference": "INV-8179",
+      "description": "Payment received — thank you",
+      "amount": "-$150.00",
+      "balance": "$204,050.00"
+    },
+    {
+      "date": "Feb 02",
+      "reference": "FEE-7001",
+      "description": "Professional services — consulting",
+      "amount": "$1,500.00",
+      "balance": "$205,550.00"
+    },
+    {
+      "date": "Mar 03",
+      "reference": "INV-1530",
+      "description": "Software license renewal",
+      "amount": "$500.00",
+      "balance": "$206,050.00"
+    },
+    {
+      "date": "Apr 04",
+      "reference": "PMT-7095",
+      "description": "Data storage overage charge",
+      "amount": "$3,500.00",
+      "balance": "$209,550.00"
+    },
+    {
+      "date": "May 05",
+      "reference": "INV-3255",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$1,500.00",
+      "balance": "$211,050.00"
+    },
+    {
+      "date": "Jun 06",
+      "reference": "REF-5566",
+      "description": "API usage — metered billing",
+      "amount": "$750.00",
+      "balance": "$211,800.00"
+    },
+    {
+      "date": "Jul 07",
+      "reference": "ADJ-4048",
+      "description": "Infrastructure maintenance",
+      "amount": "$3,500.00",
+      "balance": "$215,300.00"
+    },
+    {
+      "date": "Aug 08",
+      "reference": "INV-2929",
+      "description": "SSL certificate renewal",
+      "amount": "$1,200.00",
+      "balance": "$216,500.00"
+    },
+    {
+      "date": "Sep 09",
+      "reference": "REF-8311",
+      "description": "Domain registration fee",
+      "amount": "$750.00",
+      "balance": "$217,250.00"
+    },
+    {
+      "date": "Oct 10",
+      "reference": "PMT-9047",
+      "description": "Bandwidth overage charge",
+      "amount": "-$750.00",
+      "balance": "$216,500.00"
+    },
+    {
+      "date": "Nov 11",
+      "reference": "ADJ-8406",
+      "description": "Cloud compute — on-demand",
+      "amount": "$500.00",
+      "balance": "$217,000.00"
+    },
+    {
+      "date": "Dec 12",
+      "reference": "CR-2438",
+      "description": "Database backup service",
+      "amount": "$1,500.00",
+      "balance": "$218,500.00"
+    },
+    {
+      "date": "Jan 13",
+      "reference": "REF-2063",
+      "description": "CDN usage fee",
+      "amount": "$1,200.00",
+      "balance": "$219,700.00"
+    },
+    {
+      "date": "Feb 14",
+      "reference": "FEE-3852",
+      "description": "Security scanning service",
+      "amount": "$1,500.00",
+      "balance": "$221,200.00"
+    },
+    {
+      "date": "Mar 15",
+      "reference": "ADJ-4292",
+      "description": "Email delivery service",
+      "amount": "-$500.00",
+      "balance": "$220,700.00"
+    },
+    {
+      "date": "Apr 16",
+      "reference": "CR-1430",
+      "description": "Load balancer fee",
+      "amount": "$1,500.00",
+      "balance": "$222,200.00"
+    },
+    {
+      "date": "May 17",
+      "reference": "PMT-8657",
+      "description": "Container orchestration",
+      "amount": "$500.00",
+      "balance": "$222,700.00"
+    },
+    {
+      "date": "Jun 18",
+      "reference": "ADJ-2077",
+      "description": "Log management service",
+      "amount": "$1,200.00",
+      "balance": "$223,900.00"
+    },
+    {
+      "date": "Jul 19",
+      "reference": "REF-8842",
+      "description": "Compliance audit fee",
+      "amount": "$2,000.00",
+      "balance": "$225,900.00"
+    },
+    {
+      "date": "Aug 20",
+      "reference": "INV-2208",
+      "description": "Monthly hosting fee",
+      "amount": "$500.00",
+      "balance": "$226,400.00"
+    },
+    {
+      "date": "Sep 21",
+      "reference": "REF-2215",
+      "description": "Payment received — thank you",
+      "amount": "$3,500.00",
+      "balance": "$229,900.00"
+    },
+    {
+      "date": "Oct 22",
+      "reference": "INV-6644",
+      "description": "Professional services — consulting",
+      "amount": "$500.00",
+      "balance": "$230,400.00"
+    },
+    {
+      "date": "Nov 23",
+      "reference": "INV-3981",
+      "description": "Software license renewal",
+      "amount": "$500.00",
+      "balance": "$230,900.00"
+    },
+    {
+      "date": "Dec 24",
+      "reference": "ADJ-3034",
+      "description": "Data storage overage charge",
+      "amount": "$500.00",
+      "balance": "$231,400.00"
+    },
+    {
+      "date": "Jan 25",
+      "reference": "FEE-6286",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$750.00",
+      "balance": "$232,150.00"
+    },
+    {
+      "date": "Feb 26",
+      "reference": "INV-5653",
+      "description": "API usage — metered billing",
+      "amount": "-$250.00",
+      "balance": "$231,900.00"
+    },
+    {
+      "date": "Mar 27",
+      "reference": "REF-5496",
+      "description": "Infrastructure maintenance",
+      "amount": "$500.00",
+      "balance": "$232,400.00"
+    },
+    {
+      "date": "Apr 28",
+      "reference": "INV-9740",
+      "description": "SSL certificate renewal",
+      "amount": "$250.00",
+      "balance": "$232,650.00"
+    },
+    {
+      "date": "May 01",
+      "reference": "FEE-3526",
+      "description": "Domain registration fee",
+      "amount": "$500.00",
+      "balance": "$233,150.00"
+    },
+    {
+      "date": "Jun 02",
+      "reference": "REF-6531",
+      "description": "Bandwidth overage charge",
+      "amount": "$150.00",
+      "balance": "$233,300.00"
+    },
+    {
+      "date": "Jul 03",
+      "reference": "ADJ-2330",
+      "description": "Cloud compute — on-demand",
+      "amount": "$150.00",
+      "balance": "$233,450.00"
+    },
+    {
+      "date": "Aug 04",
+      "reference": "INV-5336",
+      "description": "Database backup service",
+      "amount": "$750.00",
+      "balance": "$234,200.00"
+    },
+    {
+      "date": "Sep 05",
+      "reference": "CR-1496",
+      "description": "CDN usage fee",
+      "amount": "$3,500.00",
+      "balance": "$237,700.00"
+    },
+    {
+      "date": "Oct 06",
+      "reference": "INV-5745",
+      "description": "Security scanning service",
+      "amount": "$1,200.00",
+      "balance": "$238,900.00"
+    },
+    {
+      "date": "Nov 07",
+      "reference": "REF-7653",
+      "description": "Email delivery service",
+      "amount": "$1,200.00",
+      "balance": "$240,100.00"
+    },
+    {
+      "date": "Dec 08",
+      "reference": "REF-1981",
+      "description": "Load balancer fee",
+      "amount": "$500.00",
+      "balance": "$240,600.00"
+    },
+    {
+      "date": "Jan 09",
+      "reference": "CR-8609",
+      "description": "Container orchestration",
+      "amount": "$750.00",
+      "balance": "$241,350.00"
+    },
+    {
+      "date": "Feb 10",
+      "reference": "FEE-6121",
+      "description": "Log management service",
+      "amount": "$1,500.00",
+      "balance": "$242,850.00"
+    },
+    {
+      "date": "Mar 11",
+      "reference": "PMT-7532",
+      "description": "Compliance audit fee",
+      "amount": "$500.00",
+      "balance": "$243,350.00"
+    },
+    {
+      "date": "Apr 12",
+      "reference": "INV-2739",
+      "description": "Monthly hosting fee",
+      "amount": "-$1,500.00",
+      "balance": "$241,850.00"
+    },
+    {
+      "date": "May 13",
+      "reference": "ADJ-5382",
+      "description": "Payment received — thank you",
+      "amount": "-$3,500.00",
+      "balance": "$238,350.00"
+    },
+    {
+      "date": "Jun 14",
+      "reference": "ADJ-1829",
+      "description": "Professional services — consulting",
+      "amount": "$1,200.00",
+      "balance": "$239,550.00"
+    },
+    {
+      "date": "Jul 15",
+      "reference": "INV-7850",
+      "description": "Software license renewal",
+      "amount": "$750.00",
+      "balance": "$240,300.00"
+    },
+    {
+      "date": "Aug 16",
+      "reference": "FEE-6364",
+      "description": "Data storage overage charge",
+      "amount": "-$1,500.00",
+      "balance": "$238,800.00"
+    },
+    {
+      "date": "Sep 17",
+      "reference": "FEE-9163",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$3,500.00",
+      "balance": "$242,300.00"
+    },
+    {
+      "date": "Oct 18",
+      "reference": "PMT-9148",
+      "description": "API usage — metered billing",
+      "amount": "-$150.00",
+      "balance": "$242,150.00"
+    },
+    {
+      "date": "Nov 19",
+      "reference": "CR-9281",
+      "description": "Infrastructure maintenance",
+      "amount": "$3,500.00",
+      "balance": "$245,650.00"
+    },
+    {
+      "date": "Dec 20",
+      "reference": "FEE-6781",
+      "description": "SSL certificate renewal",
+      "amount": "-$150.00",
+      "balance": "$245,500.00"
+    },
+    {
+      "date": "Jan 21",
+      "reference": "CR-8710",
+      "description": "Domain registration fee",
+      "amount": "$1,200.00",
+      "balance": "$246,700.00"
+    },
+    {
+      "date": "Feb 22",
+      "reference": "ADJ-8060",
+      "description": "Bandwidth overage charge",
+      "amount": "$500.00",
+      "balance": "$247,200.00"
+    },
+    {
+      "date": "Mar 23",
+      "reference": "REF-6992",
+      "description": "Cloud compute — on-demand",
+      "amount": "$2,000.00",
+      "balance": "$249,200.00"
+    },
+    {
+      "date": "Apr 24",
+      "reference": "CR-1838",
+      "description": "Database backup service",
+      "amount": "$750.00",
+      "balance": "$249,950.00"
+    },
+    {
+      "date": "May 25",
+      "reference": "PMT-2204",
+      "description": "CDN usage fee",
+      "amount": "$2,000.00",
+      "balance": "$251,950.00"
+    },
+    {
+      "date": "Jun 26",
+      "reference": "INV-5582",
+      "description": "Security scanning service",
+      "amount": "-$250.00",
+      "balance": "$251,700.00"
+    },
+    {
+      "date": "Jul 27",
+      "reference": "ADJ-7453",
+      "description": "Email delivery service",
+      "amount": "$1,500.00",
+      "balance": "$253,200.00"
+    },
+    {
+      "date": "Aug 28",
+      "reference": "PMT-6990",
+      "description": "Load balancer fee",
+      "amount": "-$500.00",
+      "balance": "$252,700.00"
+    },
+    {
+      "date": "Sep 01",
+      "reference": "INV-7576",
+      "description": "Container orchestration",
+      "amount": "-$150.00",
+      "balance": "$252,550.00"
+    },
+    {
+      "date": "Oct 02",
+      "reference": "FEE-6456",
+      "description": "Log management service",
+      "amount": "$3,500.00",
+      "balance": "$256,050.00"
+    },
+    {
+      "date": "Nov 03",
+      "reference": "FEE-9446",
+      "description": "Compliance audit fee",
+      "amount": "$500.00",
+      "balance": "$256,550.00"
+    },
+    {
+      "date": "Dec 04",
+      "reference": "INV-6218",
+      "description": "Monthly hosting fee",
+      "amount": "$500.00",
+      "balance": "$257,050.00"
+    },
+    {
+      "date": "Jan 05",
+      "reference": "INV-5902",
+      "description": "Payment received — thank you",
+      "amount": "$1,500.00",
+      "balance": "$258,550.00"
+    },
+    {
+      "date": "Feb 06",
+      "reference": "INV-9721",
+      "description": "Professional services — consulting",
+      "amount": "$3,500.00",
+      "balance": "$262,050.00"
+    },
+    {
+      "date": "Mar 07",
+      "reference": "PMT-8780",
+      "description": "Software license renewal",
+      "amount": "$150.00",
+      "balance": "$262,200.00"
+    },
+    {
+      "date": "Apr 08",
+      "reference": "REF-2795",
+      "description": "Data storage overage charge",
+      "amount": "$2,000.00",
+      "balance": "$264,200.00"
+    },
+    {
+      "date": "May 09",
+      "reference": "REF-1436",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "-$3,500.00",
+      "balance": "$260,700.00"
+    },
+    {
+      "date": "Jun 10",
+      "reference": "REF-4728",
+      "description": "API usage — metered billing",
+      "amount": "$150.00",
+      "balance": "$260,850.00"
+    },
+    {
+      "date": "Jul 11",
+      "reference": "FEE-9589",
+      "description": "Infrastructure maintenance",
+      "amount": "-$2,000.00",
+      "balance": "$258,850.00"
+    },
+    {
+      "date": "Aug 12",
+      "reference": "REF-4968",
+      "description": "SSL certificate renewal",
+      "amount": "$150.00",
+      "balance": "$259,000.00"
+    },
+    {
+      "date": "Sep 13",
+      "reference": "REF-2800",
+      "description": "Domain registration fee",
+      "amount": "-$750.00",
+      "balance": "$258,250.00"
+    },
+    {
+      "date": "Oct 14",
+      "reference": "PMT-7861",
+      "description": "Bandwidth overage charge",
+      "amount": "$500.00",
+      "balance": "$258,750.00"
+    },
+    {
+      "date": "Nov 15",
+      "reference": "FEE-7723",
+      "description": "Cloud compute — on-demand",
+      "amount": "$3,500.00",
+      "balance": "$262,250.00"
+    },
+    {
+      "date": "Dec 16",
+      "reference": "REF-2020",
+      "description": "Database backup service",
+      "amount": "$500.00",
+      "balance": "$262,750.00"
+    },
+    {
+      "date": "Jan 17",
+      "reference": "INV-6325",
+      "description": "CDN usage fee",
+      "amount": "$3,500.00",
+      "balance": "$266,250.00"
+    },
+    {
+      "date": "Feb 18",
+      "reference": "PMT-3837",
+      "description": "Security scanning service",
+      "amount": "$3,500.00",
+      "balance": "$269,750.00"
+    },
+    {
+      "date": "Mar 19",
+      "reference": "PMT-9950",
+      "description": "Email delivery service",
+      "amount": "$1,500.00",
+      "balance": "$271,250.00"
+    },
+    {
+      "date": "Apr 20",
+      "reference": "REF-5331",
+      "description": "Load balancer fee",
+      "amount": "-$3,500.00",
+      "balance": "$267,750.00"
+    },
+    {
+      "date": "May 21",
+      "reference": "FEE-5571",
+      "description": "Container orchestration",
+      "amount": "-$1,200.00",
+      "balance": "$266,550.00"
+    },
+    {
+      "date": "Jun 22",
+      "reference": "PMT-5735",
+      "description": "Log management service",
+      "amount": "$750.00",
+      "balance": "$267,300.00"
+    },
+    {
+      "date": "Jul 23",
+      "reference": "CR-6194",
+      "description": "Compliance audit fee",
+      "amount": "$3,500.00",
+      "balance": "$270,800.00"
+    },
+    {
+      "date": "Aug 24",
+      "reference": "REF-5480",
+      "description": "Monthly hosting fee",
+      "amount": "-$1,200.00",
+      "balance": "$269,600.00"
+    },
+    {
+      "date": "Sep 25",
+      "reference": "REF-9899",
+      "description": "Payment received — thank you",
+      "amount": "$2,000.00",
+      "balance": "$271,600.00"
+    },
+    {
+      "date": "Oct 26",
+      "reference": "CR-6654",
+      "description": "Professional services — consulting",
+      "amount": "-$500.00",
+      "balance": "$271,100.00"
+    },
+    {
+      "date": "Nov 27",
+      "reference": "PMT-2294",
+      "description": "Software license renewal",
+      "amount": "$1,500.00",
+      "balance": "$272,600.00"
+    },
+    {
+      "date": "Dec 28",
+      "reference": "REF-5201",
+      "description": "Data storage overage charge",
+      "amount": "-$3,500.00",
+      "balance": "$269,100.00"
+    },
+    {
+      "date": "Jan 01",
+      "reference": "INV-5442",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "-$1,200.00",
+      "balance": "$267,900.00"
+    },
+    {
+      "date": "Feb 02",
+      "reference": "INV-4920",
+      "description": "API usage — metered billing",
+      "amount": "-$750.00",
+      "balance": "$267,150.00"
+    },
+    {
+      "date": "Mar 03",
+      "reference": "INV-4697",
+      "description": "Infrastructure maintenance",
+      "amount": "-$750.00",
+      "balance": "$266,400.00"
+    },
+    {
+      "date": "Apr 04",
+      "reference": "CR-6411",
+      "description": "SSL certificate renewal",
+      "amount": "-$3,500.00",
+      "balance": "$262,900.00"
+    },
+    {
+      "date": "May 05",
+      "reference": "FEE-1084",
+      "description": "Domain registration fee",
+      "amount": "$500.00",
+      "balance": "$263,400.00"
+    },
+    {
+      "date": "Jun 06",
+      "reference": "CR-8822",
+      "description": "Bandwidth overage charge",
+      "amount": "$750.00",
+      "balance": "$264,150.00"
+    },
+    {
+      "date": "Jul 07",
+      "reference": "PMT-6262",
+      "description": "Cloud compute — on-demand",
+      "amount": "$1,200.00",
+      "balance": "$265,350.00"
+    },
+    {
+      "date": "Aug 08",
+      "reference": "ADJ-4804",
+      "description": "Database backup service",
+      "amount": "$150.00",
+      "balance": "$265,500.00"
+    },
+    {
+      "date": "Sep 09",
+      "reference": "FEE-7846",
+      "description": "CDN usage fee",
+      "amount": "$500.00",
+      "balance": "$266,000.00"
+    },
+    {
+      "date": "Oct 10",
+      "reference": "ADJ-7504",
+      "description": "Security scanning service",
+      "amount": "-$3,500.00",
+      "balance": "$262,500.00"
+    },
+    {
+      "date": "Nov 11",
+      "reference": "REF-5742",
+      "description": "Email delivery service",
+      "amount": "-$150.00",
+      "balance": "$262,350.00"
+    },
+    {
+      "date": "Dec 12",
+      "reference": "INV-2758",
+      "description": "Load balancer fee",
+      "amount": "-$1,500.00",
+      "balance": "$260,850.00"
+    },
+    {
+      "date": "Jan 13",
+      "reference": "REF-9901",
+      "description": "Container orchestration",
+      "amount": "$3,500.00",
+      "balance": "$264,350.00"
+    },
+    {
+      "date": "Feb 14",
+      "reference": "FEE-9261",
+      "description": "Log management service",
+      "amount": "-$3,500.00",
+      "balance": "$260,850.00"
+    },
+    {
+      "date": "Mar 15",
+      "reference": "ADJ-6417",
+      "description": "Compliance audit fee",
+      "amount": "$500.00",
+      "balance": "$261,350.00"
+    },
+    {
+      "date": "Apr 16",
+      "reference": "REF-5215",
+      "description": "Monthly hosting fee",
+      "amount": "-$500.00",
+      "balance": "$260,850.00"
+    },
+    {
+      "date": "May 17",
+      "reference": "PMT-5833",
+      "description": "Payment received — thank you",
+      "amount": "-$750.00",
+      "balance": "$260,100.00"
+    },
+    {
+      "date": "Jun 18",
+      "reference": "REF-7643",
+      "description": "Professional services — consulting",
+      "amount": "$2,000.00",
+      "balance": "$262,100.00"
+    },
+    {
+      "date": "Jul 19",
+      "reference": "ADJ-7567",
+      "description": "Software license renewal",
+      "amount": "-$250.00",
+      "balance": "$261,850.00"
+    },
+    {
+      "date": "Aug 20",
+      "reference": "FEE-8822",
+      "description": "Data storage overage charge",
+      "amount": "$1,500.00",
+      "balance": "$263,350.00"
+    },
+    {
+      "date": "Sep 21",
+      "reference": "ADJ-5272",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "-$2,000.00",
+      "balance": "$261,350.00"
+    },
+    {
+      "date": "Oct 22",
+      "reference": "PMT-6400",
+      "description": "API usage — metered billing",
+      "amount": "$1,200.00",
+      "balance": "$262,550.00"
+    },
+    {
+      "date": "Nov 23",
+      "reference": "INV-1187",
+      "description": "Infrastructure maintenance",
+      "amount": "$1,200.00",
+      "balance": "$263,750.00"
+    },
+    {
+      "date": "Dec 24",
+      "reference": "REF-4871",
+      "description": "SSL certificate renewal",
+      "amount": "$150.00",
+      "balance": "$263,900.00"
+    },
+    {
+      "date": "Jan 25",
+      "reference": "CR-6026",
+      "description": "Domain registration fee",
+      "amount": "$500.00",
+      "balance": "$264,400.00"
+    },
+    {
+      "date": "Feb 26",
+      "reference": "INV-6095",
+      "description": "Bandwidth overage charge",
+      "amount": "$250.00",
+      "balance": "$264,650.00"
+    },
+    {
+      "date": "Mar 27",
+      "reference": "PMT-7021",
+      "description": "Cloud compute — on-demand",
+      "amount": "-$750.00",
+      "balance": "$263,900.00"
+    },
+    {
+      "date": "Apr 28",
+      "reference": "FEE-8834",
+      "description": "Database backup service",
+      "amount": "$500.00",
+      "balance": "$264,400.00"
+    },
+    {
+      "date": "May 01",
+      "reference": "INV-7121",
+      "description": "CDN usage fee",
+      "amount": "$2,000.00",
+      "balance": "$266,400.00"
+    },
+    {
+      "date": "Jun 02",
+      "reference": "CR-9806",
+      "description": "Security scanning service",
+      "amount": "$750.00",
+      "balance": "$267,150.00"
+    },
+    {
+      "date": "Jul 03",
+      "reference": "REF-2341",
+      "description": "Email delivery service",
+      "amount": "$3,500.00",
+      "balance": "$270,650.00"
+    },
+    {
+      "date": "Aug 04",
+      "reference": "PMT-2279",
+      "description": "Load balancer fee",
+      "amount": "-$250.00",
+      "balance": "$270,400.00"
+    },
+    {
+      "date": "Sep 05",
+      "reference": "INV-9281",
+      "description": "Container orchestration",
+      "amount": "$750.00",
+      "balance": "$271,150.00"
+    },
+    {
+      "date": "Oct 06",
+      "reference": "FEE-3695",
+      "description": "Log management service",
+      "amount": "$1,500.00",
+      "balance": "$272,650.00"
+    },
+    {
+      "date": "Nov 07",
+      "reference": "CR-2904",
+      "description": "Compliance audit fee",
+      "amount": "$750.00",
+      "balance": "$273,400.00"
+    },
+    {
+      "date": "Dec 08",
+      "reference": "CR-2489",
+      "description": "Monthly hosting fee",
+      "amount": "$3,500.00",
+      "balance": "$276,900.00"
+    },
+    {
+      "date": "Jan 09",
+      "reference": "CR-3161",
+      "description": "Payment received — thank you",
+      "amount": "$2,000.00",
+      "balance": "$278,900.00"
+    },
+    {
+      "date": "Feb 10",
+      "reference": "ADJ-8575",
+      "description": "Professional services — consulting",
+      "amount": "$1,200.00",
+      "balance": "$280,100.00"
+    },
+    {
+      "date": "Mar 11",
+      "reference": "CR-5169",
+      "description": "Software license renewal",
+      "amount": "$150.00",
+      "balance": "$280,250.00"
+    },
+    {
+      "date": "Apr 12",
+      "reference": "INV-2196",
+      "description": "Data storage overage charge",
+      "amount": "$150.00",
+      "balance": "$280,400.00"
+    },
+    {
+      "date": "May 13",
+      "reference": "REF-2044",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$150.00",
+      "balance": "$280,550.00"
+    },
+    {
+      "date": "Jun 14",
+      "reference": "ADJ-8734",
+      "description": "API usage — metered billing",
+      "amount": "-$150.00",
+      "balance": "$280,400.00"
+    },
+    {
+      "date": "Jul 15",
+      "reference": "FEE-3218",
+      "description": "Infrastructure maintenance",
+      "amount": "$2,000.00",
+      "balance": "$282,400.00"
+    },
+    {
+      "date": "Aug 16",
+      "reference": "CR-8348",
+      "description": "SSL certificate renewal",
+      "amount": "$2,000.00",
+      "balance": "$284,400.00"
+    },
+    {
+      "date": "Sep 17",
+      "reference": "REF-9835",
+      "description": "Domain registration fee",
+      "amount": "$500.00",
+      "balance": "$284,900.00"
+    },
+    {
+      "date": "Oct 18",
+      "reference": "PMT-2943",
+      "description": "Bandwidth overage charge",
+      "amount": "$500.00",
+      "balance": "$285,400.00"
+    },
+    {
+      "date": "Nov 19",
+      "reference": "CR-9664",
+      "description": "Cloud compute — on-demand",
+      "amount": "$500.00",
+      "balance": "$285,900.00"
+    },
+    {
+      "date": "Dec 20",
+      "reference": "FEE-1056",
+      "description": "Database backup service",
+      "amount": "$150.00",
+      "balance": "$286,050.00"
+    },
+    {
+      "date": "Jan 21",
+      "reference": "CR-9920",
+      "description": "CDN usage fee",
+      "amount": "$2,000.00",
+      "balance": "$288,050.00"
+    },
+    {
+      "date": "Feb 22",
+      "reference": "FEE-5055",
+      "description": "Security scanning service",
+      "amount": "$3,500.00",
+      "balance": "$291,550.00"
+    },
+    {
+      "date": "Mar 23",
+      "reference": "PMT-4088",
+      "description": "Email delivery service",
+      "amount": "-$250.00",
+      "balance": "$291,300.00"
+    },
+    {
+      "date": "Apr 24",
+      "reference": "REF-7868",
+      "description": "Load balancer fee",
+      "amount": "-$150.00",
+      "balance": "$291,150.00"
+    },
+    {
+      "date": "May 25",
+      "reference": "ADJ-2653",
+      "description": "Container orchestration",
+      "amount": "$150.00",
+      "balance": "$291,300.00"
+    },
+    {
+      "date": "Jun 26",
+      "reference": "REF-1797",
+      "description": "Log management service",
+      "amount": "$750.00",
+      "balance": "$292,050.00"
+    },
+    {
+      "date": "Jul 27",
+      "reference": "CR-8191",
+      "description": "Compliance audit fee",
+      "amount": "$750.00",
+      "balance": "$292,800.00"
+    },
+    {
+      "date": "Aug 28",
+      "reference": "ADJ-3295",
+      "description": "Monthly hosting fee",
+      "amount": "-$1,200.00",
+      "balance": "$291,600.00"
+    },
+    {
+      "date": "Sep 01",
+      "reference": "REF-6224",
+      "description": "Payment received — thank you",
+      "amount": "-$1,500.00",
+      "balance": "$290,100.00"
+    },
+    {
+      "date": "Oct 02",
+      "reference": "FEE-9540",
+      "description": "Professional services — consulting",
+      "amount": "$750.00",
+      "balance": "$290,850.00"
+    },
+    {
+      "date": "Nov 03",
+      "reference": "PMT-1998",
+      "description": "Software license renewal",
+      "amount": "$500.00",
+      "balance": "$291,350.00"
+    },
+    {
+      "date": "Dec 04",
+      "reference": "CR-9120",
+      "description": "Data storage overage charge",
+      "amount": "$150.00",
+      "balance": "$291,500.00"
+    },
+    {
+      "date": "Jan 05",
+      "reference": "REF-7244",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$1,500.00",
+      "balance": "$293,000.00"
+    },
+    {
+      "date": "Feb 06",
+      "reference": "CR-3444",
+      "description": "API usage — metered billing",
+      "amount": "$1,200.00",
+      "balance": "$294,200.00"
+    },
+    {
+      "date": "Mar 07",
+      "reference": "INV-8758",
+      "description": "Infrastructure maintenance",
+      "amount": "$750.00",
+      "balance": "$294,950.00"
+    },
+    {
+      "date": "Apr 08",
+      "reference": "PMT-3365",
+      "description": "SSL certificate renewal",
+      "amount": "$3,500.00",
+      "balance": "$298,450.00"
+    },
+    {
+      "date": "May 09",
+      "reference": "INV-7761",
+      "description": "Domain registration fee",
+      "amount": "$2,000.00",
+      "balance": "$300,450.00"
+    },
+    {
+      "date": "Jun 10",
+      "reference": "FEE-7363",
+      "description": "Bandwidth overage charge",
+      "amount": "-$750.00",
+      "balance": "$299,700.00"
+    },
+    {
+      "date": "Jul 11",
+      "reference": "PMT-2295",
+      "description": "Cloud compute — on-demand",
+      "amount": "$3,500.00",
+      "balance": "$303,200.00"
+    },
+    {
+      "date": "Aug 12",
+      "reference": "ADJ-9775",
+      "description": "Database backup service",
+      "amount": "-$750.00",
+      "balance": "$302,450.00"
+    },
+    {
+      "date": "Sep 13",
+      "reference": "CR-1647",
+      "description": "CDN usage fee",
+      "amount": "-$250.00",
+      "balance": "$302,200.00"
+    },
+    {
+      "date": "Oct 14",
+      "reference": "INV-4555",
+      "description": "Security scanning service",
+      "amount": "-$3,500.00",
+      "balance": "$298,700.00"
+    },
+    {
+      "date": "Nov 15",
+      "reference": "PMT-5967",
+      "description": "Email delivery service",
+      "amount": "-$150.00",
+      "balance": "$298,550.00"
+    },
+    {
+      "date": "Dec 16",
+      "reference": "FEE-2922",
+      "description": "Load balancer fee",
+      "amount": "$3,500.00",
+      "balance": "$302,050.00"
+    },
+    {
+      "date": "Jan 17",
+      "reference": "REF-4350",
+      "description": "Container orchestration",
+      "amount": "$2,000.00",
+      "balance": "$304,050.00"
+    },
+    {
+      "date": "Feb 18",
+      "reference": "INV-6269",
+      "description": "Log management service",
+      "amount": "$1,200.00",
+      "balance": "$305,250.00"
+    },
+    {
+      "date": "Mar 19",
+      "reference": "INV-6886",
+      "description": "Compliance audit fee",
+      "amount": "-$1,200.00",
+      "balance": "$304,050.00"
+    },
+    {
+      "date": "Apr 20",
+      "reference": "INV-9147",
+      "description": "Monthly hosting fee",
+      "amount": "-$3,500.00",
+      "balance": "$300,550.00"
+    },
+    {
+      "date": "May 21",
+      "reference": "REF-8692",
+      "description": "Payment received — thank you",
+      "amount": "$1,500.00",
+      "balance": "$302,050.00"
+    },
+    {
+      "date": "Jun 22",
+      "reference": "PMT-6126",
+      "description": "Professional services — consulting",
+      "amount": "-$2,000.00",
+      "balance": "$300,050.00"
+    },
+    {
+      "date": "Jul 23",
+      "reference": "FEE-3390",
+      "description": "Software license renewal",
+      "amount": "-$150.00",
+      "balance": "$299,900.00"
+    },
+    {
+      "date": "Aug 24",
+      "reference": "INV-7841",
+      "description": "Data storage overage charge",
+      "amount": "-$1,200.00",
+      "balance": "$298,700.00"
+    },
+    {
+      "date": "Sep 25",
+      "reference": "PMT-4768",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$2,000.00",
+      "balance": "$300,700.00"
+    },
+    {
+      "date": "Oct 26",
+      "reference": "FEE-9180",
+      "description": "API usage — metered billing",
+      "amount": "-$1,500.00",
+      "balance": "$299,200.00"
+    },
+    {
+      "date": "Nov 27",
+      "reference": "CR-9037",
+      "description": "Infrastructure maintenance",
+      "amount": "-$3,500.00",
+      "balance": "$295,700.00"
+    },
+    {
+      "date": "Dec 28",
+      "reference": "PMT-3773",
+      "description": "SSL certificate renewal",
+      "amount": "$500.00",
+      "balance": "$296,200.00"
+    },
+    {
+      "date": "Jan 01",
+      "reference": "CR-4015",
+      "description": "Domain registration fee",
+      "amount": "$150.00",
+      "balance": "$296,350.00"
+    },
+    {
+      "date": "Feb 02",
+      "reference": "ADJ-1794",
+      "description": "Bandwidth overage charge",
+      "amount": "$150.00",
+      "balance": "$296,500.00"
+    },
+    {
+      "date": "Mar 03",
+      "reference": "REF-4791",
+      "description": "Cloud compute — on-demand",
+      "amount": "$250.00",
+      "balance": "$296,750.00"
+    },
+    {
+      "date": "Apr 04",
+      "reference": "ADJ-4583",
+      "description": "Database backup service",
+      "amount": "$3,500.00",
+      "balance": "$300,250.00"
+    },
+    {
+      "date": "May 05",
+      "reference": "INV-8916",
+      "description": "CDN usage fee",
+      "amount": "-$3,500.00",
+      "balance": "$296,750.00"
+    },
+    {
+      "date": "Jun 06",
+      "reference": "INV-7739",
+      "description": "Security scanning service",
+      "amount": "-$150.00",
+      "balance": "$296,600.00"
+    },
+    {
+      "date": "Jul 07",
+      "reference": "REF-5501",
+      "description": "Email delivery service",
+      "amount": "-$1,200.00",
+      "balance": "$295,400.00"
+    },
+    {
+      "date": "Aug 08",
+      "reference": "REF-8054",
+      "description": "Load balancer fee",
+      "amount": "-$500.00",
+      "balance": "$294,900.00"
+    },
+    {
+      "date": "Sep 09",
+      "reference": "ADJ-9591",
+      "description": "Container orchestration",
+      "amount": "-$500.00",
+      "balance": "$294,400.00"
+    },
+    {
+      "date": "Oct 10",
+      "reference": "INV-9625",
+      "description": "Log management service",
+      "amount": "$1,200.00",
+      "balance": "$295,600.00"
+    },
+    {
+      "date": "Nov 11",
+      "reference": "PMT-7502",
+      "description": "Compliance audit fee",
+      "amount": "$250.00",
+      "balance": "$295,850.00"
+    },
+    {
+      "date": "Dec 12",
+      "reference": "CR-8520",
+      "description": "Monthly hosting fee",
+      "amount": "$750.00",
+      "balance": "$296,600.00"
+    },
+    {
+      "date": "Jan 13",
+      "reference": "FEE-5914",
+      "description": "Payment received — thank you",
+      "amount": "$250.00",
+      "balance": "$296,850.00"
+    },
+    {
+      "date": "Feb 14",
+      "reference": "REF-1519",
+      "description": "Professional services — consulting",
+      "amount": "$250.00",
+      "balance": "$297,100.00"
+    },
+    {
+      "date": "Mar 15",
+      "reference": "CR-8798",
+      "description": "Software license renewal",
+      "amount": "$150.00",
+      "balance": "$297,250.00"
+    },
+    {
+      "date": "Apr 16",
+      "reference": "REF-3807",
+      "description": "Data storage overage charge",
+      "amount": "$250.00",
+      "balance": "$297,500.00"
+    },
+    {
+      "date": "May 17",
+      "reference": "CR-6427",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$250.00",
+      "balance": "$297,750.00"
+    },
+    {
+      "date": "Jun 18",
+      "reference": "ADJ-4764",
+      "description": "API usage — metered billing",
+      "amount": "$750.00",
+      "balance": "$298,500.00"
+    },
+    {
+      "date": "Jul 19",
+      "reference": "REF-8790",
+      "description": "Infrastructure maintenance",
+      "amount": "-$1,200.00",
+      "balance": "$297,300.00"
+    },
+    {
+      "date": "Aug 20",
+      "reference": "ADJ-5593",
+      "description": "SSL certificate renewal",
+      "amount": "-$150.00",
+      "balance": "$297,150.00"
+    },
+    {
+      "date": "Sep 21",
+      "reference": "PMT-1256",
+      "description": "Domain registration fee",
+      "amount": "$750.00",
+      "balance": "$297,900.00"
+    },
+    {
+      "date": "Oct 22",
+      "reference": "REF-7525",
+      "description": "Bandwidth overage charge",
+      "amount": "-$250.00",
+      "balance": "$297,650.00"
+    },
+    {
+      "date": "Nov 23",
+      "reference": "INV-4939",
+      "description": "Cloud compute — on-demand",
+      "amount": "$2,000.00",
+      "balance": "$299,650.00"
+    },
+    {
+      "date": "Dec 24",
+      "reference": "INV-6435",
+      "description": "Database backup service",
+      "amount": "$2,000.00",
+      "balance": "$301,650.00"
+    },
+    {
+      "date": "Jan 25",
+      "reference": "FEE-2284",
+      "description": "CDN usage fee",
+      "amount": "-$1,500.00",
+      "balance": "$300,150.00"
+    },
+    {
+      "date": "Feb 26",
+      "reference": "CR-4803",
+      "description": "Security scanning service",
+      "amount": "$250.00",
+      "balance": "$300,400.00"
+    },
+    {
+      "date": "Mar 27",
+      "reference": "INV-7499",
+      "description": "Email delivery service",
+      "amount": "-$1,500.00",
+      "balance": "$298,900.00"
+    },
+    {
+      "date": "Apr 28",
+      "reference": "PMT-8381",
+      "description": "Load balancer fee",
+      "amount": "-$3,500.00",
+      "balance": "$295,400.00"
+    },
+    {
+      "date": "May 01",
+      "reference": "INV-7150",
+      "description": "Container orchestration",
+      "amount": "-$2,000.00",
+      "balance": "$293,400.00"
+    },
+    {
+      "date": "Jun 02",
+      "reference": "INV-7227",
+      "description": "Log management service",
+      "amount": "$250.00",
+      "balance": "$293,650.00"
+    },
+    {
+      "date": "Jul 03",
+      "reference": "PMT-5037",
+      "description": "Compliance audit fee",
+      "amount": "-$250.00",
+      "balance": "$293,400.00"
+    },
+    {
+      "date": "Aug 04",
+      "reference": "FEE-7225",
+      "description": "Monthly hosting fee",
+      "amount": "$500.00",
+      "balance": "$293,900.00"
+    },
+    {
+      "date": "Sep 05",
+      "reference": "PMT-6909",
+      "description": "Payment received — thank you",
+      "amount": "-$250.00",
+      "balance": "$293,650.00"
+    },
+    {
+      "date": "Oct 06",
+      "reference": "PMT-8286",
+      "description": "Professional services — consulting",
+      "amount": "$1,500.00",
+      "balance": "$295,150.00"
+    },
+    {
+      "date": "Nov 07",
+      "reference": "ADJ-3170",
+      "description": "Software license renewal",
+      "amount": "-$250.00",
+      "balance": "$294,900.00"
+    },
+    {
+      "date": "Dec 08",
+      "reference": "CR-9395",
+      "description": "Data storage overage charge",
+      "amount": "-$2,000.00",
+      "balance": "$292,900.00"
+    },
+    {
+      "date": "Jan 09",
+      "reference": "ADJ-6798",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$250.00",
+      "balance": "$293,150.00"
+    },
+    {
+      "date": "Feb 10",
+      "reference": "PMT-7311",
+      "description": "API usage — metered billing",
+      "amount": "-$150.00",
+      "balance": "$293,000.00"
+    },
+    {
+      "date": "Mar 11",
+      "reference": "CR-2387",
+      "description": "Infrastructure maintenance",
+      "amount": "$750.00",
+      "balance": "$293,750.00"
+    },
+    {
+      "date": "Apr 12",
+      "reference": "FEE-7237",
+      "description": "SSL certificate renewal",
+      "amount": "-$500.00",
+      "balance": "$293,250.00"
+    },
+    {
+      "date": "May 13",
+      "reference": "PMT-5397",
+      "description": "Domain registration fee",
+      "amount": "-$3,500.00",
+      "balance": "$289,750.00"
+    },
+    {
+      "date": "Jun 14",
+      "reference": "FEE-8121",
+      "description": "Bandwidth overage charge",
+      "amount": "$1,200.00",
+      "balance": "$290,950.00"
+    },
+    {
+      "date": "Jul 15",
+      "reference": "CR-2260",
+      "description": "Cloud compute — on-demand",
+      "amount": "-$1,500.00",
+      "balance": "$289,450.00"
+    },
+    {
+      "date": "Aug 16",
+      "reference": "FEE-9123",
+      "description": "Database backup service",
+      "amount": "$750.00",
+      "balance": "$290,200.00"
+    },
+    {
+      "date": "Sep 17",
+      "reference": "FEE-5991",
+      "description": "CDN usage fee",
+      "amount": "$150.00",
+      "balance": "$290,350.00"
+    },
+    {
+      "date": "Oct 18",
+      "reference": "PMT-7224",
+      "description": "Security scanning service",
+      "amount": "$1,500.00",
+      "balance": "$291,850.00"
+    },
+    {
+      "date": "Nov 19",
+      "reference": "CR-3230",
+      "description": "Email delivery service",
+      "amount": "$1,200.00",
+      "balance": "$293,050.00"
+    },
+    {
+      "date": "Dec 20",
+      "reference": "REF-4290",
+      "description": "Load balancer fee",
+      "amount": "$3,500.00",
+      "balance": "$296,550.00"
+    },
+    {
+      "date": "Jan 21",
+      "reference": "CR-6228",
+      "description": "Container orchestration",
+      "amount": "$1,200.00",
+      "balance": "$297,750.00"
+    },
+    {
+      "date": "Feb 22",
+      "reference": "REF-9044",
+      "description": "Log management service",
+      "amount": "$750.00",
+      "balance": "$298,500.00"
+    },
+    {
+      "date": "Mar 23",
+      "reference": "PMT-7437",
+      "description": "Compliance audit fee",
+      "amount": "-$1,500.00",
+      "balance": "$297,000.00"
+    },
+    {
+      "date": "Apr 24",
+      "reference": "INV-4273",
+      "description": "Monthly hosting fee",
+      "amount": "$500.00",
+      "balance": "$297,500.00"
+    },
+    {
+      "date": "May 25",
+      "reference": "INV-1440",
+      "description": "Payment received — thank you",
+      "amount": "$3,500.00",
+      "balance": "$301,000.00"
+    },
+    {
+      "date": "Jun 26",
+      "reference": "FEE-8183",
+      "description": "Professional services — consulting",
+      "amount": "$1,200.00",
+      "balance": "$302,200.00"
+    },
+    {
+      "date": "Jul 27",
+      "reference": "ADJ-7703",
+      "description": "Software license renewal",
+      "amount": "-$3,500.00",
+      "balance": "$298,700.00"
+    },
+    {
+      "date": "Aug 28",
+      "reference": "PMT-4965",
+      "description": "Data storage overage charge",
+      "amount": "$1,200.00",
+      "balance": "$299,900.00"
+    },
+    {
+      "date": "Sep 01",
+      "reference": "REF-7932",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "-$2,000.00",
+      "balance": "$297,900.00"
+    },
+    {
+      "date": "Oct 02",
+      "reference": "INV-8851",
+      "description": "API usage — metered billing",
+      "amount": "$2,000.00",
+      "balance": "$299,900.00"
+    },
+    {
+      "date": "Nov 03",
+      "reference": "REF-7853",
+      "description": "Infrastructure maintenance",
+      "amount": "$150.00",
+      "balance": "$300,050.00"
+    },
+    {
+      "date": "Dec 04",
+      "reference": "PMT-9796",
+      "description": "SSL certificate renewal",
+      "amount": "-$250.00",
+      "balance": "$299,800.00"
+    },
+    {
+      "date": "Jan 05",
+      "reference": "FEE-6816",
+      "description": "Domain registration fee",
+      "amount": "$500.00",
+      "balance": "$300,300.00"
+    },
+    {
+      "date": "Feb 06",
+      "reference": "ADJ-7547",
+      "description": "Bandwidth overage charge",
+      "amount": "$1,500.00",
+      "balance": "$301,800.00"
+    },
+    {
+      "date": "Mar 07",
+      "reference": "CR-2735",
+      "description": "Cloud compute — on-demand",
+      "amount": "-$150.00",
+      "balance": "$301,650.00"
+    },
+    {
+      "date": "Apr 08",
+      "reference": "FEE-9366",
+      "description": "Database backup service",
+      "amount": "$750.00",
+      "balance": "$302,400.00"
+    },
+    {
+      "date": "May 09",
+      "reference": "CR-8586",
+      "description": "CDN usage fee",
+      "amount": "$500.00",
+      "balance": "$302,900.00"
+    },
+    {
+      "date": "Jun 10",
+      "reference": "ADJ-8909",
+      "description": "Security scanning service",
+      "amount": "-$250.00",
+      "balance": "$302,650.00"
+    },
+    {
+      "date": "Jul 11",
+      "reference": "ADJ-2901",
+      "description": "Email delivery service",
+      "amount": "$500.00",
+      "balance": "$303,150.00"
+    },
+    {
+      "date": "Aug 12",
+      "reference": "PMT-8460",
+      "description": "Load balancer fee",
+      "amount": "$750.00",
+      "balance": "$303,900.00"
+    },
+    {
+      "date": "Sep 13",
+      "reference": "PMT-8801",
+      "description": "Container orchestration",
+      "amount": "$250.00",
+      "balance": "$304,150.00"
+    },
+    {
+      "date": "Oct 14",
+      "reference": "REF-8412",
+      "description": "Log management service",
+      "amount": "-$1,500.00",
+      "balance": "$302,650.00"
+    },
+    {
+      "date": "Nov 15",
+      "reference": "ADJ-2885",
+      "description": "Compliance audit fee",
+      "amount": "$150.00",
+      "balance": "$302,800.00"
+    },
+    {
+      "date": "Dec 16",
+      "reference": "REF-2791",
+      "description": "Monthly hosting fee",
+      "amount": "$500.00",
+      "balance": "$303,300.00"
+    },
+    {
+      "date": "Jan 17",
+      "reference": "REF-4996",
+      "description": "Payment received — thank you",
+      "amount": "$500.00",
+      "balance": "$303,800.00"
+    },
+    {
+      "date": "Feb 18",
+      "reference": "PMT-7985",
+      "description": "Professional services — consulting",
+      "amount": "-$3,500.00",
+      "balance": "$300,300.00"
+    },
+    {
+      "date": "Mar 19",
+      "reference": "CR-4022",
+      "description": "Software license renewal",
+      "amount": "$500.00",
+      "balance": "$300,800.00"
+    },
+    {
+      "date": "Apr 20",
+      "reference": "CR-7481",
+      "description": "Data storage overage charge",
+      "amount": "$150.00",
+      "balance": "$300,950.00"
+    },
+    {
+      "date": "May 21",
+      "reference": "FEE-8365",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$2,000.00",
+      "balance": "$302,950.00"
+    },
+    {
+      "date": "Jun 22",
+      "reference": "REF-4519",
+      "description": "API usage — metered billing",
+      "amount": "-$750.00",
+      "balance": "$302,200.00"
+    },
+    {
+      "date": "Jul 23",
+      "reference": "REF-2025",
+      "description": "Infrastructure maintenance",
+      "amount": "$250.00",
+      "balance": "$302,450.00"
+    },
+    {
+      "date": "Aug 24",
+      "reference": "INV-4063",
+      "description": "SSL certificate renewal",
+      "amount": "$1,500.00",
+      "balance": "$303,950.00"
+    },
+    {
+      "date": "Sep 25",
+      "reference": "CR-2867",
+      "description": "Domain registration fee",
+      "amount": "$1,200.00",
+      "balance": "$305,150.00"
+    },
+    {
+      "date": "Oct 26",
+      "reference": "CR-9646",
+      "description": "Bandwidth overage charge",
+      "amount": "$1,500.00",
+      "balance": "$306,650.00"
+    },
+    {
+      "date": "Nov 27",
+      "reference": "INV-7431",
+      "description": "Cloud compute — on-demand",
+      "amount": "$250.00",
+      "balance": "$306,900.00"
+    },
+    {
+      "date": "Dec 28",
+      "reference": "CR-3826",
+      "description": "Database backup service",
+      "amount": "$1,200.00",
+      "balance": "$308,100.00"
+    },
+    {
+      "date": "Jan 01",
+      "reference": "INV-2388",
+      "description": "CDN usage fee",
+      "amount": "$500.00",
+      "balance": "$308,600.00"
+    },
+    {
+      "date": "Feb 02",
+      "reference": "FEE-6003",
+      "description": "Security scanning service",
+      "amount": "-$250.00",
+      "balance": "$308,350.00"
+    },
+    {
+      "date": "Mar 03",
+      "reference": "REF-3316",
+      "description": "Email delivery service",
+      "amount": "$2,000.00",
+      "balance": "$310,350.00"
+    },
+    {
+      "date": "Apr 04",
+      "reference": "FEE-7286",
+      "description": "Load balancer fee",
+      "amount": "-$2,000.00",
+      "balance": "$308,350.00"
+    },
+    {
+      "date": "May 05",
+      "reference": "REF-9804",
+      "description": "Container orchestration",
+      "amount": "$500.00",
+      "balance": "$308,850.00"
+    },
+    {
+      "date": "Jun 06",
+      "reference": "CR-5732",
+      "description": "Log management service",
+      "amount": "-$500.00",
+      "balance": "$308,350.00"
+    },
+    {
+      "date": "Jul 07",
+      "reference": "CR-1878",
+      "description": "Compliance audit fee",
+      "amount": "$1,500.00",
+      "balance": "$309,850.00"
+    },
+    {
+      "date": "Aug 08",
+      "reference": "CR-3236",
+      "description": "Monthly hosting fee",
+      "amount": "$750.00",
+      "balance": "$310,600.00"
+    },
+    {
+      "date": "Sep 09",
+      "reference": "INV-9281",
+      "description": "Payment received — thank you",
+      "amount": "$3,500.00",
+      "balance": "$314,100.00"
+    },
+    {
+      "date": "Oct 10",
+      "reference": "CR-7809",
+      "description": "Professional services — consulting",
+      "amount": "$3,500.00",
+      "balance": "$317,600.00"
+    },
+    {
+      "date": "Nov 11",
+      "reference": "ADJ-1505",
+      "description": "Software license renewal",
+      "amount": "-$750.00",
+      "balance": "$316,850.00"
+    },
+    {
+      "date": "Dec 12",
+      "reference": "PMT-4683",
+      "description": "Data storage overage charge",
+      "amount": "-$1,200.00",
+      "balance": "$315,650.00"
+    },
+    {
+      "date": "Jan 13",
+      "reference": "CR-9115",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$250.00",
+      "balance": "$315,900.00"
+    },
+    {
+      "date": "Feb 14",
+      "reference": "PMT-9898",
+      "description": "API usage — metered billing",
+      "amount": "$1,500.00",
+      "balance": "$317,400.00"
+    },
+    {
+      "date": "Mar 15",
+      "reference": "ADJ-8231",
+      "description": "Infrastructure maintenance",
+      "amount": "$750.00",
+      "balance": "$318,150.00"
+    },
+    {
+      "date": "Apr 16",
+      "reference": "ADJ-5055",
+      "description": "SSL certificate renewal",
+      "amount": "$1,200.00",
+      "balance": "$319,350.00"
+    },
+    {
+      "date": "May 17",
+      "reference": "ADJ-8368",
+      "description": "Domain registration fee",
+      "amount": "$1,200.00",
+      "balance": "$320,550.00"
+    },
+    {
+      "date": "Jun 18",
+      "reference": "ADJ-8193",
+      "description": "Bandwidth overage charge",
+      "amount": "$250.00",
+      "balance": "$320,800.00"
+    },
+    {
+      "date": "Jul 19",
+      "reference": "FEE-4438",
+      "description": "Cloud compute — on-demand",
+      "amount": "$1,500.00",
+      "balance": "$322,300.00"
+    },
+    {
+      "date": "Aug 20",
+      "reference": "INV-8015",
+      "description": "Database backup service",
+      "amount": "$500.00",
+      "balance": "$322,800.00"
+    },
+    {
+      "date": "Sep 21",
+      "reference": "FEE-4390",
+      "description": "CDN usage fee",
+      "amount": "$150.00",
+      "balance": "$322,950.00"
+    },
+    {
+      "date": "Oct 22",
+      "reference": "INV-5605",
+      "description": "Security scanning service",
+      "amount": "$500.00",
+      "balance": "$323,450.00"
+    },
+    {
+      "date": "Nov 23",
+      "reference": "REF-5794",
+      "description": "Email delivery service",
+      "amount": "$1,200.00",
+      "balance": "$324,650.00"
+    },
+    {
+      "date": "Dec 24",
+      "reference": "INV-2560",
+      "description": "Load balancer fee",
+      "amount": "$500.00",
+      "balance": "$325,150.00"
+    },
+    {
+      "date": "Jan 25",
+      "reference": "CR-1971",
+      "description": "Container orchestration",
+      "amount": "$1,200.00",
+      "balance": "$326,350.00"
+    },
+    {
+      "date": "Feb 26",
+      "reference": "FEE-3174",
+      "description": "Log management service",
+      "amount": "-$750.00",
+      "balance": "$325,600.00"
+    },
+    {
+      "date": "Mar 27",
+      "reference": "PMT-5055",
+      "description": "Compliance audit fee",
+      "amount": "$2,000.00",
+      "balance": "$327,600.00"
+    },
+    {
+      "date": "Apr 28",
+      "reference": "INV-5402",
+      "description": "Monthly hosting fee",
+      "amount": "$2,000.00",
+      "balance": "$329,600.00"
+    },
+    {
+      "date": "May 01",
+      "reference": "ADJ-2525",
+      "description": "Payment received — thank you",
+      "amount": "$2,000.00",
+      "balance": "$331,600.00"
+    },
+    {
+      "date": "Jun 02",
+      "reference": "PMT-7046",
+      "description": "Professional services — consulting",
+      "amount": "$3,500.00",
+      "balance": "$335,100.00"
+    },
+    {
+      "date": "Jul 03",
+      "reference": "PMT-1040",
+      "description": "Software license renewal",
+      "amount": "$250.00",
+      "balance": "$335,350.00"
+    },
+    {
+      "date": "Aug 04",
+      "reference": "CR-6869",
+      "description": "Data storage overage charge",
+      "amount": "$250.00",
+      "balance": "$335,600.00"
+    },
+    {
+      "date": "Sep 05",
+      "reference": "CR-4568",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$2,000.00",
+      "balance": "$337,600.00"
+    },
+    {
+      "date": "Oct 06",
+      "reference": "CR-5399",
+      "description": "API usage — metered billing",
+      "amount": "$1,500.00",
+      "balance": "$339,100.00"
+    },
+    {
+      "date": "Nov 07",
+      "reference": "PMT-9967",
+      "description": "Infrastructure maintenance",
+      "amount": "$500.00",
+      "balance": "$339,600.00"
+    },
+    {
+      "date": "Dec 08",
+      "reference": "CR-6631",
+      "description": "SSL certificate renewal",
+      "amount": "-$150.00",
+      "balance": "$339,450.00"
+    },
+    {
+      "date": "Jan 09",
+      "reference": "REF-8529",
+      "description": "Domain registration fee",
+      "amount": "-$150.00",
+      "balance": "$339,300.00"
+    },
+    {
+      "date": "Feb 10",
+      "reference": "FEE-8230",
+      "description": "Bandwidth overage charge",
+      "amount": "-$3,500.00",
+      "balance": "$335,800.00"
+    },
+    {
+      "date": "Mar 11",
+      "reference": "CR-4314",
+      "description": "Cloud compute — on-demand",
+      "amount": "$500.00",
+      "balance": "$336,300.00"
+    },
+    {
+      "date": "Apr 12",
+      "reference": "PMT-3604",
+      "description": "Database backup service",
+      "amount": "-$1,200.00",
+      "balance": "$335,100.00"
+    },
+    {
+      "date": "May 13",
+      "reference": "PMT-5102",
+      "description": "CDN usage fee",
+      "amount": "$250.00",
+      "balance": "$335,350.00"
+    },
+    {
+      "date": "Jun 14",
+      "reference": "REF-3711",
+      "description": "Security scanning service",
+      "amount": "$150.00",
+      "balance": "$335,500.00"
+    },
+    {
+      "date": "Jul 15",
+      "reference": "PMT-4836",
+      "description": "Email delivery service",
+      "amount": "$2,000.00",
+      "balance": "$337,500.00"
+    },
+    {
+      "date": "Aug 16",
+      "reference": "REF-2559",
+      "description": "Load balancer fee",
+      "amount": "-$150.00",
+      "balance": "$337,350.00"
+    },
+    {
+      "date": "Sep 17",
+      "reference": "ADJ-3174",
+      "description": "Container orchestration",
+      "amount": "$750.00",
+      "balance": "$338,100.00"
+    },
+    {
+      "date": "Oct 18",
+      "reference": "CR-1152",
+      "description": "Log management service",
+      "amount": "$150.00",
+      "balance": "$338,250.00"
+    },
+    {
+      "date": "Nov 19",
+      "reference": "ADJ-7919",
+      "description": "Compliance audit fee",
+      "amount": "$500.00",
+      "balance": "$338,750.00"
+    },
+    {
+      "date": "Dec 20",
+      "reference": "FEE-7276",
+      "description": "Monthly hosting fee",
+      "amount": "$250.00",
+      "balance": "$339,000.00"
+    },
+    {
+      "date": "Jan 21",
+      "reference": "ADJ-2690",
+      "description": "Payment received — thank you",
+      "amount": "$1,500.00",
+      "balance": "$340,500.00"
+    },
+    {
+      "date": "Feb 22",
+      "reference": "PMT-3246",
+      "description": "Professional services — consulting",
+      "amount": "$2,000.00",
+      "balance": "$342,500.00"
+    },
+    {
+      "date": "Mar 23",
+      "reference": "FEE-3340",
+      "description": "Software license renewal",
+      "amount": "$250.00",
+      "balance": "$342,750.00"
+    },
+    {
+      "date": "Apr 24",
+      "reference": "ADJ-3688",
+      "description": "Data storage overage charge",
+      "amount": "$3,500.00",
+      "balance": "$346,250.00"
+    },
+    {
+      "date": "May 25",
+      "reference": "FEE-3480",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$2,000.00",
+      "balance": "$348,250.00"
+    },
+    {
+      "date": "Jun 26",
+      "reference": "CR-4559",
+      "description": "API usage — metered billing",
+      "amount": "$250.00",
+      "balance": "$348,500.00"
+    },
+    {
+      "date": "Jul 27",
+      "reference": "FEE-3017",
+      "description": "Infrastructure maintenance",
+      "amount": "$2,000.00",
+      "balance": "$350,500.00"
+    },
+    {
+      "date": "Aug 28",
+      "reference": "CR-6152",
+      "description": "SSL certificate renewal",
+      "amount": "-$500.00",
+      "balance": "$350,000.00"
+    },
+    {
+      "date": "Sep 01",
+      "reference": "REF-2380",
+      "description": "Domain registration fee",
+      "amount": "$750.00",
+      "balance": "$350,750.00"
+    },
+    {
+      "date": "Oct 02",
+      "reference": "INV-5668",
+      "description": "Bandwidth overage charge",
+      "amount": "$150.00",
+      "balance": "$350,900.00"
+    },
+    {
+      "date": "Nov 03",
+      "reference": "REF-5942",
+      "description": "Cloud compute — on-demand",
+      "amount": "$750.00",
+      "balance": "$351,650.00"
+    },
+    {
+      "date": "Dec 04",
+      "reference": "INV-4090",
+      "description": "Database backup service",
+      "amount": "-$2,000.00",
+      "balance": "$349,650.00"
+    },
+    {
+      "date": "Jan 05",
+      "reference": "ADJ-4921",
+      "description": "CDN usage fee",
+      "amount": "$3,500.00",
+      "balance": "$353,150.00"
+    },
+    {
+      "date": "Feb 06",
+      "reference": "FEE-9185",
+      "description": "Security scanning service",
+      "amount": "$250.00",
+      "balance": "$353,400.00"
+    },
+    {
+      "date": "Mar 07",
+      "reference": "ADJ-6916",
+      "description": "Email delivery service",
+      "amount": "-$1,500.00",
+      "balance": "$351,900.00"
+    },
+    {
+      "date": "Apr 08",
+      "reference": "INV-7895",
+      "description": "Load balancer fee",
+      "amount": "$1,500.00",
+      "balance": "$353,400.00"
+    },
+    {
+      "date": "May 09",
+      "reference": "FEE-8717",
+      "description": "Container orchestration",
+      "amount": "-$250.00",
+      "balance": "$353,150.00"
+    },
+    {
+      "date": "Jun 10",
+      "reference": "ADJ-1225",
+      "description": "Log management service",
+      "amount": "-$1,200.00",
+      "balance": "$351,950.00"
+    },
+    {
+      "date": "Jul 11",
+      "reference": "ADJ-7520",
+      "description": "Compliance audit fee",
+      "amount": "$1,200.00",
+      "balance": "$353,150.00"
+    },
+    {
+      "date": "Aug 12",
+      "reference": "INV-7806",
+      "description": "Monthly hosting fee",
+      "amount": "$2,000.00",
+      "balance": "$355,150.00"
+    },
+    {
+      "date": "Sep 13",
+      "reference": "ADJ-9791",
+      "description": "Payment received — thank you",
+      "amount": "-$500.00",
+      "balance": "$354,650.00"
+    },
+    {
+      "date": "Oct 14",
+      "reference": "PMT-2294",
+      "description": "Professional services — consulting",
+      "amount": "$750.00",
+      "balance": "$355,400.00"
+    },
+    {
+      "date": "Nov 15",
+      "reference": "FEE-9788",
+      "description": "Software license renewal",
+      "amount": "$1,500.00",
+      "balance": "$356,900.00"
+    },
+    {
+      "date": "Dec 16",
+      "reference": "REF-2083",
+      "description": "Data storage overage charge",
+      "amount": "$1,200.00",
+      "balance": "$358,100.00"
+    },
+    {
+      "date": "Jan 17",
+      "reference": "REF-4909",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "-$150.00",
+      "balance": "$357,950.00"
+    },
+    {
+      "date": "Feb 18",
+      "reference": "CR-2900",
+      "description": "API usage — metered billing",
+      "amount": "$3,500.00",
+      "balance": "$361,450.00"
+    },
+    {
+      "date": "Mar 19",
+      "reference": "ADJ-6067",
+      "description": "Infrastructure maintenance",
+      "amount": "-$500.00",
+      "balance": "$360,950.00"
+    },
+    {
+      "date": "Apr 20",
+      "reference": "REF-3248",
+      "description": "SSL certificate renewal",
+      "amount": "-$150.00",
+      "balance": "$360,800.00"
+    },
+    {
+      "date": "May 21",
+      "reference": "PMT-9568",
+      "description": "Domain registration fee",
+      "amount": "-$1,200.00",
+      "balance": "$359,600.00"
+    },
+    {
+      "date": "Jun 22",
+      "reference": "FEE-5403",
+      "description": "Bandwidth overage charge",
+      "amount": "$250.00",
+      "balance": "$359,850.00"
+    },
+    {
+      "date": "Jul 23",
+      "reference": "ADJ-6488",
+      "description": "Cloud compute — on-demand",
+      "amount": "-$2,000.00",
+      "balance": "$357,850.00"
+    },
+    {
+      "date": "Aug 24",
+      "reference": "ADJ-5308",
+      "description": "Database backup service",
+      "amount": "$250.00",
+      "balance": "$358,100.00"
+    },
+    {
+      "date": "Sep 25",
+      "reference": "INV-6900",
+      "description": "CDN usage fee",
+      "amount": "$150.00",
+      "balance": "$358,250.00"
+    },
+    {
+      "date": "Oct 26",
+      "reference": "INV-3734",
+      "description": "Security scanning service",
+      "amount": "-$1,500.00",
+      "balance": "$356,750.00"
+    },
+    {
+      "date": "Nov 27",
+      "reference": "ADJ-2889",
+      "description": "Email delivery service",
+      "amount": "$750.00",
+      "balance": "$357,500.00"
+    },
+    {
+      "date": "Dec 28",
+      "reference": "ADJ-1721",
+      "description": "Load balancer fee",
+      "amount": "-$150.00",
+      "balance": "$357,350.00"
+    },
+    {
+      "date": "Jan 01",
+      "reference": "CR-6963",
+      "description": "Container orchestration",
+      "amount": "$2,000.00",
+      "balance": "$359,350.00"
+    },
+    {
+      "date": "Feb 02",
+      "reference": "FEE-1579",
+      "description": "Log management service",
+      "amount": "-$2,000.00",
+      "balance": "$357,350.00"
+    },
+    {
+      "date": "Mar 03",
+      "reference": "FEE-7819",
+      "description": "Compliance audit fee",
+      "amount": "-$1,500.00",
+      "balance": "$355,850.00"
+    },
+    {
+      "date": "Apr 04",
+      "reference": "ADJ-7108",
+      "description": "Monthly hosting fee",
+      "amount": "$250.00",
+      "balance": "$356,100.00"
+    },
+    {
+      "date": "May 05",
+      "reference": "ADJ-3938",
+      "description": "Payment received — thank you",
+      "amount": "$750.00",
+      "balance": "$356,850.00"
+    },
+    {
+      "date": "Jun 06",
+      "reference": "ADJ-7568",
+      "description": "Professional services — consulting",
+      "amount": "$250.00",
+      "balance": "$357,100.00"
+    },
+    {
+      "date": "Jul 07",
+      "reference": "PMT-6090",
+      "description": "Software license renewal",
+      "amount": "-$1,500.00",
+      "balance": "$355,600.00"
+    },
+    {
+      "date": "Aug 08",
+      "reference": "CR-1130",
+      "description": "Data storage overage charge",
+      "amount": "-$1,500.00",
+      "balance": "$354,100.00"
+    },
+    {
+      "date": "Sep 09",
+      "reference": "INV-5979",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$750.00",
+      "balance": "$354,850.00"
+    },
+    {
+      "date": "Oct 10",
+      "reference": "INV-9083",
+      "description": "API usage — metered billing",
+      "amount": "$750.00",
+      "balance": "$355,600.00"
+    },
+    {
+      "date": "Nov 11",
+      "reference": "INV-5016",
+      "description": "Infrastructure maintenance",
+      "amount": "-$500.00",
+      "balance": "$355,100.00"
+    },
+    {
+      "date": "Dec 12",
+      "reference": "CR-1391",
+      "description": "SSL certificate renewal",
+      "amount": "$750.00",
+      "balance": "$355,850.00"
+    },
+    {
+      "date": "Jan 13",
+      "reference": "REF-1157",
+      "description": "Domain registration fee",
+      "amount": "-$1,500.00",
+      "balance": "$354,350.00"
+    },
+    {
+      "date": "Feb 14",
+      "reference": "REF-7164",
+      "description": "Bandwidth overage charge",
+      "amount": "-$1,200.00",
+      "balance": "$353,150.00"
+    },
+    {
+      "date": "Mar 15",
+      "reference": "INV-4902",
+      "description": "Cloud compute — on-demand",
+      "amount": "$2,000.00",
+      "balance": "$355,150.00"
+    },
+    {
+      "date": "Apr 16",
+      "reference": "ADJ-3332",
+      "description": "Database backup service",
+      "amount": "-$1,200.00",
+      "balance": "$353,950.00"
+    },
+    {
+      "date": "May 17",
+      "reference": "FEE-9515",
+      "description": "CDN usage fee",
+      "amount": "$2,000.00",
+      "balance": "$355,950.00"
+    },
+    {
+      "date": "Jun 18",
+      "reference": "PMT-8511",
+      "description": "Security scanning service",
+      "amount": "$250.00",
+      "balance": "$356,200.00"
+    },
+    {
+      "date": "Jul 19",
+      "reference": "INV-3187",
+      "description": "Email delivery service",
+      "amount": "-$2,000.00",
+      "balance": "$354,200.00"
+    },
+    {
+      "date": "Aug 20",
+      "reference": "INV-2020",
+      "description": "Load balancer fee",
+      "amount": "$2,000.00",
+      "balance": "$356,200.00"
+    },
+    {
+      "date": "Sep 21",
+      "reference": "FEE-4879",
+      "description": "Container orchestration",
+      "amount": "-$1,200.00",
+      "balance": "$355,000.00"
+    },
+    {
+      "date": "Oct 22",
+      "reference": "PMT-7438",
+      "description": "Log management service",
+      "amount": "$1,500.00",
+      "balance": "$356,500.00"
+    },
+    {
+      "date": "Nov 23",
+      "reference": "PMT-4827",
+      "description": "Compliance audit fee",
+      "amount": "$250.00",
+      "balance": "$356,750.00"
+    },
+    {
+      "date": "Dec 24",
+      "reference": "FEE-2785",
+      "description": "Monthly hosting fee",
+      "amount": "-$500.00",
+      "balance": "$356,250.00"
+    },
+    {
+      "date": "Jan 25",
+      "reference": "CR-8635",
+      "description": "Payment received — thank you",
+      "amount": "$1,500.00",
+      "balance": "$357,750.00"
+    },
+    {
+      "date": "Feb 26",
+      "reference": "INV-6870",
+      "description": "Professional services — consulting",
+      "amount": "$750.00",
+      "balance": "$358,500.00"
+    },
+    {
+      "date": "Mar 27",
+      "reference": "CR-5341",
+      "description": "Software license renewal",
+      "amount": "-$250.00",
+      "balance": "$358,250.00"
+    },
+    {
+      "date": "Apr 28",
+      "reference": "REF-5984",
+      "description": "Data storage overage charge",
+      "amount": "-$150.00",
+      "balance": "$358,100.00"
+    },
+    {
+      "date": "May 01",
+      "reference": "PMT-3430",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$250.00",
+      "balance": "$358,350.00"
+    },
+    {
+      "date": "Jun 02",
+      "reference": "PMT-7492",
+      "description": "API usage — metered billing",
+      "amount": "$150.00",
+      "balance": "$358,500.00"
+    },
+    {
+      "date": "Jul 03",
+      "reference": "PMT-3848",
+      "description": "Infrastructure maintenance",
+      "amount": "$150.00",
+      "balance": "$358,650.00"
+    },
+    {
+      "date": "Aug 04",
+      "reference": "CR-5093",
+      "description": "SSL certificate renewal",
+      "amount": "$250.00",
+      "balance": "$358,900.00"
+    },
+    {
+      "date": "Sep 05",
+      "reference": "FEE-2989",
+      "description": "Domain registration fee",
+      "amount": "-$150.00",
+      "balance": "$358,750.00"
+    },
+    {
+      "date": "Oct 06",
+      "reference": "FEE-3141",
+      "description": "Bandwidth overage charge",
+      "amount": "$750.00",
+      "balance": "$359,500.00"
+    },
+    {
+      "date": "Nov 07",
+      "reference": "PMT-2376",
+      "description": "Cloud compute — on-demand",
+      "amount": "$1,200.00",
+      "balance": "$360,700.00"
+    },
+    {
+      "date": "Dec 08",
+      "reference": "ADJ-1357",
+      "description": "Database backup service",
+      "amount": "-$250.00",
+      "balance": "$360,450.00"
+    },
+    {
+      "date": "Jan 09",
+      "reference": "REF-8265",
+      "description": "CDN usage fee",
+      "amount": "-$500.00",
+      "balance": "$359,950.00"
+    },
+    {
+      "date": "Feb 10",
+      "reference": "PMT-3007",
+      "description": "Security scanning service",
+      "amount": "$150.00",
+      "balance": "$360,100.00"
+    },
+    {
+      "date": "Mar 11",
+      "reference": "ADJ-3752",
+      "description": "Email delivery service",
+      "amount": "$2,000.00",
+      "balance": "$362,100.00"
+    },
+    {
+      "date": "Apr 12",
+      "reference": "CR-9128",
+      "description": "Load balancer fee",
+      "amount": "$150.00",
+      "balance": "$362,250.00"
+    },
+    {
+      "date": "May 13",
+      "reference": "CR-3831",
+      "description": "Container orchestration",
+      "amount": "-$1,500.00",
+      "balance": "$360,750.00"
+    },
+    {
+      "date": "Jun 14",
+      "reference": "FEE-5505",
+      "description": "Log management service",
+      "amount": "$1,200.00",
+      "balance": "$361,950.00"
+    },
+    {
+      "date": "Jul 15",
+      "reference": "FEE-1567",
+      "description": "Compliance audit fee",
+      "amount": "$750.00",
+      "balance": "$362,700.00"
+    },
+    {
+      "date": "Aug 16",
+      "reference": "CR-7750",
+      "description": "Monthly hosting fee",
+      "amount": "-$3,500.00",
+      "balance": "$359,200.00"
+    },
+    {
+      "date": "Sep 17",
+      "reference": "PMT-7275",
+      "description": "Payment received — thank you",
+      "amount": "$500.00",
+      "balance": "$359,700.00"
+    },
+    {
+      "date": "Oct 18",
+      "reference": "REF-9614",
+      "description": "Professional services — consulting",
+      "amount": "$750.00",
+      "balance": "$360,450.00"
+    },
+    {
+      "date": "Nov 19",
+      "reference": "INV-1319",
+      "description": "Software license renewal",
+      "amount": "$2,000.00",
+      "balance": "$362,450.00"
+    },
+    {
+      "date": "Dec 20",
+      "reference": "PMT-8859",
+      "description": "Data storage overage charge",
+      "amount": "$3,500.00",
+      "balance": "$365,950.00"
+    },
+    {
+      "date": "Jan 21",
+      "reference": "INV-9231",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$1,500.00",
+      "balance": "$367,450.00"
+    },
+    {
+      "date": "Feb 22",
+      "reference": "FEE-1427",
+      "description": "API usage — metered billing",
+      "amount": "$1,500.00",
+      "balance": "$368,950.00"
+    },
+    {
+      "date": "Mar 23",
+      "reference": "ADJ-5602",
+      "description": "Infrastructure maintenance",
+      "amount": "$150.00",
+      "balance": "$369,100.00"
+    },
+    {
+      "date": "Apr 24",
+      "reference": "CR-9674",
+      "description": "SSL certificate renewal",
+      "amount": "$1,500.00",
+      "balance": "$370,600.00"
+    },
+    {
+      "date": "May 25",
+      "reference": "FEE-3615",
+      "description": "Domain registration fee",
+      "amount": "-$250.00",
+      "balance": "$370,350.00"
+    },
+    {
+      "date": "Jun 26",
+      "reference": "FEE-5366",
+      "description": "Bandwidth overage charge",
+      "amount": "$150.00",
+      "balance": "$370,500.00"
+    },
+    {
+      "date": "Jul 27",
+      "reference": "FEE-7363",
+      "description": "Cloud compute — on-demand",
+      "amount": "$1,500.00",
+      "balance": "$372,000.00"
+    },
+    {
+      "date": "Aug 28",
+      "reference": "FEE-3885",
+      "description": "Database backup service",
+      "amount": "$750.00",
+      "balance": "$372,750.00"
+    },
+    {
+      "date": "Sep 01",
+      "reference": "REF-6878",
+      "description": "CDN usage fee",
+      "amount": "$150.00",
+      "balance": "$372,900.00"
+    },
+    {
+      "date": "Oct 02",
+      "reference": "PMT-3328",
+      "description": "Security scanning service",
+      "amount": "$750.00",
+      "balance": "$373,650.00"
+    },
+    {
+      "date": "Nov 03",
+      "reference": "CR-9882",
+      "description": "Email delivery service",
+      "amount": "-$1,200.00",
+      "balance": "$372,450.00"
+    },
+    {
+      "date": "Dec 04",
+      "reference": "ADJ-2478",
+      "description": "Load balancer fee",
+      "amount": "-$150.00",
+      "balance": "$372,300.00"
+    },
+    {
+      "date": "Jan 05",
+      "reference": "FEE-1326",
+      "description": "Container orchestration",
+      "amount": "-$3,500.00",
+      "balance": "$368,800.00"
+    },
+    {
+      "date": "Feb 06",
+      "reference": "INV-4300",
+      "description": "Log management service",
+      "amount": "$500.00",
+      "balance": "$369,300.00"
+    },
+    {
+      "date": "Mar 07",
+      "reference": "FEE-6301",
+      "description": "Compliance audit fee",
+      "amount": "-$150.00",
+      "balance": "$369,150.00"
+    },
+    {
+      "date": "Apr 08",
+      "reference": "INV-3320",
+      "description": "Monthly hosting fee",
+      "amount": "$250.00",
+      "balance": "$369,400.00"
+    },
+    {
+      "date": "May 09",
+      "reference": "PMT-2188",
+      "description": "Payment received — thank you",
+      "amount": "$1,500.00",
+      "balance": "$370,900.00"
+    },
+    {
+      "date": "Jun 10",
+      "reference": "REF-7481",
+      "description": "Professional services — consulting",
+      "amount": "$250.00",
+      "balance": "$371,150.00"
+    },
+    {
+      "date": "Jul 11",
+      "reference": "PMT-3235",
+      "description": "Software license renewal",
+      "amount": "$500.00",
+      "balance": "$371,650.00"
+    },
+    {
+      "date": "Aug 12",
+      "reference": "CR-8982",
+      "description": "Data storage overage charge",
+      "amount": "-$1,500.00",
+      "balance": "$370,150.00"
+    },
+    {
+      "date": "Sep 13",
+      "reference": "INV-6846",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$750.00",
+      "balance": "$370,900.00"
+    },
+    {
+      "date": "Oct 14",
+      "reference": "FEE-7199",
+      "description": "API usage — metered billing",
+      "amount": "$1,200.00",
+      "balance": "$372,100.00"
+    },
+    {
+      "date": "Nov 15",
+      "reference": "PMT-3086",
+      "description": "Infrastructure maintenance",
+      "amount": "$500.00",
+      "balance": "$372,600.00"
+    },
+    {
+      "date": "Dec 16",
+      "reference": "REF-7415",
+      "description": "SSL certificate renewal",
+      "amount": "-$150.00",
+      "balance": "$372,450.00"
+    },
+    {
+      "date": "Jan 17",
+      "reference": "PMT-4619",
+      "description": "Domain registration fee",
+      "amount": "$250.00",
+      "balance": "$372,700.00"
+    },
+    {
+      "date": "Feb 18",
+      "reference": "FEE-6425",
+      "description": "Bandwidth overage charge",
+      "amount": "-$250.00",
+      "balance": "$372,450.00"
+    },
+    {
+      "date": "Mar 19",
+      "reference": "PMT-3750",
+      "description": "Cloud compute — on-demand",
+      "amount": "$250.00",
+      "balance": "$372,700.00"
+    },
+    {
+      "date": "Apr 20",
+      "reference": "REF-6500",
+      "description": "Database backup service",
+      "amount": "-$3,500.00",
+      "balance": "$369,200.00"
+    },
+    {
+      "date": "May 21",
+      "reference": "FEE-5088",
+      "description": "CDN usage fee",
+      "amount": "$250.00",
+      "balance": "$369,450.00"
+    },
+    {
+      "date": "Jun 22",
+      "reference": "ADJ-1020",
+      "description": "Security scanning service",
+      "amount": "$150.00",
+      "balance": "$369,600.00"
+    },
+    {
+      "date": "Jul 23",
+      "reference": "REF-7875",
+      "description": "Email delivery service",
+      "amount": "$500.00",
+      "balance": "$370,100.00"
+    },
+    {
+      "date": "Aug 24",
+      "reference": "CR-7204",
+      "description": "Load balancer fee",
+      "amount": "$1,500.00",
+      "balance": "$371,600.00"
+    },
+    {
+      "date": "Sep 25",
+      "reference": "ADJ-8855",
+      "description": "Container orchestration",
+      "amount": "-$750.00",
+      "balance": "$370,850.00"
+    },
+    {
+      "date": "Oct 26",
+      "reference": "ADJ-1547",
+      "description": "Log management service",
+      "amount": "-$1,200.00",
+      "balance": "$369,650.00"
+    },
+    {
+      "date": "Nov 27",
+      "reference": "PMT-2715",
+      "description": "Compliance audit fee",
+      "amount": "$250.00",
+      "balance": "$369,900.00"
+    },
+    {
+      "date": "Dec 28",
+      "reference": "CR-3636",
+      "description": "Monthly hosting fee",
+      "amount": "$250.00",
+      "balance": "$370,150.00"
+    },
+    {
+      "date": "Jan 01",
+      "reference": "ADJ-6536",
+      "description": "Payment received — thank you",
+      "amount": "$3,500.00",
+      "balance": "$373,650.00"
+    },
+    {
+      "date": "Feb 02",
+      "reference": "CR-3703",
+      "description": "Professional services — consulting",
+      "amount": "-$2,000.00",
+      "balance": "$371,650.00"
+    },
+    {
+      "date": "Mar 03",
+      "reference": "ADJ-6424",
+      "description": "Software license renewal",
+      "amount": "$750.00",
+      "balance": "$372,400.00"
+    },
+    {
+      "date": "Apr 04",
+      "reference": "CR-9849",
+      "description": "Data storage overage charge",
+      "amount": "$1,200.00",
+      "balance": "$373,600.00"
+    },
+    {
+      "date": "May 05",
+      "reference": "PMT-4891",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "-$250.00",
+      "balance": "$373,350.00"
+    },
+    {
+      "date": "Jun 06",
+      "reference": "INV-9043",
+      "description": "API usage — metered billing",
+      "amount": "-$500.00",
+      "balance": "$372,850.00"
+    },
+    {
+      "date": "Jul 07",
+      "reference": "ADJ-8005",
+      "description": "Infrastructure maintenance",
+      "amount": "-$250.00",
+      "balance": "$372,600.00"
+    },
+    {
+      "date": "Aug 08",
+      "reference": "REF-8869",
+      "description": "SSL certificate renewal",
+      "amount": "-$750.00",
+      "balance": "$371,850.00"
+    },
+    {
+      "date": "Sep 09",
+      "reference": "FEE-3798",
+      "description": "Domain registration fee",
+      "amount": "$1,200.00",
+      "balance": "$373,050.00"
+    },
+    {
+      "date": "Oct 10",
+      "reference": "CR-2892",
+      "description": "Bandwidth overage charge",
+      "amount": "$1,200.00",
+      "balance": "$374,250.00"
+    },
+    {
+      "date": "Nov 11",
+      "reference": "CR-9013",
+      "description": "Cloud compute — on-demand",
+      "amount": "-$1,200.00",
+      "balance": "$373,050.00"
+    },
+    {
+      "date": "Dec 12",
+      "reference": "INV-7349",
+      "description": "Database backup service",
+      "amount": "$500.00",
+      "balance": "$373,550.00"
+    },
+    {
+      "date": "Jan 13",
+      "reference": "CR-7052",
+      "description": "CDN usage fee",
+      "amount": "$500.00",
+      "balance": "$374,050.00"
+    },
+    {
+      "date": "Feb 14",
+      "reference": "PMT-8204",
+      "description": "Security scanning service",
+      "amount": "-$3,500.00",
+      "balance": "$370,550.00"
+    },
+    {
+      "date": "Mar 15",
+      "reference": "PMT-2009",
+      "description": "Email delivery service",
+      "amount": "$500.00",
+      "balance": "$371,050.00"
+    },
+    {
+      "date": "Apr 16",
+      "reference": "REF-2584",
+      "description": "Load balancer fee",
+      "amount": "$250.00",
+      "balance": "$371,300.00"
+    },
+    {
+      "date": "May 17",
+      "reference": "INV-7782",
+      "description": "Container orchestration",
+      "amount": "$750.00",
+      "balance": "$372,050.00"
+    },
+    {
+      "date": "Jun 18",
+      "reference": "CR-9561",
+      "description": "Log management service",
+      "amount": "$2,000.00",
+      "balance": "$374,050.00"
+    },
+    {
+      "date": "Jul 19",
+      "reference": "REF-8779",
+      "description": "Compliance audit fee",
+      "amount": "$750.00",
+      "balance": "$374,800.00"
+    },
+    {
+      "date": "Aug 20",
+      "reference": "ADJ-7468",
+      "description": "Monthly hosting fee",
+      "amount": "$150.00",
+      "balance": "$374,950.00"
+    },
+    {
+      "date": "Sep 21",
+      "reference": "INV-3415",
+      "description": "Payment received — thank you",
+      "amount": "$250.00",
+      "balance": "$375,200.00"
+    },
+    {
+      "date": "Oct 22",
+      "reference": "CR-3832",
+      "description": "Professional services — consulting",
+      "amount": "$500.00",
+      "balance": "$375,700.00"
+    },
+    {
+      "date": "Nov 23",
+      "reference": "FEE-3067",
+      "description": "Software license renewal",
+      "amount": "$150.00",
+      "balance": "$375,850.00"
+    },
+    {
+      "date": "Dec 24",
+      "reference": "REF-8133",
+      "description": "Data storage overage charge",
+      "amount": "$750.00",
+      "balance": "$376,600.00"
+    },
+    {
+      "date": "Jan 25",
+      "reference": "REF-3422",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$1,200.00",
+      "balance": "$377,800.00"
+    },
+    {
+      "date": "Feb 26",
+      "reference": "REF-2097",
+      "description": "API usage — metered billing",
+      "amount": "$250.00",
+      "balance": "$378,050.00"
+    },
+    {
+      "date": "Mar 27",
+      "reference": "CR-6343",
+      "description": "Infrastructure maintenance",
+      "amount": "$1,200.00",
+      "balance": "$379,250.00"
+    },
+    {
+      "date": "Apr 28",
+      "reference": "ADJ-9561",
+      "description": "SSL certificate renewal",
+      "amount": "-$2,000.00",
+      "balance": "$377,250.00"
+    },
+    {
+      "date": "May 01",
+      "reference": "FEE-3428",
+      "description": "Domain registration fee",
+      "amount": "$250.00",
+      "balance": "$377,500.00"
+    },
+    {
+      "date": "Jun 02",
+      "reference": "INV-2654",
+      "description": "Bandwidth overage charge",
+      "amount": "$1,200.00",
+      "balance": "$378,700.00"
+    },
+    {
+      "date": "Jul 03",
+      "reference": "PMT-7732",
+      "description": "Cloud compute — on-demand",
+      "amount": "$1,200.00",
+      "balance": "$379,900.00"
+    },
+    {
+      "date": "Aug 04",
+      "reference": "CR-8750",
+      "description": "Database backup service",
+      "amount": "-$150.00",
+      "balance": "$379,750.00"
+    },
+    {
+      "date": "Sep 05",
+      "reference": "CR-3356",
+      "description": "CDN usage fee",
+      "amount": "-$2,000.00",
+      "balance": "$377,750.00"
+    },
+    {
+      "date": "Oct 06",
+      "reference": "PMT-4892",
+      "description": "Security scanning service",
+      "amount": "$150.00",
+      "balance": "$377,900.00"
+    },
+    {
+      "date": "Nov 07",
+      "reference": "PMT-7102",
+      "description": "Email delivery service",
+      "amount": "$150.00",
+      "balance": "$378,050.00"
+    },
+    {
+      "date": "Dec 08",
+      "reference": "PMT-6094",
+      "description": "Load balancer fee",
+      "amount": "$1,200.00",
+      "balance": "$379,250.00"
+    },
+    {
+      "date": "Jan 09",
+      "reference": "REF-2609",
+      "description": "Container orchestration",
+      "amount": "-$750.00",
+      "balance": "$378,500.00"
+    },
+    {
+      "date": "Feb 10",
+      "reference": "REF-8259",
+      "description": "Log management service",
+      "amount": "-$1,500.00",
+      "balance": "$377,000.00"
+    },
+    {
+      "date": "Mar 11",
+      "reference": "CR-2462",
+      "description": "Compliance audit fee",
+      "amount": "$750.00",
+      "balance": "$377,750.00"
+    },
+    {
+      "date": "Apr 12",
+      "reference": "CR-8937",
+      "description": "Monthly hosting fee",
+      "amount": "$1,500.00",
+      "balance": "$379,250.00"
+    },
+    {
+      "date": "May 13",
+      "reference": "INV-3604",
+      "description": "Payment received — thank you",
+      "amount": "$250.00",
+      "balance": "$379,500.00"
+    },
+    {
+      "date": "Jun 14",
+      "reference": "INV-7609",
+      "description": "Professional services — consulting",
+      "amount": "$500.00",
+      "balance": "$380,000.00"
+    },
+    {
+      "date": "Jul 15",
+      "reference": "INV-1474",
+      "description": "Software license renewal",
+      "amount": "-$500.00",
+      "balance": "$379,500.00"
+    },
+    {
+      "date": "Aug 16",
+      "reference": "FEE-1944",
+      "description": "Data storage overage charge",
+      "amount": "-$750.00",
+      "balance": "$378,750.00"
+    },
+    {
+      "date": "Sep 17",
+      "reference": "ADJ-6904",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "-$750.00",
+      "balance": "$378,000.00"
+    },
+    {
+      "date": "Oct 18",
+      "reference": "CR-9275",
+      "description": "API usage — metered billing",
+      "amount": "$2,000.00",
+      "balance": "$380,000.00"
+    },
+    {
+      "date": "Nov 19",
+      "reference": "ADJ-1500",
+      "description": "Infrastructure maintenance",
+      "amount": "$750.00",
+      "balance": "$380,750.00"
+    },
+    {
+      "date": "Dec 20",
+      "reference": "INV-8308",
+      "description": "SSL certificate renewal",
+      "amount": "$500.00",
+      "balance": "$381,250.00"
+    },
+    {
+      "date": "Jan 21",
+      "reference": "CR-6730",
+      "description": "Domain registration fee",
+      "amount": "-$1,500.00",
+      "balance": "$379,750.00"
+    },
+    {
+      "date": "Feb 22",
+      "reference": "PMT-2480",
+      "description": "Bandwidth overage charge",
+      "amount": "-$1,200.00",
+      "balance": "$378,550.00"
+    },
+    {
+      "date": "Mar 23",
+      "reference": "ADJ-3669",
+      "description": "Cloud compute — on-demand",
+      "amount": "$750.00",
+      "balance": "$379,300.00"
+    },
+    {
+      "date": "Apr 24",
+      "reference": "REF-4688",
+      "description": "Database backup service",
+      "amount": "-$750.00",
+      "balance": "$378,550.00"
+    },
+    {
+      "date": "May 25",
+      "reference": "CR-9409",
+      "description": "CDN usage fee",
+      "amount": "$150.00",
+      "balance": "$378,700.00"
+    },
+    {
+      "date": "Jun 26",
+      "reference": "REF-1145",
+      "description": "Security scanning service",
+      "amount": "$3,500.00",
+      "balance": "$382,200.00"
+    },
+    {
+      "date": "Jul 27",
+      "reference": "REF-3837",
+      "description": "Email delivery service",
+      "amount": "-$150.00",
+      "balance": "$382,050.00"
+    },
+    {
+      "date": "Aug 28",
+      "reference": "INV-6004",
+      "description": "Load balancer fee",
+      "amount": "$1,200.00",
+      "balance": "$383,250.00"
+    },
+    {
+      "date": "Sep 01",
+      "reference": "CR-6713",
+      "description": "Container orchestration",
+      "amount": "-$3,500.00",
+      "balance": "$379,750.00"
+    },
+    {
+      "date": "Oct 02",
+      "reference": "CR-5950",
+      "description": "Log management service",
+      "amount": "$2,000.00",
+      "balance": "$381,750.00"
+    },
+    {
+      "date": "Nov 03",
+      "reference": "ADJ-9380",
+      "description": "Compliance audit fee",
+      "amount": "$1,500.00",
+      "balance": "$383,250.00"
+    },
+    {
+      "date": "Dec 04",
+      "reference": "INV-5631",
+      "description": "Monthly hosting fee",
+      "amount": "$1,200.00",
+      "balance": "$384,450.00"
+    },
+    {
+      "date": "Jan 05",
+      "reference": "CR-2045",
+      "description": "Payment received — thank you",
+      "amount": "$1,500.00",
+      "balance": "$385,950.00"
+    },
+    {
+      "date": "Feb 06",
+      "reference": "REF-6327",
+      "description": "Professional services — consulting",
+      "amount": "-$1,200.00",
+      "balance": "$384,750.00"
+    },
+    {
+      "date": "Mar 07",
+      "reference": "REF-5895",
+      "description": "Software license renewal",
+      "amount": "-$750.00",
+      "balance": "$384,000.00"
+    },
+    {
+      "date": "Apr 08",
+      "reference": "FEE-1930",
+      "description": "Data storage overage charge",
+      "amount": "$2,000.00",
+      "balance": "$386,000.00"
+    },
+    {
+      "date": "May 09",
+      "reference": "REF-3292",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$150.00",
+      "balance": "$386,150.00"
+    },
+    {
+      "date": "Jun 10",
+      "reference": "PMT-5250",
+      "description": "API usage — metered billing",
+      "amount": "$2,000.00",
+      "balance": "$388,150.00"
+    },
+    {
+      "date": "Jul 11",
+      "reference": "REF-1578",
+      "description": "Infrastructure maintenance",
+      "amount": "$750.00",
+      "balance": "$388,900.00"
+    },
+    {
+      "date": "Aug 12",
+      "reference": "REF-4643",
+      "description": "SSL certificate renewal",
+      "amount": "$3,500.00",
+      "balance": "$392,400.00"
+    },
+    {
+      "date": "Sep 13",
+      "reference": "REF-6873",
+      "description": "Domain registration fee",
+      "amount": "$1,200.00",
+      "balance": "$393,600.00"
+    },
+    {
+      "date": "Oct 14",
+      "reference": "REF-3967",
+      "description": "Bandwidth overage charge",
+      "amount": "-$1,200.00",
+      "balance": "$392,400.00"
+    },
+    {
+      "date": "Nov 15",
+      "reference": "FEE-5237",
+      "description": "Cloud compute — on-demand",
+      "amount": "$500.00",
+      "balance": "$392,900.00"
+    },
+    {
+      "date": "Dec 16",
+      "reference": "PMT-2463",
+      "description": "Database backup service",
+      "amount": "$750.00",
+      "balance": "$393,650.00"
+    },
+    {
+      "date": "Jan 17",
+      "reference": "REF-6031",
+      "description": "CDN usage fee",
+      "amount": "$2,000.00",
+      "balance": "$395,650.00"
+    },
+    {
+      "date": "Feb 18",
+      "reference": "PMT-7089",
+      "description": "Security scanning service",
+      "amount": "$1,200.00",
+      "balance": "$396,850.00"
+    },
+    {
+      "date": "Mar 19",
+      "reference": "CR-2929",
+      "description": "Email delivery service",
+      "amount": "-$3,500.00",
+      "balance": "$393,350.00"
+    },
+    {
+      "date": "Apr 20",
+      "reference": "REF-2166",
+      "description": "Load balancer fee",
+      "amount": "$3,500.00",
+      "balance": "$396,850.00"
+    },
+    {
+      "date": "May 21",
+      "reference": "INV-2963",
+      "description": "Container orchestration",
+      "amount": "$2,000.00",
+      "balance": "$398,850.00"
+    },
+    {
+      "date": "Jun 22",
+      "reference": "CR-1885",
+      "description": "Log management service",
+      "amount": "-$500.00",
+      "balance": "$398,350.00"
+    },
+    {
+      "date": "Jul 23",
+      "reference": "FEE-6614",
+      "description": "Compliance audit fee",
+      "amount": "$2,000.00",
+      "balance": "$400,350.00"
+    },
+    {
+      "date": "Aug 24",
+      "reference": "CR-3346",
+      "description": "Monthly hosting fee",
+      "amount": "$1,500.00",
+      "balance": "$401,850.00"
+    },
+    {
+      "date": "Sep 25",
+      "reference": "FEE-2324",
+      "description": "Payment received — thank you",
+      "amount": "$3,500.00",
+      "balance": "$405,350.00"
+    },
+    {
+      "date": "Oct 26",
+      "reference": "FEE-6134",
+      "description": "Professional services — consulting",
+      "amount": "-$150.00",
+      "balance": "$405,200.00"
+    },
+    {
+      "date": "Nov 27",
+      "reference": "PMT-4430",
+      "description": "Software license renewal",
+      "amount": "$500.00",
+      "balance": "$405,700.00"
+    },
+    {
+      "date": "Dec 28",
+      "reference": "FEE-9021",
+      "description": "Data storage overage charge",
+      "amount": "-$250.00",
+      "balance": "$405,450.00"
+    },
+    {
+      "date": "Jan 01",
+      "reference": "CR-8035",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$2,000.00",
+      "balance": "$407,450.00"
+    },
+    {
+      "date": "Feb 02",
+      "reference": "CR-7280",
+      "description": "API usage — metered billing",
+      "amount": "-$150.00",
+      "balance": "$407,300.00"
+    },
+    {
+      "date": "Mar 03",
+      "reference": "FEE-7112",
+      "description": "Infrastructure maintenance",
+      "amount": "$150.00",
+      "balance": "$407,450.00"
+    },
+    {
+      "date": "Apr 04",
+      "reference": "INV-4122",
+      "description": "SSL certificate renewal",
+      "amount": "$150.00",
+      "balance": "$407,600.00"
+    },
+    {
+      "date": "May 05",
+      "reference": "REF-5076",
+      "description": "Domain registration fee",
+      "amount": "$750.00",
+      "balance": "$408,350.00"
+    },
+    {
+      "date": "Jun 06",
+      "reference": "PMT-6113",
+      "description": "Bandwidth overage charge",
+      "amount": "-$500.00",
+      "balance": "$407,850.00"
+    },
+    {
+      "date": "Jul 07",
+      "reference": "INV-6015",
+      "description": "Cloud compute — on-demand",
+      "amount": "-$500.00",
+      "balance": "$407,350.00"
+    },
+    {
+      "date": "Aug 08",
+      "reference": "ADJ-5885",
+      "description": "Database backup service",
+      "amount": "$1,200.00",
+      "balance": "$408,550.00"
+    },
+    {
+      "date": "Sep 09",
+      "reference": "INV-9587",
+      "description": "CDN usage fee",
+      "amount": "$1,500.00",
+      "balance": "$410,050.00"
+    },
+    {
+      "date": "Oct 10",
+      "reference": "REF-3192",
+      "description": "Security scanning service",
+      "amount": "$1,500.00",
+      "balance": "$411,550.00"
+    },
+    {
+      "date": "Nov 11",
+      "reference": "CR-6885",
+      "description": "Email delivery service",
+      "amount": "-$750.00",
+      "balance": "$410,800.00"
+    },
+    {
+      "date": "Dec 12",
+      "reference": "CR-1313",
+      "description": "Load balancer fee",
+      "amount": "-$750.00",
+      "balance": "$410,050.00"
+    },
+    {
+      "date": "Jan 13",
+      "reference": "FEE-4460",
+      "description": "Container orchestration",
+      "amount": "$150.00",
+      "balance": "$410,200.00"
+    },
+    {
+      "date": "Feb 14",
+      "reference": "FEE-3017",
+      "description": "Log management service",
+      "amount": "$1,500.00",
+      "balance": "$411,700.00"
+    },
+    {
+      "date": "Mar 15",
+      "reference": "ADJ-7147",
+      "description": "Compliance audit fee",
+      "amount": "$1,200.00",
+      "balance": "$412,900.00"
+    },
+    {
+      "date": "Apr 16",
+      "reference": "INV-1796",
+      "description": "Monthly hosting fee",
+      "amount": "$150.00",
+      "balance": "$413,050.00"
+    },
+    {
+      "date": "May 17",
+      "reference": "REF-1323",
+      "description": "Payment received — thank you",
+      "amount": "$150.00",
+      "balance": "$413,200.00"
+    },
+    {
+      "date": "Jun 18",
+      "reference": "CR-8279",
+      "description": "Professional services — consulting",
+      "amount": "-$2,000.00",
+      "balance": "$411,200.00"
+    },
+    {
+      "date": "Jul 19",
+      "reference": "PMT-8772",
+      "description": "Software license renewal",
+      "amount": "-$500.00",
+      "balance": "$410,700.00"
+    },
+    {
+      "date": "Aug 20",
+      "reference": "REF-1152",
+      "description": "Data storage overage charge",
+      "amount": "$1,200.00",
+      "balance": "$411,900.00"
+    },
+    {
+      "date": "Sep 21",
+      "reference": "ADJ-9524",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$1,200.00",
+      "balance": "$413,100.00"
+    },
+    {
+      "date": "Oct 22",
+      "reference": "REF-3247",
+      "description": "API usage — metered billing",
+      "amount": "$2,000.00",
+      "balance": "$415,100.00"
+    },
+    {
+      "date": "Nov 23",
+      "reference": "ADJ-9381",
+      "description": "Infrastructure maintenance",
+      "amount": "-$250.00",
+      "balance": "$414,850.00"
+    },
+    {
+      "date": "Dec 24",
+      "reference": "ADJ-9154",
+      "description": "SSL certificate renewal",
+      "amount": "$750.00",
+      "balance": "$415,600.00"
+    },
+    {
+      "date": "Jan 25",
+      "reference": "PMT-9571",
+      "description": "Domain registration fee",
+      "amount": "$750.00",
+      "balance": "$416,350.00"
+    },
+    {
+      "date": "Feb 26",
+      "reference": "CR-5839",
+      "description": "Bandwidth overage charge",
+      "amount": "-$500.00",
+      "balance": "$415,850.00"
+    },
+    {
+      "date": "Mar 27",
+      "reference": "CR-4402",
+      "description": "Cloud compute — on-demand",
+      "amount": "$3,500.00",
+      "balance": "$419,350.00"
+    },
+    {
+      "date": "Apr 28",
+      "reference": "ADJ-1208",
+      "description": "Database backup service",
+      "amount": "$250.00",
+      "balance": "$419,600.00"
+    },
+    {
+      "date": "May 01",
+      "reference": "INV-9095",
+      "description": "CDN usage fee",
+      "amount": "$500.00",
+      "balance": "$420,100.00"
+    },
+    {
+      "date": "Jun 02",
+      "reference": "INV-2229",
+      "description": "Security scanning service",
+      "amount": "$250.00",
+      "balance": "$420,350.00"
+    },
+    {
+      "date": "Jul 03",
+      "reference": "REF-4787",
+      "description": "Email delivery service",
+      "amount": "$3,500.00",
+      "balance": "$423,850.00"
+    },
+    {
+      "date": "Aug 04",
+      "reference": "PMT-5327",
+      "description": "Load balancer fee",
+      "amount": "-$3,500.00",
+      "balance": "$420,350.00"
+    },
+    {
+      "date": "Sep 05",
+      "reference": "FEE-1646",
+      "description": "Container orchestration",
+      "amount": "$1,200.00",
+      "balance": "$421,550.00"
+    },
+    {
+      "date": "Oct 06",
+      "reference": "REF-6123",
+      "description": "Log management service",
+      "amount": "$2,000.00",
+      "balance": "$423,550.00"
+    },
+    {
+      "date": "Nov 07",
+      "reference": "ADJ-1751",
+      "description": "Compliance audit fee",
+      "amount": "$150.00",
+      "balance": "$423,700.00"
+    },
+    {
+      "date": "Dec 08",
+      "reference": "REF-3793",
+      "description": "Monthly hosting fee",
+      "amount": "$1,500.00",
+      "balance": "$425,200.00"
+    },
+    {
+      "date": "Jan 09",
+      "reference": "CR-5395",
+      "description": "Payment received — thank you",
+      "amount": "$250.00",
+      "balance": "$425,450.00"
+    },
+    {
+      "date": "Feb 10",
+      "reference": "PMT-3996",
+      "description": "Professional services — consulting",
+      "amount": "$250.00",
+      "balance": "$425,700.00"
+    },
+    {
+      "date": "Mar 11",
+      "reference": "CR-5453",
+      "description": "Software license renewal",
+      "amount": "$2,000.00",
+      "balance": "$427,700.00"
+    },
+    {
+      "date": "Apr 12",
+      "reference": "CR-7909",
+      "description": "Data storage overage charge",
+      "amount": "-$500.00",
+      "balance": "$427,200.00"
+    },
+    {
+      "date": "May 13",
+      "reference": "REF-1960",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "-$500.00",
+      "balance": "$426,700.00"
+    },
+    {
+      "date": "Jun 14",
+      "reference": "INV-8908",
+      "description": "API usage — metered billing",
+      "amount": "-$3,500.00",
+      "balance": "$423,200.00"
+    },
+    {
+      "date": "Jul 15",
+      "reference": "CR-6875",
+      "description": "Infrastructure maintenance",
+      "amount": "$150.00",
+      "balance": "$423,350.00"
+    },
+    {
+      "date": "Aug 16",
+      "reference": "REF-3140",
+      "description": "SSL certificate renewal",
+      "amount": "$3,500.00",
+      "balance": "$426,850.00"
+    },
+    {
+      "date": "Sep 17",
+      "reference": "ADJ-7738",
+      "description": "Domain registration fee",
+      "amount": "-$3,500.00",
+      "balance": "$423,350.00"
+    },
+    {
+      "date": "Oct 18",
+      "reference": "PMT-6148",
+      "description": "Bandwidth overage charge",
+      "amount": "$150.00",
+      "balance": "$423,500.00"
+    },
+    {
+      "date": "Nov 19",
+      "reference": "REF-9598",
+      "description": "Cloud compute — on-demand",
+      "amount": "$750.00",
+      "balance": "$424,250.00"
+    },
+    {
+      "date": "Dec 20",
+      "reference": "REF-6542",
+      "description": "Database backup service",
+      "amount": "$250.00",
+      "balance": "$424,500.00"
+    },
+    {
+      "date": "Jan 21",
+      "reference": "REF-5072",
+      "description": "CDN usage fee",
+      "amount": "$3,500.00",
+      "balance": "$428,000.00"
+    },
+    {
+      "date": "Feb 22",
+      "reference": "REF-7305",
+      "description": "Security scanning service",
+      "amount": "$500.00",
+      "balance": "$428,500.00"
+    },
+    {
+      "date": "Mar 23",
+      "reference": "INV-1894",
+      "description": "Email delivery service",
+      "amount": "$150.00",
+      "balance": "$428,650.00"
+    },
+    {
+      "date": "Apr 24",
+      "reference": "FEE-9283",
+      "description": "Load balancer fee",
+      "amount": "$3,500.00",
+      "balance": "$432,150.00"
+    },
+    {
+      "date": "May 25",
+      "reference": "FEE-2226",
+      "description": "Container orchestration",
+      "amount": "$3,500.00",
+      "balance": "$435,650.00"
+    },
+    {
+      "date": "Jun 26",
+      "reference": "PMT-5557",
+      "description": "Log management service",
+      "amount": "$150.00",
+      "balance": "$435,800.00"
+    },
+    {
+      "date": "Jul 27",
+      "reference": "INV-7203",
+      "description": "Compliance audit fee",
+      "amount": "$2,000.00",
+      "balance": "$437,800.00"
+    },
+    {
+      "date": "Aug 28",
+      "reference": "ADJ-8521",
+      "description": "Monthly hosting fee",
+      "amount": "$3,500.00",
+      "balance": "$441,300.00"
+    },
+    {
+      "date": "Sep 01",
+      "reference": "CR-2442",
+      "description": "Payment received — thank you",
+      "amount": "$3,500.00",
+      "balance": "$444,800.00"
+    },
+    {
+      "date": "Oct 02",
+      "reference": "ADJ-9148",
+      "description": "Professional services — consulting",
+      "amount": "-$150.00",
+      "balance": "$444,650.00"
+    },
+    {
+      "date": "Nov 03",
+      "reference": "CR-1587",
+      "description": "Software license renewal",
+      "amount": "$150.00",
+      "balance": "$444,800.00"
+    },
+    {
+      "date": "Dec 04",
+      "reference": "INV-5990",
+      "description": "Data storage overage charge",
+      "amount": "$750.00",
+      "balance": "$445,550.00"
+    },
+    {
+      "date": "Jan 05",
+      "reference": "CR-6584",
+      "description": "Support ticket resolution — Priority 1",
+      "amount": "$1,500.00",
+      "balance": "$447,050.00"
+    },
+    {
+      "date": "Feb 06",
+      "reference": "FEE-8445",
+      "description": "API usage — metered billing",
+      "amount": "$1,500.00",
+      "balance": "$448,550.00"
+    },
+    {
+      "date": "Mar 07",
+      "reference": "INV-8751",
+      "description": "Infrastructure maintenance",
+      "amount": "$1,500.00",
+      "balance": "$450,050.00"
+    },
+    {
+      "date": "Apr 08",
+      "reference": "ADJ-2596",
+      "description": "SSL certificate renewal",
+      "amount": "-$750.00",
+      "balance": "$449,300.00"
+    },
+    {
+      "date": "May 09",
+      "reference": "PMT-5783",
+      "description": "Domain registration fee",
+      "amount": "$1,500.00",
+      "balance": "$450,800.00"
+    },
+    {
+      "date": "Jun 10",
+      "reference": "ADJ-3689",
+      "description": "Bandwidth overage charge",
+      "amount": "-$3,500.00",
+      "balance": "$447,300.00"
+    },
+    {
+      "date": "Jul 11",
+      "reference": "REF-7704",
+      "description": "Cloud compute — on-demand",
+      "amount": "-$250.00",
+      "balance": "$447,050.00"
+    },
+    {
+      "date": "Aug 12",
+      "reference": "FEE-4072",
+      "description": "Database backup service",
+      "amount": "$250.00",
+      "balance": "$447,300.00"
+    },
+    {
+      "date": "Sep 13",
+      "reference": "CR-4532",
+      "description": "CDN usage fee",
+      "amount": "$3,500.00",
+      "balance": "$450,800.00"
+    },
+    {
+      "date": "Oct 14",
+      "reference": "FEE-6536",
+      "description": "Security scanning service",
+      "amount": "$250.00",
+      "balance": "$451,050.00"
+    },
+    {
+      "date": "Nov 15",
+      "reference": "ADJ-3018",
+      "description": "Email delivery service",
+      "amount": "$3,500.00",
+      "balance": "$454,550.00"
+    },
+    {
+      "date": "Dec 16",
+      "reference": "INV-9260",
+      "description": "Load balancer fee",
+      "amount": "$500.00",
+      "balance": "$455,050.00"
+    },
+    {
+      "date": "Jan 17",
+      "reference": "ADJ-9689",
+      "description": "Container orchestration",
+      "amount": "$150.00",
+      "balance": "$455,200.00"
+    },
+    {
+      "date": "Feb 18",
+      "reference": "CR-8912",
+      "description": "Log management service",
+      "amount": "$500.00",
+      "balance": "$455,700.00"
+    },
+    {
+      "date": "Mar 19",
+      "reference": "FEE-3103",
+      "description": "Compliance audit fee",
+      "amount": "$250.00",
+      "balance": "$455,950.00"
+    }
+  ],
+  "aging": {
+    "current": "$18,500.00",
+    "days_30": "$8,200.00",
+    "days_60": "$3,800.00",
+    "days_90": "$1,950.00",
+    "total": "$32,450.00"
+  },
+  "notes": "This statement covers a 12-month period. Please review all transactions and contact us within 30 days if you have questions."
+}

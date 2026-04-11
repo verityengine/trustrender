@@ -49,6 +49,35 @@ Backend teams generating invoices and statements need tables that paginate corre
 
 No headless browser, no Chromium, no manual pagination code.
 
+## Automated verification
+
+19 automated tests in `tests/test_pagination.py` verify pagination behavior across all scales:
+
+| Scale | Template | Rows | Pages | What is verified |
+|-------|----------|------|-------|-----------------|
+| Standard | invoice | 10 | 1 | Single-page baseline |
+| Medium | invoice | 50 | 3 | Page count, all rows present, headers repeat, total present |
+| Medium | statement | 201 | 7 | Page count, spot-check rows, headers repeat on 5+ pages, closing balance |
+| Large | invoice | 1000 | 33 | Page count, first/middle/last items, headers on 20+ pages |
+| Large | statement | 1000 | 29 | Page count, spot-check rows, headers on 15+ pages |
+| Dense | report | 115 entries | 8 | Page count, all sections present (metrics, incidents, spend, recommendations) |
+
+Text extraction uses pypdf (already a dependency). Assertions use `>=` thresholds to avoid brittleness from minor layout changes.
+
+## Large-document soak results
+
+80 renders across 5 fixture sizes, CLI subprocess backend, zero errors:
+
+| Fixture | Rows | Pages | P50 | P95 | ms/row |
+|---------|------|-------|-----|-----|--------|
+| invoice-50 | 50 | 3 | 63.5 ms | 74.6 ms | 1.32 |
+| invoice-1000 | 1000 | 33 | 217.6 ms | 246.3 ms | 0.22 |
+| statement-201 | 201 | 7 | 96.7 ms | 100.7 ms | 0.48 |
+| statement-1000 | 1000 | 29 | 271.1 ms | 278.9 ms | 0.27 |
+| report-dense | 115 | 8 | 77.7 ms | 96.6 ms | 0.70 |
+
+Peak RSS: 60.5 MB after all 80 renders. Full results: `benchmarks/pagination_soak_results.md`.
+
 ## Limitations
 
 - Pagination is handled by Typst's layout engine. Formforge does not add custom pagination logic.
