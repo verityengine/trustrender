@@ -150,6 +150,9 @@ def check_template_fonts(templates_dir: Path | None = None) -> tuple[str, str]:
     for template in templates_dir.glob("**/*.typ"):
         if template.name.startswith("_trustrender_"):
             continue
+        # Skip output directory — contains reference PDFs and old .typ artifacts
+        if "output" in template.relative_to(templates_dir).parts:
+            continue
         try:
             content = template.read_text()
         except Exception:
