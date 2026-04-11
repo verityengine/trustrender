@@ -1,0 +1,6 @@
+{
+  "invoice_number": "BAD-001",
+  "sender": "not an object",
+  "items": "not a list",
+  "notes": null
+}

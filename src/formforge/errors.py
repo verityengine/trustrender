@@ -10,6 +10,7 @@ from the underlying tool, and an optional ``source_path`` to the intermediate
 Error codes
 ~~~~~~~~~~~
     INVALID_DATA         Bad input data (not a dict, bad JSON, wrong type)
+    DATA_CONTRACT        Data does not satisfy the template's structural contract
     TEMPLATE_NOT_FOUND   Template file does not exist
     TEMPLATE_SYNTAX      Jinja2 syntax error in the template
     TEMPLATE_VARIABLE    Undefined variable during Jinja2 rendering
@@ -22,6 +23,7 @@ Error codes
 Stages
 ~~~~~~
     data_resolution      Resolving/parsing the data argument
+    data_validation      Validating data against template contract
     template_preprocess  Jinja2 template rendering
     compilation          Typst compilation to PDF
     execution            Server/CLI execution wrapper
@@ -36,6 +38,7 @@ class ErrorCode(str, Enum):
     """Stable error codes for Formforge failures."""
 
     INVALID_DATA = "INVALID_DATA"
+    DATA_CONTRACT = "DATA_CONTRACT"
     TEMPLATE_NOT_FOUND = "TEMPLATE_NOT_FOUND"
     TEMPLATE_SYNTAX = "TEMPLATE_SYNTAX"
     TEMPLATE_VARIABLE = "TEMPLATE_VARIABLE"
@@ -66,12 +69,14 @@ class FormforgeError(Exception):
         detail: str | None = None,
         source_path: str | None = None,
         template_path: str | None = None,
+        validation_errors: list | None = None,
     ):
         self.code = code
         self.stage = stage
         self.detail = detail or message
         self.source_path = source_path
         self.template_path = template_path
+        self.validation_errors = validation_errors
 
         # Build the user-facing message
         parts = [message]

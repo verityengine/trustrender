@@ -62,6 +62,25 @@ def _server_render(
     backend = TypstCliBackend(compile_timeout=timeout)
 
     if template_path.name.endswith(".j2.typ"):
+        # Validate data against template contract before rendering.
+        from .schema import (
+            format_contract_detail,
+            format_contract_errors,
+            infer_contract,
+            validate_data,
+        )
+
+        contract = infer_contract(template_path)
+        validation_errors = validate_data(contract, data)
+        if validation_errors:
+            raise FormforgeError(
+                format_contract_errors(validation_errors, template_path.name),
+                code=ErrorCode.DATA_CONTRACT,
+                stage="data_validation",
+                template_path=str(template_path),
+                detail=format_contract_detail(validation_errors, contract),
+            )
+
         rendered = render_template(template_path, data)
         return compile_typst(
             rendered,
@@ -243,7 +262,12 @@ def create_app(
                 stage="execution",
             )
         except FormforgeError as exc:
-            status = 504 if exc.code == ErrorCode.RENDER_TIMEOUT else 500
+            if exc.code == ErrorCode.RENDER_TIMEOUT:
+                status = 504
+            elif exc.code in (ErrorCode.INVALID_DATA, ErrorCode.DATA_CONTRACT):
+                status = 422 if exc.code == ErrorCode.DATA_CONTRACT else 400
+            else:
+                status = 500
             error_data = exc.to_dict(include_debug=use_debug)
             error_data["request_id"] = request_id
             return JSONResponse(

@@ -111,8 +111,25 @@ def render(
     resolved_fonts = _build_font_paths(font_paths)
 
     if is_jinja:
-        # Jinja errors (syntax, undefined vars) are caught and classified
-        # inside render_template
+        # Validate data against template contract before rendering.
+        from .schema import (
+            format_contract_detail,
+            format_contract_errors,
+            infer_contract,
+            validate_data,
+        )
+
+        contract = infer_contract(template_path)
+        validation_errors = validate_data(contract, data_dict)
+        if validation_errors:
+            raise FormforgeError(
+                format_contract_errors(validation_errors, template_path.name),
+                code=ErrorCode.DATA_CONTRACT,
+                stage="data_validation",
+                template_path=str(template_path),
+                detail=format_contract_detail(validation_errors, contract),
+            )
+
         rendered = render_template(template_path, data_dict)
         pdf_bytes = compile_typst(
             rendered,
