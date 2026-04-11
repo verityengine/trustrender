@@ -1,0 +1,31 @@
+{
+  "template": "invoice.j2.typ",
+  "data": {
+    "invoice_number": "INV-2026-0042",
+    "invoice_date": "April 10, 2026",
+    "due_date": "May 10, 2026",
+    "payment_terms": "Net 30",
+    "sender": {
+      "name": "Acme Corporation",
+      "address_line1": "123 Business Ave, Suite 400",
+      "address_line2": "San Francisco, CA 94105",
+      "email": "billing@acme.com"
+    },
+    "recipient": {
+      "name": "Contoso Ltd.",
+      "address_line1": "456 Enterprise Blvd",
+      "address_line2": "New York, NY 10001",
+      "email": "accounts@contoso.com"
+    },
+    "items": [
+      {"num": 1, "description": "Website redesign and development", "qty": 1, "unit_price": "$4,500.00", "amount": "$4,500.00"},
+      {"num": 2, "description": "Logo design and brand identity package", "qty": 1, "unit_price": "$2,200.00", "amount": "$2,200.00"},
+      {"num": 3, "description": "SEO optimization and keyword research", "qty": 1, "unit_price": "$1,800.00", "amount": "$1,800.00"}
+    ],
+    "subtotal": "$8,500.00",
+    "tax_rate": "8.5%",
+    "tax_amount": "$722.50",
+    "total": "$9,222.50",
+    "notes": "Payment is due within 30 days."
+  }
+}

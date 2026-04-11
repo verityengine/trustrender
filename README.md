@@ -1,0 +1,339 @@
+# Formforge
+
+Generate structured business PDFs from data + templates. No browser, no Chromium.
+
+Formforge renders invoices, statements, receipts, and similar structured documents using [Typst](https://typst.app/) as the layout engine and Jinja2 for data binding. It ships as a Python library, CLI, and HTTP server.
+
+## Non-goals
+
+Formforge is not:
+
+- arbitrary HTML-to-PDF conversion
+- a browser or headless renderer
+- a visual/WYSIWYG editor
+- DOCX, PPTX, or multi-format output
+- a general document platform
+
+It does one thing: structured business PDFs from code.
+
+## Install
+
+### Standard install (recommended)
+
+```
+git clone https://github.com/verityengine/formforge.git
+cd formforge
+pip install .
+```
+
+This is the most reliable local path today.
+
+### Development install
+
+```
+pip install -e ".[dev]"
+```
+
+Editable install is intended for development workflows. Use the standard install above if you just want to run Formforge.
+
+### Requirements
+
+- Python 3.11+
+- Python package dependencies (`typst`, `jinja2`, `starlette`, `uvicorn`) are installed automatically by `pip install .`
+- **Typst CLI binary** is a separate install, required for the `typst-cli` backend (and always used by the server). The binary name on PATH must be `typst`. Install via:
+  - macOS: `brew install typst`
+  - Cargo: `cargo install --git https://github.com/typst/typst --locked typst-cli`
+  - Or download from [typst.app](https://typst.app/)
+
+The `typst` Python package (used by the `typst-py` backend) is a pip dependency and installed automatically. The Typst CLI binary is a separate system-level install.
+
+## Quick start
+
+**Python API:**
+
+```python
+from formforge import render
+
+pdf_bytes = render(
+    "examples/invoice.j2.typ",
+    "examples/invoice_data.json",
+    output="invoice.pdf",
+)
+print(f"Rendered {len(pdf_bytes)} bytes")
+```
+
+**CLI:**
+
+```
+formforge render examples/invoice.j2.typ examples/invoice_data.json -o invoice.pdf
+```
+
+Both produce `invoice.pdf` from the bundled example template and data. Template and data paths are resolved relative to the current working directory.
+
+## CLI usage
+
+```
+formforge render <template> <data.json> -o <output.pdf> [--debug] [--font-path <dir>]
+formforge serve --templates <dir> [--host 127.0.0.1] [--port 8190] [--debug] [--font-path <dir>]
+```
+
+Common examples:
+
+```
+# Render a single PDF
+formforge render templates/invoice.j2.typ data.json -o out.pdf
+
+# Render with custom fonts
+formforge render templates/invoice.j2.typ data.json -o out.pdf --font-path ./my-fonts
+
+# Start the HTTP server
+formforge serve --templates ./templates --port 8190
+
+# Start with debug mode (preserves intermediate files)
+formforge serve --templates ./templates --debug
+```
+
+Full flag reference: `formforge render --help` / `formforge serve --help`.
+
+## HTTP server
+
+The server exposes two endpoints:
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `POST` | `/render` | Render a template to PDF |
+| `GET` | `/health` | Health check |
+
+**Successful render:**
+
+```
+curl -X POST http://localhost:8190/render \
+  -H "Content-Type: application/json" \
+  --data @examples/request_invoice.json \
+  -o invoice.pdf
+```
+
+Returns `application/pdf` on success.
+
+**Error response:**
+
+```json
+{
+  "error": "TEMPLATE_NOT_FOUND",
+  "message": "Template not found: missing.j2.typ",
+  "stage": "execution",
+  "request_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+}
+```
+
+**Request format:** JSON object with fields `template` (required string), `data` (required object), `debug` (optional boolean). See `examples/request_invoice.json` for a complete runnable example.
+
+**Request ID:** The server accepts a client-provided `X-Request-ID` header or generates a UUID. It is echoed on both success and error responses for request tracing.
+
+**Max request body:** 1 MB.
+
+## Docker
+
+**Build:**
+
+```
+docker build -t formforge .
+```
+
+**Run with bundled examples:**
+
+```
+docker run -p 8190:8190 formforge
+```
+
+**Run with custom templates:**
+
+```
+docker run -p 8190:8190 \
+  -v /path/to/templates:/templates \
+  formforge serve --templates /templates --host 0.0.0.0 --port 8190
+```
+
+**Mount custom fonts:**
+
+```
+docker run -p 8190:8190 \
+  -v /path/to/fonts:/custom-fonts \
+  -e FORMFORGE_FONT_PATH=/custom-fonts \
+  formforge serve --templates /app/examples --host 0.0.0.0 --port 8190
+```
+
+The container sets `FORMFORGE_FONT_PATH=/app/fonts` by default, which includes the bundled Inter family. Override with your own fonts as shown above.
+
+## Configuration
+
+### Environment variables
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `FORMFORGE_BACKEND` | Backend selection: `typst-py` or `typst-cli` | Auto-detect |
+| `FORMFORGE_FONT_PATH` | Font directory path | Bundled fonts dir |
+
+### Backend selection
+
+Formforge supports two render backends behind a shared protocol:
+
+| Backend | How it works | Timeout behavior |
+|---------|-------------|-----------------|
+| `typst-py` | In-process Python binding | Not killable (blocks until done) |
+| `typst-cli` | Subprocess calling `typst` binary | Killable via `subprocess.run(timeout=...)` |
+
+**Library and CLI** support both backends. Auto-detect tries `typst-py` first, falls back to `typst-cli`. Override with `FORMFORGE_BACKEND`.
+
+**Server always uses `typst-cli`**, regardless of `FORMFORGE_BACKEND`. This is intentional: the subprocess boundary is what makes server timeout actually kill a stuck render. This is a deployment-level decision, not a per-request choice.
+
+## Fonts
+
+Fonts are trust infrastructure. Output determinism depends on controlling font availability.
+
+### Precedence
+
+1. Explicit `font_paths` from caller (searched first)
+2. Bundled fonts directory (searched second)
+3. System fonts (Typst default, always available)
+
+### Bundled fonts
+
+Formforge ships Inter (Regular, Bold, Italic, BoldItalic) as TTF files. All example templates use Inter. Bundled fonts are the deterministic baseline.
+
+### Silent fallback
+
+Typst silently falls back when a requested font is unavailable. The PDF is valid but may use the wrong font. No error is raised in most cases.
+
+Current observed fallback in our tested environment: Libertinus. Do not treat this as a permanent upstream guarantee.
+
+**If you care about deterministic output, rely on bundled or explicitly supplied fonts only. Do not rely on fallback.**
+
+### Custom fonts
+
+| Method | Usage |
+|--------|-------|
+| Python API | `render(..., font_paths=["/path/to/fonts"])` |
+| CLI | `--font-path /path/to/fonts` (repeatable) |
+| Env var | `FORMFORGE_FONT_PATH=/path/to/fonts` |
+| Docker | Mount a volume and set `FORMFORGE_FONT_PATH` |
+
+## Templates
+
+Templates are Jinja2-preprocessed Typst files (`.j2.typ`). Jinja2 handles data binding; Typst handles layout and PDF generation.
+
+```
+{{ variable }}              Interpolate a value (auto-escaped)
+{% for item in items %}     Loop
+{% if condition %}          Conditional
+{{ value | typst_money }}   Filter
+```
+
+Raw Typst files (`.typ`) are also supported but receive no data binding or escaping. They are for template authors who want direct Typst control. Formforge's safety guarantees apply to Jinja-interpolated values in `.j2.typ` templates.
+
+### Escaping
+
+All string values interpolated via `{{ }}` are automatically escaped for Typst text/content contexts. This is text-interpolation safety only, not universal Typst sanitization.
+
+11 characters are escaped: `\` `$` `#` `@` `{` `}` `<` `` ` `` `~` `[` `]`
+
+Intentionally not escaped: `_` and `*` (word-boundary emphasis; escaping everywhere would damage normal text like `snake_case`).
+
+**Not in scope:** code mode, math mode, and other context-sensitive Typst syntax. Templates that embed user data in those contexts require author discipline.
+
+### Filters
+
+| Filter | Purpose | Escaping |
+|--------|---------|----------|
+| `typst_money` | Color-wrap negative currency values | Escapes input, returns markup |
+| `typst_color` | Wrap value in colored text | Escapes input, returns markup |
+| `typst_markup` | Bypass auto-escaping | **Unsafe for user input** |
+
+`typst_markup` exists for template authors who need to emit controlled Typst formatting. Never pass arbitrary user data through it.
+
+### Template rules
+
+Templates may format values, loop through rows, conditionally show blocks, and render precomputed strings. Templates must not perform business logic (currency calculation, tax computation, rounding). Those values should arrive precomputed in the data.
+
+## Timeout and debug
+
+### Server timeout
+
+The server render timeout defaults to 30 seconds. Timeout is real: the CLI subprocess is killed via `subprocess.run(timeout=...)`. A secondary async watchdog (`timeout + 5s`) provides a defensive backstop in case subprocess cleanup stalls. The watchdog should never fire in normal operation.
+
+### Artifact policy
+
+| Scenario | Intermediate `.typ` file |
+|----------|-------------------------|
+| Successful render | Cleaned up |
+| Compile error | Preserved (even without debug) |
+| Timeout (no debug) | Cleaned up |
+| Timeout (debug mode) | Preserved |
+| `--debug` flag or `"debug": true` | Always preserved |
+
+Compile errors preserve the intermediate file even without debug mode because the generated Typst markup is often required to diagnose the failure. Timeout behavior is stricter: intermediates are cleaned to prevent accumulating orphan artifacts under repeated timeout failures, unless debug mode is explicitly enabled.
+
+Intermediate files are written next to the template as `_formforge_*.typ`. They contain the Jinja2-rendered Typst markup before compilation.
+
+## Error model
+
+### Error codes
+
+| Code | Meaning |
+|------|---------|
+| `INVALID_DATA` | Bad input data (not a dict, bad JSON, wrong type) |
+| `TEMPLATE_NOT_FOUND` | Template file does not exist |
+| `TEMPLATE_SYNTAX` | Jinja2 syntax error in the template |
+| `TEMPLATE_VARIABLE` | Undefined variable during Jinja2 rendering |
+| `MISSING_ASSET` | Referenced file (image, etc.) not found |
+| `MISSING_FONT` | Font not available (rare due to silent fallback) |
+| `COMPILE_ERROR` | Typst compilation failed |
+| `RENDER_TIMEOUT` | Render exceeded the time limit |
+| `BACKEND_ERROR` | Unexpected backend failure |
+
+### Pipeline stages
+
+| Stage | Where |
+|-------|-------|
+| `data_resolution` | Parsing/validating input data |
+| `template_preprocess` | Jinja2 rendering |
+| `compilation` | Typst compilation to PDF |
+| `execution` | Server/CLI execution wrapper |
+
+Server error responses include `error`, `message`, `stage`, and `request_id`. With `debug: true`, responses also include `detail` (full Typst diagnostic) and file paths.
+
+## What is working and tested
+
+- `formforge.render()` produces valid PDFs from dict/JSON + Jinja2 templates
+- CLI `render` and `serve` commands
+- HTTP server with request validation, structured errors, request ID tracking
+- Server timeout kills stuck renders (subprocess boundary)
+- Auto-escaping: 11 Typst special characters in text-interpolation contexts
+- Bundled Inter fonts, deterministic across local and container environments
+- Library and CLI support both backends; server forces typst-cli
+- Docker: builds, runs, produces matching output
+- 5 starter templates: invoice, statement, receipt, letter, report
+- 225 tests passing (unit, integration, ugly-data stress tests)
+
+## Caveats
+
+- Silent font fallback means missing fonts may not produce errors — just wrong output
+- Source mapping from generated Typst back to Jinja2 template source is limited
+- `typst_markup()` intentionally bypasses escaping — template author's responsibility
+- Code/math mode contexts are not auto-escaped
+- Line-start markup (`=` headings, `-` lists) is template layout, not auto-escaped
+- Font determinism across arbitrary environments is not fully soak-tested
+- Standard install from source is the most reliable local path today
+- Not yet published to PyPI
+
+## Bundled templates
+
+| Template | File | Tests |
+|----------|------|-------|
+| Invoice | `examples/invoice.j2.typ` | Single and multi-page, ugly data |
+| Statement | `examples/statement.j2.typ` | Multi-page tables, negative values |
+| Receipt | `examples/receipt.j2.typ` | Long items, many items |
+| Letter | `examples/letter.j2.typ` | Long subject, many paragraphs, enclosures |
+| Report | `examples/report.j2.typ` | Metrics, incidents, conditional formatting |
+
+Each has a matching `_data.json` file in `examples/`.
