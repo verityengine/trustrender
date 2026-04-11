@@ -264,6 +264,21 @@ def _render_document_pipeline(
                         template_path=str(template_path),
                     ) from xsd_exc
 
+                # Schematron validation: business rule check on generated XML
+                try:
+                    from facturx.facturx import xml_check_schematron
+                    xml_check_schematron(xml_bytes)
+                except ImportError:
+                    pass  # facturx not installed — skip Schematron check
+                except Exception as sch_exc:
+                    raise FormforgeError(
+                        f"Generated XML failed Schematron validation: {sch_exc}",
+                        code=ErrorCode.ZUGFERD_ERROR,
+                        stage="zugferd",
+                        detail=str(sch_exc),
+                        template_path=str(template_path),
+                    ) from sch_exc
+
                 pdf_bytes = apply_zugferd(pdf_bytes, xml_bytes)
                 trace.stages.append(StageTrace(
                     stage="zugferd_postprocess",
