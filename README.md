@@ -89,7 +89,7 @@ Both produce `invoice.pdf` from the bundled example template and data. Template 
 ```
 formforge render <template> <data.json> -o <output.pdf> [--debug] [--no-validate] [--zugferd en16931] [--font-path <dir>]
 formforge check <template> [--data <data.json>]
-formforge serve --templates <dir> [--host 127.0.0.1] [--port 8190] [--debug] [--font-path <dir>]
+formforge serve --templates <dir> [--host 127.0.0.1] [--port 8190] [--debug] [--font-path <dir>] [--max-body-size <bytes>]
 formforge doctor [--smoke]
 ```
 
@@ -394,7 +394,7 @@ Returns `application/pdf` on success.
 
 **Backpressure:** The server limits concurrent renders (default 8, configurable via `--max-concurrent`). Requests that arrive while at capacity receive 503. This prevents runaway resource consumption under load.
 
-**Max request body:** 1 MB.
+**Max request body:** 10 MB (default). Configurable via `--max-body-size` or `FORMFORGE_MAX_BODY_SIZE` env var.
 
 ## Docker
 
@@ -415,7 +415,8 @@ docker run -p 8190:8190 formforge
 ```
 docker run -p 8190:8190 \
   -v /path/to/templates:/templates \
-  formforge serve --templates /templates --host 0.0.0.0 --port 8190
+  -e FORMFORGE_TEMPLATES_DIR=/templates \
+  formforge
 ```
 
 **Mount custom fonts:**
@@ -424,10 +425,10 @@ docker run -p 8190:8190 \
 docker run -p 8190:8190 \
   -v /path/to/fonts:/custom-fonts \
   -e FORMFORGE_FONT_PATH=/custom-fonts \
-  formforge serve --templates /app/examples --host 0.0.0.0 --port 8190
+  formforge
 ```
 
-The container sets `FORMFORGE_FONT_PATH=/app/fonts` by default, which includes the bundled Inter family. Override with your own fonts as shown above.
+The container sets `FORMFORGE_FONT_PATH=/app/fonts` and `FORMFORGE_TEMPLATES_DIR=/app/examples` by default. Override with your own paths via environment variables as shown above.
 
 ## Configuration
 
@@ -437,6 +438,8 @@ The container sets `FORMFORGE_FONT_PATH=/app/fonts` by default, which includes t
 |----------|---------|---------|
 | `FORMFORGE_BACKEND` | Backend selection: `typst-py` or `typst-cli` | Auto-detect |
 | `FORMFORGE_FONT_PATH` | Font directory path | Bundled fonts dir |
+| `FORMFORGE_TEMPLATES_DIR` | Template directory for `serve` command | — |
+| `FORMFORGE_MAX_BODY_SIZE` | Max request body in bytes for `serve` | `10485760` (10 MB) |
 
 ### Backend selection
 
