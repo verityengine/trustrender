@@ -359,12 +359,20 @@ Provenance works with all render modes — with or without ZUGFeRD, with or with
 
 ## HTTP server
 
-The server exposes two endpoints:
+The server exposes these endpoints:
 
 | Method | Path | Purpose |
 |--------|------|---------|
 | `POST` | `/render` | Render a template to PDF |
+| `POST` | `/preflight` | Pre-render readiness check (no rendering) |
+| `GET` | `/template-source?name=` | Raw template source (for browser editing) |
 | `GET` | `/health` | Health check |
+| `GET` | `/history` | Render trace history (requires `--history`) |
+| `GET` | `/history/{id}` | Single trace detail |
+| `GET` | `/stats` | Aggregate render statistics |
+| `GET` | `/dashboard` | Ops dashboard UI (requires `--dashboard`) |
+
+Both `/render` and `/preflight` accept an optional `template_source` field for ephemeral template editing — the server writes a temp file, runs the pipeline, and cleans up. The `template` field is still required (for include resolution and preset detection).
 
 **Successful render:**
 
