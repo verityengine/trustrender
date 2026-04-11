@@ -85,8 +85,8 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#12100e; --surface:#171411; --panel:#1d1915;
-  --border:#2b241d; --border-light:#3a3026;
+  --bg:#131313; --surface:#191919; --panel:#1f1f1f;
+  --border:#2c2c2c; --border-light:#3b3b3b;
   --ink:#f3ede3; --ink2:#b7a995; --muted:#847766; --faint:#847766;
   --accent:#b86a3a; --accent-hover:#cb7a47; --accent-soft:rgba(184,106,58,.10); --accent-border:rgba(184,106,58,.25);
   --ok:#5f8f73; --ok-soft:rgba(95,143,115,.12); --ok-border:rgba(95,143,115,.22);
