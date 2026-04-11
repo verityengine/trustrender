@@ -251,7 +251,7 @@ class TestNoHints:
     def test_empty_hints_runs_checks(self):
         report = validate_semantics({"anything": "value"}, hints=SemanticHints())
         assert len(report.issues) == 0
-        assert len(report.checks_run) == 4  # All 4 checks run, just nothing to find
+        assert len(report.checks_run) == 5  # All 5 checks run, just nothing to find
 
 
 class TestInvoiceHints:
@@ -267,6 +267,222 @@ class TestInvoiceHints:
         # arithmetic check may or may not match depending on format.
         # No errors expected (warnings are OK).
         assert not report.has_errors
+
+
+class TestReceiptHints:
+    def test_receipt_valid_data_passes(self):
+        """Receipt fixture passes RECEIPT_HINTS without issues."""
+        import json
+        from pathlib import Path
+        from formforge.semantic import RECEIPT_HINTS
+
+        examples = Path(__file__).parent.parent / "examples"
+        data = json.loads((examples / "receipt_data.json").read_text())
+        report = validate_semantics(data, hints=RECEIPT_HINTS)
+        assert len(report.issues) == 0
+
+    def test_receipt_bad_total_warns(self):
+        """Receipt with wrong total triggers arithmetic warning."""
+        from formforge.semantic import RECEIPT_HINTS
+
+        data = {
+            "company": {"name": "Test"},
+            "receipt_number": "R-001",
+            "date": "April 10, 2026",
+            "items": [
+                {"description": "A", "qty": 1, "unit_price": "$10.00", "amount": "$10.00"},
+                {"description": "B", "qty": 1, "unit_price": "$20.00", "amount": "$20.00"},
+            ],
+            "subtotal": "$999.00",  # Wrong
+            "tax_amount": "$0",
+            "total": "$999.00",
+            "amount_tendered": "$999.00",
+            "change_due": "$0.00",
+        }
+        report = validate_semantics(data, hints=RECEIPT_HINTS)
+        arith = [i for i in report.issues if i.category == "arithmetic"]
+        assert len(arith) >= 1
+        assert arith[0].path == "subtotal"
+
+    def test_receipt_non_numeric_amount_warns(self):
+        """Receipt item with non-numeric amount triggers warning."""
+        from formforge.semantic import RECEIPT_HINTS
+
+        data = {
+            "company": {"name": "Test"},
+            "receipt_number": "R-001",
+            "date": "April 10, 2026",
+            "items": [{"description": "A", "qty": 1, "unit_price": "$10", "amount": "free"}],
+            "subtotal": "$10",
+            "tax_amount": "$0",
+            "total": "$10",
+            "amount_tendered": "$10",
+            "change_due": "$0",
+        }
+        report = validate_semantics(data, hints=RECEIPT_HINTS)
+        num = [i for i in report.issues if i.category == "numeric_coercion"]
+        assert len(num) >= 1
+        assert any("amount" in i.path for i in num)
+
+
+class TestStatementHints:
+    def test_statement_valid_data_passes(self):
+        """Statement fixture passes STATEMENT_HINTS without issues."""
+        import json
+        from pathlib import Path
+        from formforge.semantic import STATEMENT_HINTS
+
+        examples = Path(__file__).parent.parent / "examples"
+        data = json.loads((examples / "statement_data.json").read_text())
+        report = validate_semantics(data, hints=STATEMENT_HINTS)
+        assert len(report.issues) == 0
+
+    def test_statement_aging_mismatch_warns(self):
+        """Aging totals that don't sum to aging.total trigger warning."""
+        from formforge.semantic import STATEMENT_HINTS
+
+        data = {
+            "customer": {"name": "Test", "account_number": "A-001"},
+            "statement_date": "April 10, 2026",
+            "opening_balance": "$0",
+            "closing_balance": "$100",
+            "total_charges": "$100",
+            "total_payments": "$0",
+            "aging": {
+                "current": "$10",
+                "days_30": "$20",
+                "days_60": "$30",
+                "days_90": "$40",
+                "total": "$999",  # Wrong: should be 100
+            },
+        }
+        report = validate_semantics(data, hints=STATEMENT_HINTS)
+        arith = [i for i in report.issues if i.category == "arithmetic"]
+        assert any(i.path == "aging.total" for i in arith)
+
+    def test_statement_balance_mismatch_warns(self):
+        """opening + charges + payments != closing triggers warning."""
+        from formforge.semantic import STATEMENT_HINTS
+
+        data = {
+            "customer": {"name": "Test", "account_number": "A-001"},
+            "statement_date": "April 10, 2026",
+            "opening_balance": "$100",
+            "closing_balance": "$999",  # Wrong: 100 + 50 + (-25) = 125
+            "total_charges": "$50",
+            "total_payments": "-$25",
+            "aging": {
+                "current": "$125",
+                "days_30": "$0",
+                "days_60": "$0",
+                "days_90": "$0",
+                "total": "$125",
+            },
+        }
+        report = validate_semantics(data, hints=STATEMENT_HINTS)
+        arith = [i for i in report.issues if i.category == "arithmetic"]
+        assert any(i.path == "closing_balance" for i in arith)
+
+
+class TestReconciliation:
+    def test_reconciliation_passes_when_correct(self):
+        """Matching sums produce no issues."""
+        hints = SemanticHints(
+            reconciliations=[
+                (["a", "b", "c"], "total"),
+            ],
+        )
+        data = {"a": 10, "b": 20, "c": 30, "total": 60}
+        report = validate_semantics(data, hints=hints)
+        arith = [i for i in report.issues if i.category == "arithmetic"]
+        assert len(arith) == 0
+
+    def test_reconciliation_warns_on_mismatch(self):
+        """Mismatched sums produce arithmetic warning."""
+        hints = SemanticHints(
+            reconciliations=[
+                (["a", "b", "c"], "total"),
+            ],
+        )
+        data = {"a": 10, "b": 20, "c": 30, "total": 999}
+        report = validate_semantics(data, hints=hints)
+        arith = [i for i in report.issues if i.category == "arithmetic"]
+        assert len(arith) == 1
+        assert arith[0].path == "total"
+        assert arith[0].deterministic is True
+        assert arith[0].severity == "warning"
+
+    def test_reconciliation_skips_unparseable(self):
+        """Non-numeric values are skipped, not errored."""
+        hints = SemanticHints(
+            reconciliations=[
+                (["a", "b"], "total"),
+            ],
+        )
+        data = {"a": "not a number", "b": 20, "total": 30}
+        report = validate_semantics(data, hints=hints)
+        # Should not produce reconciliation issue (can't check)
+        arith = [i for i in report.issues if i.category == "arithmetic"]
+        assert len(arith) == 0
+
+    def test_reconciliation_tolerance(self):
+        """Float differences within 0.01 are tolerated."""
+        hints = SemanticHints(
+            reconciliations=[
+                (["a", "b", "c"], "total"),
+            ],
+        )
+        data = {"a": 33.33, "b": 33.33, "c": 33.34, "total": 100.0}
+        report = validate_semantics(data, hints=hints)
+        arith = [i for i in report.issues if i.category == "arithmetic"]
+        assert len(arith) == 0
+
+    def test_reconciliation_with_currency_strings(self):
+        """Currency-formatted strings are parsed for reconciliation."""
+        hints = SemanticHints(
+            reconciliations=[
+                (["a", "b"], "total"),
+            ],
+        )
+        data = {"a": "$100.00", "b": "$200.00", "total": "$300.00"}
+        report = validate_semantics(data, hints=hints)
+        arith = [i for i in report.issues if i.category == "arithmetic"]
+        assert len(arith) == 0
+
+
+class TestHintAutoDetection:
+    def test_invoice_detected(self):
+        from formforge.cli import _resolve_hints
+        hints = _resolve_hints("invoice.j2.typ")
+        assert hints is not None
+        assert hints.line_items_path == "items"
+
+    def test_einvoice_detected(self):
+        from formforge.cli import _resolve_hints
+        hints = _resolve_hints("einvoice.j2.typ")
+        assert hints is not None
+
+    def test_receipt_detected(self):
+        from formforge.cli import _resolve_hints
+        hints = _resolve_hints("receipt.j2.typ")
+        assert hints is not None
+        assert hints.line_total_field == "amount"
+
+    def test_statement_detected(self):
+        from formforge.cli import _resolve_hints
+        hints = _resolve_hints("statement.j2.typ")
+        assert hints is not None
+        assert hints.reconciliations is not None
+
+    def test_unknown_returns_none(self):
+        from formforge.cli import _resolve_hints
+        hints = _resolve_hints("letter.j2.typ")
+        assert hints is None
+
+    def test_report_returns_none(self):
+        from formforge.cli import _resolve_hints
+        hints = _resolve_hints("report.j2.typ")
+        assert hints is None
 
 
 class TestReportSerialization:

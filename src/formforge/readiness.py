@@ -71,10 +71,10 @@ def _check_payload(
         return  # Raw .typ templates have no contract to validate against
 
     try:
-        from .contract import infer_contract, validate_data
+        from .contract import infer_contract_with_metadata, validate_data
 
-        contract = infer_contract(template_path)
-        errors = validate_data(contract, data)
+        result = infer_contract_with_metadata(template_path)
+        errors = validate_data(result.contract, data)
         for e in errors:
             issues.append(ReadinessIssue(
                 stage="payload",
@@ -83,6 +83,15 @@ def _check_payload(
                 path=e.path,
                 message=e.message,
             ))
+        if result.is_partial:
+            for inc in result.unresolved_includes:
+                issues.append(ReadinessIssue(
+                    stage="payload",
+                    check="partial_contract",
+                    severity="warning",
+                    path=inc,
+                    message=f"Contract is partial: include '{inc}' could not be resolved statically",
+                ))
     except FormforgeError:
         # Template parse error — will be caught in template stage
         pass

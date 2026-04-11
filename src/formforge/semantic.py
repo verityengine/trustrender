@@ -113,6 +113,11 @@ class SemanticHints:
     # Required fields that must not be empty strings
     nonempty_fields: list[str] | None = None # ["invoice_number", "seller.name"]
 
+    # Balance reconciliation: list of (summand_paths, expected_total_path).
+    # Each check verifies: sum(values at summand_paths) == value at total_path.
+    # Warnings only — does not block rendering.
+    reconciliations: list[tuple[list[str], str]] | None = None
+
 
 # Default hints for common invoice-like documents
 INVOICE_HINTS = SemanticHints(
@@ -122,6 +127,39 @@ INVOICE_HINTS = SemanticHints(
     date_fields=["invoice_date", "due_date"],
     numeric_fields=["items[].quantity", "items[].unit_price", "items[].line_total"],
     nonempty_fields=["invoice_number"],
+)
+
+RECEIPT_HINTS = SemanticHints(
+    line_items_path="items",
+    line_total_field="amount",
+    subtotal_path="subtotal",
+    date_fields=["date"],
+    numeric_fields=[
+        "items[].qty", "items[].unit_price", "items[].amount",
+        "subtotal", "tax_amount", "total",
+        "amount_tendered", "change_due",
+    ],
+    nonempty_fields=["receipt_number", "company.name"],
+)
+
+STATEMENT_HINTS = SemanticHints(
+    line_items_path=None,
+    line_total_field=None,
+    subtotal_path=None,
+    date_fields=["statement_date"],
+    numeric_fields=[
+        "opening_balance", "closing_balance",
+        "total_charges", "total_payments",
+        "aging.current", "aging.days_30",
+        "aging.days_60", "aging.days_90", "aging.total",
+    ],
+    nonempty_fields=["customer.name", "customer.account_number"],
+    reconciliations=[
+        # aging buckets sum to aging total
+        (["aging.current", "aging.days_30", "aging.days_60", "aging.days_90"], "aging.total"),
+        # opening + charges + payments = closing
+        (["opening_balance", "total_charges", "total_payments"], "closing_balance"),
+    ],
 )
 
 
@@ -358,6 +396,47 @@ def _check_numeric_coercion(
                 ))
 
 
+def _check_reconciliation(
+    data: dict,
+    hints: SemanticHints,
+    issues: list[SemanticIssue],
+) -> None:
+    """Check that groups of numeric fields sum to expected totals."""
+    if not hints.reconciliations:
+        return
+
+    for summand_paths, total_path in hints.reconciliations:
+        total_raw = _resolve_path(data, total_path)
+        expected = _try_parse_number(total_raw)
+        if expected is None:
+            continue  # Can't check if total isn't numeric
+
+        summands: list[float] = []
+        all_parseable = True
+        for sp in summand_paths:
+            val = _try_parse_number(_resolve_path(data, sp))
+            if val is None:
+                all_parseable = False
+                break
+            summands.append(val)
+
+        if not all_parseable:
+            continue  # Skip if any summand isn't parseable
+
+        actual_sum = sum(summands)
+        if abs(actual_sum - expected) > 0.01:
+            paths_str = " + ".join(summand_paths)
+            issues.append(SemanticIssue(
+                category="arithmetic",
+                severity="warning",
+                path=total_path,
+                message=f"{paths_str} = {actual_sum:.2f}, but {total_path} = {expected:.2f}",
+                expected=f"{actual_sum:.2f}",
+                actual=f"{expected:.2f}",
+                deterministic=True,
+            ))
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -393,5 +472,8 @@ def validate_semantics(
 
     _check_numeric_coercion(data, hints, issues)
     checks_run.append("numeric_coercion")
+
+    _check_reconciliation(data, hints, issues)
+    checks_run.append("balance_reconciliation")
 
     return SemanticReport(issues=issues, checks_run=checks_run)

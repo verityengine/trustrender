@@ -54,7 +54,7 @@ class TestAuditBasic:
             semantic_hints=INVOICE_HINTS,
         )
         assert result.semantic_report is not None
-        assert len(result.semantic_report.checks_run) == 4
+        assert len(result.semantic_report.checks_run) == 5
 
     def test_audit_matches_render(self):
         """audit() should produce the same PDF bytes as render()."""

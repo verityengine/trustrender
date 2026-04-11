@@ -34,10 +34,12 @@ def main(argv: list[str] | None = None) -> int:
         help="Additional font directory (can be repeated)",
     )
     render_cmd.add_argument(
-        "--validate",
-        action="store_true",
-        help="Validate data against template contract before rendering",
+        "--no-validate",
+        action="store_false",
+        dest="validate",
+        help="Skip data contract validation before rendering",
     )
+    render_cmd.set_defaults(validate=True)
     render_cmd.add_argument(
         "--zugferd",
         choices=["en16931", "xrechnung"],
@@ -111,10 +113,12 @@ def main(argv: list[str] | None = None) -> int:
         help="Run semantic validation (arithmetic, dates, completeness)",
     )
     audit_cmd.add_argument(
-        "--validate",
-        action="store_true",
-        help="Validate data against template contract before rendering",
+        "--no-validate",
+        action="store_false",
+        dest="validate",
+        help="Skip data contract validation before rendering",
     )
+    audit_cmd.set_defaults(validate=True)
     audit_cmd.add_argument(
         "--font-path",
         action="append",
@@ -150,7 +154,8 @@ def main(argv: list[str] | None = None) -> int:
         help="Baseline directory",
     )
     baseline_save.add_argument("--font-path", action="append", dest="font_paths")
-    baseline_save.add_argument("--validate", action="store_true")
+    baseline_save.add_argument("--no-validate", action="store_false", dest="validate")
+    baseline_save.set_defaults(validate=True)
     baseline_save.add_argument("--zugferd", choices=["en16931", "xrechnung"])
     baseline_save.add_argument("--provenance", action="store_true")
 
@@ -163,7 +168,8 @@ def main(argv: list[str] | None = None) -> int:
         help="Baseline directory",
     )
     baseline_check.add_argument("--font-path", action="append", dest="font_paths")
-    baseline_check.add_argument("--validate", action="store_true")
+    baseline_check.add_argument("--no-validate", action="store_false", dest="validate")
+    baseline_check.set_defaults(validate=True)
     baseline_check.add_argument("--zugferd", choices=["en16931", "xrechnung"])
     baseline_check.add_argument("--provenance", action="store_true")
 
@@ -321,11 +327,26 @@ def _run_trace(args: argparse.Namespace) -> int:
     return 0
 
 
+def _resolve_hints(template_name: str):
+    """Auto-detect semantic hints based on template name.
+
+    Returns None for unrecognized template types — no fake confidence.
+    """
+    from .semantic import INVOICE_HINTS, RECEIPT_HINTS, STATEMENT_HINTS
+
+    name = template_name.lower()
+    if "invoice" in name or "einvoice" in name:
+        return INVOICE_HINTS
+    if "receipt" in name:
+        return RECEIPT_HINTS
+    if "statement" in name:
+        return STATEMENT_HINTS
+    return None
+
+
 def _run_audit(args: argparse.Namespace) -> int:
     """Render with full audit: fingerprint, drift, semantic."""
     import json as json_mod
-
-    from .semantic import INVOICE_HINTS
 
     template_path = Path(args.template)
     data_path = Path(args.data)
@@ -337,7 +358,13 @@ def _run_audit(args: argparse.Namespace) -> int:
     with open(data_path) as f:
         data = json_mod.load(f)
 
-    semantic_hints = INVOICE_HINTS if args.semantic else None
+    semantic_hints = _resolve_hints(template_path.name) if args.semantic else None
+    if args.semantic and semantic_hints is None:
+        print(
+            f"warning: no semantic hints configured for '{template_path.name}'"
+            " — skipping semantic checks",
+            file=sys.stderr,
+        )
 
     try:
         result = audit(
@@ -505,8 +532,13 @@ def _run_preflight(args: argparse.Namespace) -> int:
 
     semantic_hints = None
     if args.semantic:
-        from .semantic import INVOICE_HINTS
-        semantic_hints = INVOICE_HINTS
+        semantic_hints = _resolve_hints(template_path.name)
+        if semantic_hints is None:
+            print(
+                f"warning: no semantic hints configured for '{template_path.name}'"
+                " — skipping semantic checks",
+                file=sys.stderr,
+            )
 
     verdict = preflight(template_path, data, zugferd=args.zugferd, semantic_hints=semantic_hints)
 
@@ -571,7 +603,7 @@ def _run_check(args: argparse.Namespace) -> int:
     """Inspect template contract or validate data against it."""
     import json
 
-    from .contract import infer_contract, validate_data
+    from .contract import infer_contract_with_metadata, validate_data
 
     template_path = Path(args.template)
     if not template_path.exists():
@@ -581,7 +613,8 @@ def _run_check(args: argparse.Namespace) -> int:
         print(f"error: Not a Jinja2 template: {template_path}", file=sys.stderr)
         return 1
 
-    contract = infer_contract(template_path)
+    result = infer_contract_with_metadata(template_path)
+    contract = result.contract
 
     if args.data:
         data_path = Path(args.data)
@@ -594,6 +627,8 @@ def _run_check(args: argparse.Namespace) -> int:
         errors = validate_data(contract, data)
         if not errors:
             print(f"Valid: {args.data} matches {args.template}")
+            if result.is_partial:
+                print(f"  warning: contract is partial (unresolved includes: {', '.join(result.unresolved_includes)})")
             return 0
         print(
             f"error[DATA_CONTRACT]: {len(errors)} validation error(s)",
@@ -610,6 +645,8 @@ def _run_check(args: argparse.Namespace) -> int:
     required_fields = [f for f in contract.values() if f.required]
     print(f"Template: {args.template}")
     print(f"Fields: {len(contract)} top-level ({len(required_fields)} required)")
+    if result.is_partial:
+        print(f"Partial: unresolved includes: {', '.join(result.unresolved_includes)}")
     print()
     for name, spec in sorted(contract.items()):
         marker = "*" if spec.required else " "

@@ -383,6 +383,148 @@ class TestValidationGuardMerge:
 
 
 # -----------------------------------------------------------------------
+# Include-aware inference
+# -----------------------------------------------------------------------
+
+
+class TestIncludeInference:
+    """Contract inference follows {% include %} fragments."""
+
+    def test_static_include_with_data_field(self, tmp_path):
+        """Fragment that accesses a data field adds it to the contract."""
+        # Create a fragment that references a real data field.
+        frag_dir = tmp_path / "fragments"
+        frag_dir.mkdir()
+        (frag_dir / "header.j2.typ").write_text("{{ company_name }}")
+
+        # Main template includes the fragment.
+        (tmp_path / "main.j2.typ").write_text(
+            '{% include "fragments/header.j2.typ" %}\n{{ title }}'
+        )
+
+        contract = infer_contract(tmp_path / "main.j2.typ")
+        assert "title" in contract
+        assert "company_name" in contract  # From the included fragment
+
+    def test_include_set_variable_not_in_contract(self):
+        """Fragment accessing parent's {% set %} var does not create contract field."""
+        # invoice.j2.typ sets logo_path, doc_title, doc_subtitle before include.
+        # The included header_logo.j2.typ uses those vars.
+        # They should NOT appear in the contract.
+        contract = infer_contract(EXAMPLES / "invoice.j2.typ")
+        assert "logo_path" not in contract
+        assert "doc_title" not in contract
+        assert "doc_subtitle" not in contract
+
+    def test_include_without_context(self, tmp_path):
+        """{% include ... without context %} fragment cannot see parent locals."""
+        frag_dir = tmp_path / "fragments"
+        frag_dir.mkdir()
+        # Fragment references a variable that parent set via {% set %}.
+        (frag_dir / "frag.j2.typ").write_text("{{ local_var }}")
+
+        # Parent sets local_var then includes without context.
+        (tmp_path / "main.j2.typ").write_text(
+            '{% set local_var = "x" %}\n'
+            '{% include "fragments/frag.j2.typ" without context %}'
+        )
+
+        contract = infer_contract(tmp_path / "main.j2.typ")
+        # Without context: fragment's local_var is NOT the parent's set var,
+        # so it becomes a contract field.
+        assert "local_var" in contract
+
+    def test_circular_include_no_crash(self, tmp_path):
+        """Circular includes do not cause infinite recursion."""
+        (tmp_path / "a.j2.typ").write_text(
+            '{% include "b.j2.typ" %}\n{{ field_a }}'
+        )
+        (tmp_path / "b.j2.typ").write_text(
+            '{% include "a.j2.typ" %}\n{{ field_b }}'
+        )
+
+        contract = infer_contract(tmp_path / "a.j2.typ")
+        assert "field_a" in contract
+        assert "field_b" in contract  # From b.j2.typ
+
+    def test_dynamic_include_marks_partial(self, tmp_path):
+        """{% include some_var %} marks the contract as partial."""
+        from formforge.contract import infer_contract_with_metadata
+
+        (tmp_path / "main.j2.typ").write_text(
+            "{% include template_name %}\n{{ title }}"
+        )
+
+        result = infer_contract_with_metadata(tmp_path / "main.j2.typ")
+        assert result.is_partial is True
+        assert "<dynamic>" in result.unresolved_includes
+        assert "title" in result.contract
+
+    def test_missing_fragment_marks_partial(self, tmp_path):
+        """{% include 'nonexistent.j2.typ' %} marks partial, no crash."""
+        from formforge.contract import infer_contract_with_metadata
+
+        (tmp_path / "main.j2.typ").write_text(
+            '{% include "nonexistent.j2.typ" %}\n{{ title }}'
+        )
+
+        result = infer_contract_with_metadata(tmp_path / "main.j2.typ")
+        assert result.is_partial is True
+        assert "nonexistent.j2.typ" in result.unresolved_includes
+        assert "title" in result.contract  # Rest of contract still works
+
+    def test_ignore_missing_not_partial(self, tmp_path):
+        """{% include 'x' ignore missing %} does not mark as partial."""
+        from formforge.contract import infer_contract_with_metadata
+
+        (tmp_path / "main.j2.typ").write_text(
+            '{% include "nonexistent.j2.typ" ignore missing %}\n{{ title }}'
+        )
+
+        result = infer_contract_with_metadata(tmp_path / "main.j2.typ")
+        assert result.is_partial is False
+        assert "title" in result.contract
+
+    def test_nested_includes(self, tmp_path):
+        """Includes within includes are followed."""
+        frag_dir = tmp_path / "fragments"
+        frag_dir.mkdir()
+        (frag_dir / "inner.j2.typ").write_text("{{ deep_field }}")
+        (frag_dir / "outer.j2.typ").write_text(
+            '{% include "fragments/inner.j2.typ" %}\n{{ mid_field }}'
+        )
+        (tmp_path / "main.j2.typ").write_text(
+            '{% include "fragments/outer.j2.typ" %}\n{{ top_field }}'
+        )
+
+        contract = infer_contract(tmp_path / "main.j2.typ")
+        assert "top_field" in contract
+        assert "mid_field" in contract
+        assert "deep_field" in contract
+
+    def test_existing_invoice_contract_unchanged(self):
+        """Invoice contract is unchanged after include support."""
+        contract = infer_contract(EXAMPLES / "invoice.j2.typ")
+        # Same fields as before — includes only use {% set %} vars.
+        expected = {
+            "invoice_number", "invoice_date", "due_date", "payment_terms",
+            "notes", "sender", "recipient", "items",
+            "subtotal", "tax_rate", "tax_amount", "total",
+        }
+        assert set(contract.keys()) == expected
+
+    def test_existing_statement_contract_unchanged(self):
+        """Statement contract is unchanged after include support."""
+        contract = infer_contract(EXAMPLES / "statement.j2.typ")
+        expected = {
+            "company", "customer", "statement_date", "period",
+            "opening_balance", "closing_balance", "total_charges",
+            "total_payments", "transactions", "aging", "notes",
+        }
+        assert set(contract.keys()) == expected
+
+
+# -----------------------------------------------------------------------
 # Integration — render() with bad data
 # -----------------------------------------------------------------------
 
@@ -407,16 +549,25 @@ class TestIntegration:
         pdf = render(EXAMPLES / "invoice.j2.typ", data, validate=True)
         assert pdf[:5] == b"%PDF-"
 
-    def test_render_without_validate_skips_contract(self):
-        """render() without validate=True does NOT run contract validation."""
+    def test_render_with_validate_false_skips_contract(self):
+        """render(validate=False) skips contract validation."""
         from formforge import render
 
-        # Bad data but no validate flag — should hit Jinja error, not contract.
+        # Bad data with explicit validate=False — should hit Jinja error, not contract.
         with pytest.raises(FormforgeError) as exc_info:
-            render(EXAMPLES / "invoice.j2.typ", {"invoice_number": "X"})
+            render(EXAMPLES / "invoice.j2.typ", {"invoice_number": "X"}, validate=False)
 
         # Should be a template error, not DATA_CONTRACT.
         assert exc_info.value.code != ErrorCode.DATA_CONTRACT
+
+    def test_validate_true_is_default(self):
+        """render() validates by default for .j2.typ templates."""
+        from formforge import render
+
+        # No validate= argument — default should be True
+        with pytest.raises(FormforgeError) as exc_info:
+            render(EXAMPLES / "invoice.j2.typ", {"invoice_number": "X"})
+        assert exc_info.value.code == ErrorCode.DATA_CONTRACT
 
     def test_error_detail_contains_paths(self):
         """Error detail should contain the missing field paths."""

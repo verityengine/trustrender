@@ -1,8 +1,9 @@
 """HTTP server for Formforge — thin wrapper over the render pipeline.
 
 Endpoints:
-    POST /render  — render a template to PDF
-    GET  /health  — health check
+    POST /render     — render a template to PDF
+    POST /preflight  — readiness check (no render)
+    GET  /health     — health check
 
 Execution model:
     The server uses ``TypstCliBackend`` for all renders.  This provides a
@@ -39,6 +40,7 @@ from .errors import ErrorCode
 MAX_BODY_SIZE = 1_048_576  # 1 MB
 RENDER_TIMEOUT = 30  # seconds
 ALLOWED_FIELDS = {"template", "data", "debug", "validate", "zugferd", "provenance"}
+PREFLIGHT_FIELDS = {"template", "data", "zugferd"}
 
 
 def _server_render(
@@ -162,7 +164,7 @@ def create_app(
         template_name = payload.get("template")
         data = payload.get("data")
         req_debug = payload.get("debug", False)
-        req_validate = payload.get("validate", False)
+        req_validate = payload.get("validate", True)
         req_zugferd = payload.get("zugferd")
         req_provenance = payload.get("provenance", False)
 
@@ -279,6 +281,66 @@ def create_app(
             headers=headers,
         )
 
+    async def preflight_endpoint(request: Request) -> JSONResponse:
+        """Pre-render readiness check — no rendering, just validation."""
+        from dataclasses import asdict
+
+        from .readiness import preflight
+
+        request_id = request.state.request_id
+
+        # Same body parsing as /render
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > MAX_BODY_SIZE:
+            return _error(400, ErrorCode.INVALID_DATA, "Request body too large", request_id, stage="execution")
+
+        body = await request.body()
+        if len(body) > MAX_BODY_SIZE:
+            return _error(400, ErrorCode.INVALID_DATA, "Request body too large", request_id, stage="execution")
+
+        try:
+            payload = json.loads(body)
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            return _error(400, ErrorCode.INVALID_DATA, f"Invalid JSON: {exc}", request_id, stage="execution")
+
+        if not isinstance(payload, dict):
+            return _error(400, ErrorCode.INVALID_DATA, "Request body must be a JSON object", request_id, stage="execution")
+
+        unknown = set(payload.keys()) - PREFLIGHT_FIELDS
+        if unknown:
+            return _error(400, ErrorCode.INVALID_DATA, f"Unknown fields: {', '.join(sorted(unknown))}", request_id, stage="execution")
+
+        template_name = payload.get("template")
+        data = payload.get("data")
+        req_zugferd = payload.get("zugferd")
+
+        if not template_name or not isinstance(template_name, str):
+            return _error(400, ErrorCode.INVALID_DATA, "Missing or invalid 'template' field", request_id, stage="execution")
+        if data is None or not isinstance(data, dict):
+            return _error(400, ErrorCode.INVALID_DATA, "Missing or invalid 'data' field", request_id, stage="execution")
+        if req_zugferd is not None and req_zugferd not in ("en16931", "xrechnung"):
+            return _error(400, ErrorCode.INVALID_DATA, "'zugferd' must be 'en16931' or 'xrechnung'", request_id, stage="execution")
+
+        # Same path traversal protection as /render
+        template_path = (templates_dir / template_name).resolve()
+        if not str(template_path).startswith(str(templates_dir)):
+            return _error(400, ErrorCode.INVALID_DATA, "Invalid template path", request_id, stage="execution")
+        if not template_path.exists():
+            return _error(404, ErrorCode.TEMPLATE_NOT_FOUND, f"Template not found: {template_name}", request_id, stage="execution")
+
+        verdict = preflight(template_path, data, zugferd=req_zugferd)
+        return JSONResponse(
+            {
+                "ready": verdict.ready,
+                "errors": [asdict(e) for e in verdict.errors],
+                "warnings": [asdict(e) for e in verdict.warnings],
+                "profile_eligible": verdict.profile_eligible,
+                "stages_checked": verdict.stages_checked,
+                "checked_at": verdict.checked_at,
+            },
+            headers={"X-Request-ID": request_id},
+        )
+
     async def request_id_middleware(request: Request, call_next):
         request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
         request.state.request_id = request_id
@@ -301,12 +363,25 @@ def create_app(
     routes = [
         Route("/health", health, methods=["GET"]),
         Route("/render", render_endpoint, methods=["POST"]),
+        Route("/preflight", preflight_endpoint, methods=["POST"]),
     ]
+
+    # Always mount trace API (returns 503 if history not enabled).
+    # Routes use bare paths (no /api/ prefix) because the Vite dev proxy
+    # strips /api/ before forwarding.  In production the server is accessed
+    # directly, so these paths work either way.
+    from .dashboard import api_history, api_stats, api_trace
+
+    routes.extend([
+        Route("/history", api_history, methods=["GET"]),
+        Route("/history/{trace_id}", api_trace, methods=["GET"]),
+        Route("/stats", api_stats, methods=["GET"]),
+    ])
 
     if dashboard and trace_store:
         from .dashboard import dashboard_routes
 
-        routes.extend(dashboard_routes())
+        routes.extend([r for r in dashboard_routes() if r.path == "/dashboard"])
 
     app = Starlette(
         routes=routes,

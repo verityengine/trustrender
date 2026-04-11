@@ -4,10 +4,11 @@ Infers a minimum structural contract from Jinja2 template usage and validates
 caller data before rendering. Catches missing fields, null values, and
 structural type mismatches (scalar vs object vs list) with path-based errors.
 
-Limitations (v1):
-- ``{% include %}`` templates are not followed. The inferred contract may be
-  incomplete for templates that rely on fragments for data access. Validation
-  is best-effort for those templates.
+Include-aware: ``{% include %}`` directives are followed recursively.
+Dynamic includes (``{% include some_var %}``) cannot be resolved statically
+and mark the contract as partial.
+
+Limitations:
 - No int/str/float type narrowing — structural types only
   (scalar, object, list[object], list[scalar], unknown).
 - ``required`` is a template-read heuristic, not business-semantic truth.
@@ -60,6 +61,15 @@ class ContractError:
 
 
 DataContract = dict[str, FieldSpec]
+
+
+@dataclass
+class InferenceResult:
+    """Result of contract inference with metadata about completeness."""
+
+    contract: DataContract
+    is_partial: bool = False
+    unresolved_includes: list[str] = field(default_factory=list)
 
 # -----------------------------------------------------------------------
 # Constants
@@ -129,6 +139,20 @@ def infer_contract(template_path: Path) -> DataContract:
 
     Returns a dict of top-level field names to FieldSpec trees describing
     the structural shape the template expects from caller data.
+
+    Follows ``{% include %}`` directives recursively.  Dynamic includes
+    that cannot be resolved statically are silently skipped (use
+    ``infer_contract_with_metadata`` to see which includes were unresolved).
+    """
+    return infer_contract_with_metadata(template_path).contract
+
+
+def infer_contract_with_metadata(template_path: Path) -> InferenceResult:
+    """Like ``infer_contract`` but returns metadata about completeness.
+
+    If the template uses dynamic includes (``{% include some_var %}``) or
+    references missing fragments, ``is_partial`` is True and the
+    unresolvable paths are listed in ``unresolved_includes``.
     """
     template_path = Path(template_path)
     env = jinja2.Environment(
@@ -142,11 +166,15 @@ def infer_contract(template_path: Path) -> DataContract:
     except jinja2.TemplateSyntaxError:
         # Template has syntax errors — skip contract inference and let the
         # downstream template_preprocess stage handle and classify the error.
-        return {}
+        return InferenceResult(contract={})
 
-    walker = _ASTWalker()
+    walker = _ASTWalker(env=env)
     walker.walk(ast)
-    return walker.contract
+    return InferenceResult(
+        contract=walker.contract,
+        is_partial=bool(walker.unresolved_includes),
+        unresolved_includes=list(walker.unresolved_includes),
+    )
 
 
 class _LoopInfo:
@@ -169,7 +197,7 @@ class _LoopInfo:
 class _ASTWalker:
     """Recursive Jinja2 AST walker that builds a DataContract."""
 
-    def __init__(self) -> None:
+    def __init__(self, env: jinja2.Environment | None = None) -> None:
         self.contract: DataContract = {}
         self._local_vars: set[str] = set()
         self._loop_info: dict[str, _LoopInfo] = {}
@@ -180,6 +208,10 @@ class _ASTWalker:
         self._unconditional: set[str] = set()
         # Current direct-truthiness-guard variable (if any).
         self._guard_var: str | None = None
+        # Include tracking.
+        self._env = env
+        self._visited_includes: set[str] = set()
+        self.unresolved_includes: list[str] = []
 
     # -- public entry point -------------------------------------------
 
@@ -386,9 +418,54 @@ class _ASTWalker:
         self._visit(node.right, guarded=guarded)
 
     def _visit_Include(self, node: nodes.Include, *, guarded: bool) -> None:
-        # v1: do not follow includes. The inferred contract may be
-        # incomplete for templates that rely on fragments.
-        pass
+        # Only follow static includes (Const template names).
+        if not isinstance(node.template, nodes.Const):
+            # Dynamic include — can't resolve statically.
+            self.unresolved_includes.append("<dynamic>")
+            return
+
+        include_name = node.template.value
+
+        # Prevent circular includes.
+        if include_name in self._visited_includes:
+            return
+        self._visited_includes.add(include_name)
+
+        # Need an environment to resolve includes.
+        if self._env is None:
+            self.unresolved_includes.append(include_name)
+            return
+
+        # Load and parse the included template.
+        try:
+            source = self._env.loader.get_source(self._env, include_name)[0]
+            inc_ast = self._env.parse(source)
+        except (jinja2.TemplateNotFound, jinja2.TemplateSyntaxError):
+            # Missing or broken fragment — graceful degradation.
+            if not node.ignore_missing:
+                self.unresolved_includes.append(include_name)
+            return
+
+        # Snapshot local scope before walking the include.
+        # Always snapshot+restore to prevent fragments from leaking
+        # local variable state back into the parent scope.
+        saved_locals = self._local_vars.copy()
+        saved_loop_info = dict(self._loop_info)
+        saved_guard = self._guard_var
+
+        if not node.with_context:
+            # Without context: fragment has no access to parent locals.
+            self._local_vars = set()
+            self._loop_info = {}
+            self._guard_var = None
+
+        # Walk the fragment AST — its data references merge into our contract.
+        self._visit(inc_ast, guarded=guarded)
+
+        # Restore parent scope.
+        self._local_vars = saved_locals
+        self._loop_info = saved_loop_info
+        self._guard_var = saved_guard
 
     def _visit_Const(self, node: nodes.Const, *, guarded: bool) -> None:
         pass  # Literal value, no data references.
