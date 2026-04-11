@@ -1649,7 +1649,6 @@ function AppWorkspace() {
           <div className="flex items-center gap-4">
             <a href="#" className="flex items-center gap-2.5">
               <AnimatedLogo size="small" />
-              <span className="text-[13px] font-semibold text-ink tracking-tight">Formforge</span>
             </a>
             <button onClick={startFresh}
               className="text-[11px] text-muted hover:text-ink px-3 py-1.5 rounded-md border border-rule-light hover:border-rule transition-colors cursor-pointer font-medium">
@@ -1659,7 +1658,7 @@ function AppWorkspace() {
           <div className="flex items-center gap-1 bg-surface rounded-lg p-1 border border-rule-light">
             {[['ready', 'Ready'], ['generate', 'Generate'], ['history', 'History']].map(([key, label]) => (
               <button key={key} onClick={() => setTab(key)}
-                className={`text-[12px] px-4 py-1.5 rounded-md font-medium transition-colors cursor-pointer
+                className={`text-[13px] px-4 py-1.5 rounded-md font-medium transition-colors cursor-pointer
                   ${tab === key ? 'bg-panel text-ink shadow-sm' : 'text-muted hover:text-mid'}`}>
                 {label}
                 {key === 'ready' && verdict && !checking && (
@@ -1879,19 +1878,19 @@ function AppWorkspace() {
                 {/* Output */}
                 <div className="bg-panel rounded-xl border border-rule-light overflow-hidden min-h-[480px] flex flex-col" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
                   <div className="px-4 py-2.5 border-b border-rule-light flex items-center justify-between gap-3">
-                    <span className="text-[10px] font-mono text-muted">{renderStatus === 'done' ? 'output.pdf' : renderStatus === 'rendering' ? 'rendering\u2026' : renderStatus === 'error' ? 'error' : 'output'}</span>
+                    <span className="text-[11px] font-mono text-muted">{renderStatus === 'done' ? 'output.pdf' : renderStatus === 'rendering' ? 'rendering\u2026' : renderStatus === 'error' ? 'error' : 'output'}</span>
                     <div className="flex items-center gap-3">
                       {renderStatus === 'done' && pdfData && pdfData.totalPages > 1 && (
-                        <div className="flex items-center gap-1.5">
-                          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage <= 1} className="text-[10px] text-muted hover:text-ink disabled:opacity-30 cursor-pointer disabled:cursor-default px-1">&larr;</button>
-                          <span className="text-[10px] text-muted font-mono tabular-nums">{currentPage}/{pdfData.totalPages}</span>
-                          <button onClick={() => setCurrentPage(p => Math.min(pdfData.totalPages, p + 1))} disabled={currentPage >= pdfData.totalPages} className="text-[10px] text-muted hover:text-ink disabled:opacity-30 cursor-pointer disabled:cursor-default px-1">&rarr;</button>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage <= 1} className="text-[12px] text-muted hover:text-ink disabled:opacity-30 cursor-pointer disabled:cursor-default px-1">&larr;</button>
+                          <span className="text-[11px] text-muted font-mono tabular-nums">{currentPage}/{pdfData.totalPages}</span>
+                          <button onClick={() => setCurrentPage(p => Math.min(pdfData.totalPages, p + 1))} disabled={currentPage >= pdfData.totalPages} className="text-[12px] text-muted hover:text-ink disabled:opacity-30 cursor-pointer disabled:cursor-default px-1">&rarr;</button>
                         </div>
                       )}
                       {traceId && <span className="text-[10px] font-mono text-muted">trace: {traceId.slice(0, 8)}</span>}
-                      {renderStatus === 'done' && <span className="text-[10px] text-sage font-medium">rendered</span>}
-                      {renderStatus === 'error' && <span className="text-[10px] text-wine font-mono font-medium">{renderError?.error}</span>}
-                      {pdfData?.downloadUrl && <a href={pdfData.downloadUrl} download="formforge-demo.pdf" className="text-[11px] text-rust hover:text-wine font-medium">Download</a>}
+                      {renderStatus === 'done' && <span className="text-[11px] text-sage font-medium">rendered</span>}
+                      {renderStatus === 'error' && <span className="text-[11px] text-wine font-mono font-medium">{renderError?.error}</span>}
+                      {pdfData?.downloadUrl && <a href={pdfData.downloadUrl} download="formforge-demo.pdf" className="text-[12px] text-rust hover:text-wine font-medium">Download</a>}
                     </div>
                   </div>
                   <div className="flex-1 flex items-center justify-center p-4">
