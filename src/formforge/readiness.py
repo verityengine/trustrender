@@ -433,55 +433,42 @@ def _check_compliance(
             message=e.message,
         ))
 
-    # XSD schema validation — verify generated XML is structurally valid.
-    # Only runs when field validation passes (no point generating XML from bad data).
+    # XSD + Schematron validation — only when field validation passes.
     if not errors:
         try:
-            from .zugferd import build_invoice_xml
+            from .zugferd import build_invoice_xml, validate_zugferd_xml
 
             xml_bytes = build_invoice_xml(data, profile=zugferd)
-            try:
-                from facturx import xml_check_xsd
-
-                xml_check_xsd(xml_bytes)
-            except ImportError:
+            xml_errors = validate_zugferd_xml(xml_bytes)
+            if xml_errors is None:
                 issues.append(ReadinessIssue(
                     stage="compliance",
                     check="xsd_validation",
                     severity="warning",
                     path="facturx",
-                    message="facturx not installed — XSD validation skipped",
-                ))
-            except Exception as exc:
-                issues.append(ReadinessIssue(
-                    stage="compliance",
-                    check="xsd_validation",
-                    severity="error",
-                    path="xml",
-                    message=f"XSD validation failed: {exc}",
+                    message="facturx not installed — XSD/Schematron validation skipped",
                 ))
             else:
-                # Schematron business-rule validation (only if XSD passed)
-                try:
-                    from facturx.facturx import xml_check_schematron
-
-                    xml_check_schematron(xml_bytes)
-                except ImportError:
+                for msg in xml_errors:
                     issues.append(ReadinessIssue(
                         stage="compliance",
-                        check="schematron_validation",
-                        severity="warning",
-                        path="facturx",
-                        message="facturx not installed — Schematron validation skipped",
-                    ))
-                except Exception as sch_exc:
-                    issues.append(ReadinessIssue(
-                        stage="compliance",
-                        check="schematron_validation",
+                        check="xsd_validation" if "XSD" in msg else "schematron_validation",
                         severity="error",
                         path="xml",
-                        message=f"Schematron validation failed: {sch_exc}",
+                        message=msg,
                     ))
+                # Advisory: warn if Schematron specifically is unavailable
+                if not xml_errors:
+                    try:
+                        from facturx.facturx import xml_check_schematron  # noqa: F401
+                    except ImportError:
+                        issues.append(ReadinessIssue(
+                            stage="compliance",
+                            check="schematron_validation",
+                            severity="warning",
+                            path="facturx",
+                            message="facturx.facturx not available — Schematron validation skipped",
+                        ))
         except Exception as exc:
             issues.append(ReadinessIssue(
                 stage="compliance",
@@ -491,11 +478,9 @@ def _check_compliance(
                 message=f"XML generation failed: {exc}",
             ))
 
-    # Profile eligibility report
-    for profile in ("en16931",):
-        profile_errors = validate_zugferd_invoice_data(data, profile=profile)
-        if not profile_errors:
-            eligible.append(profile)
+    # Profile eligibility — reuse the validation result from above
+    if not errors:
+        eligible.append(zugferd)
 
 
 # ---------------------------------------------------------------------------
@@ -511,9 +496,9 @@ def _check_text_safety(
     Runs independently of semantic hints.  Walks the entire data dict and
     scans every string value for problematic characters.
     """
-    from .semantic import _collect_string_paths, _scan_text
+    from .semantic import collect_string_paths, scan_text
 
-    for path in _collect_string_paths(data):
+    for path in collect_string_paths(data):
         # Resolve the value from the data dict using the concrete path
         current: object = data
         try:
@@ -526,7 +511,7 @@ def _check_text_safety(
             continue
         if not isinstance(current, str):
             continue
-        for problem in _scan_text(current):
+        for problem in scan_text(current):
             issues.append(ReadinessIssue(
                 stage="text_safety",
                 check="text_anomaly",

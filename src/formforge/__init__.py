@@ -249,35 +249,18 @@ def _render_document_pipeline(
             try:
                 xml_bytes = build_invoice_xml(data, profile=zugferd)
 
-                # XSD validation: guard rail before embedding XML into PDF
-                try:
-                    from facturx import xml_check_xsd
-                    xml_check_xsd(xml_bytes)
-                except ImportError:
-                    pass  # facturx not installed — skip XSD check
-                except Exception as xsd_exc:
-                    raise FormforgeError(
-                        f"Generated XML failed XSD validation: {xsd_exc}",
-                        code=ErrorCode.ZUGFERD_ERROR,
-                        stage="zugferd",
-                        detail=str(xsd_exc),
-                        template_path=str(template_path),
-                    ) from xsd_exc
+                # XSD + Schematron validation: guard rail before embedding XML
+                from .zugferd import validate_zugferd_xml
 
-                # Schematron validation: business rule check on generated XML
-                try:
-                    from facturx.facturx import xml_check_schematron
-                    xml_check_schematron(xml_bytes)
-                except ImportError:
-                    pass  # facturx not installed — skip Schematron check
-                except Exception as sch_exc:
+                xml_errors = validate_zugferd_xml(xml_bytes)
+                if xml_errors:
                     raise FormforgeError(
-                        f"Generated XML failed Schematron validation: {sch_exc}",
+                        f"Generated XML failed validation: {xml_errors[0]}",
                         code=ErrorCode.ZUGFERD_ERROR,
                         stage="zugferd",
-                        detail=str(sch_exc),
+                        detail="; ".join(xml_errors),
                         template_path=str(template_path),
-                    ) from sch_exc
+                    )
 
                 pdf_bytes = apply_zugferd(pdf_bytes, xml_bytes)
                 trace.stages.append(StageTrace(

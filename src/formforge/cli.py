@@ -10,6 +10,46 @@ from pathlib import Path
 from . import AuditResult, FormforgeError, __version__, audit, render
 
 
+# ---------------------------------------------------------------------------
+# Shared argument factories
+# ---------------------------------------------------------------------------
+
+
+def _add_font_path(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--font-path",
+        action="append",
+        dest="font_paths",
+        help="Additional font directory (can be repeated)",
+    )
+
+
+def _add_validate(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--no-validate",
+        action="store_false",
+        dest="validate",
+        help="Skip data contract validation before rendering",
+    )
+    parser.set_defaults(validate=True)
+
+
+def _add_zugferd(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--zugferd",
+        choices=["en16931"],
+        help="Generate ZUGFeRD-compliant PDF (EN 16931)",
+    )
+
+
+def _add_provenance(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--provenance",
+        action="store_true",
+        help="Embed cryptographic generation proof in PDF metadata",
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="formforge",
@@ -28,29 +68,10 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Preserve intermediate .typ file after rendering",
     )
-    render_cmd.add_argument(
-        "--font-path",
-        action="append",
-        dest="font_paths",
-        help="Additional font directory (can be repeated)",
-    )
-    render_cmd.add_argument(
-        "--no-validate",
-        action="store_false",
-        dest="validate",
-        help="Skip data contract validation before rendering",
-    )
-    render_cmd.set_defaults(validate=True)
-    render_cmd.add_argument(
-        "--zugferd",
-        choices=["en16931"],
-        help="Generate ZUGFeRD-compliant PDF (EN 16931)",
-    )
-    render_cmd.add_argument(
-        "--provenance",
-        action="store_true",
-        help="Embed cryptographic generation proof in PDF metadata",
-    )
+    _add_font_path(render_cmd)
+    _add_validate(render_cmd)
+    _add_zugferd(render_cmd)
+    _add_provenance(render_cmd)
 
     check_cmd = sub.add_parser("check", help="Inspect or validate template data contract")
     check_cmd.add_argument("template", help="Path to .j2.typ template")
@@ -69,12 +90,7 @@ def main(argv: list[str] | None = None) -> int:
         "--host", default="127.0.0.1", help="Host to bind to (default: 127.0.0.1)"
     )
     serve_cmd.add_argument("--debug", action="store_true", help="Enable debug mode")
-    serve_cmd.add_argument(
-        "--font-path",
-        action="append",
-        dest="font_paths",
-        help="Additional font directory (can be repeated)",
-    )
+    _add_font_path(serve_cmd)
     serve_cmd.add_argument(
         "--render-timeout",
         type=float,
@@ -121,12 +137,7 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Block on partial contracts from unresolved dynamic includes",
     )
-    preflight_cmd.add_argument(
-        "--font-path",
-        action="append",
-        dest="font_paths",
-        help="Additional font directory (can be repeated)",
-    )
+    _add_font_path(preflight_cmd)
 
     audit_cmd = sub.add_parser("audit", help="Render with full audit trail")
     audit_cmd.add_argument("template", help="Path to template (.j2.typ or .typ)")
@@ -146,29 +157,10 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Run semantic validation (arithmetic, dates, completeness)",
     )
-    audit_cmd.add_argument(
-        "--no-validate",
-        action="store_false",
-        dest="validate",
-        help="Skip data contract validation before rendering",
-    )
-    audit_cmd.set_defaults(validate=True)
-    audit_cmd.add_argument(
-        "--font-path",
-        action="append",
-        dest="font_paths",
-        help="Additional font directory (can be repeated)",
-    )
-    audit_cmd.add_argument(
-        "--zugferd",
-        choices=["en16931"],
-        help="Generate ZUGFeRD-compliant PDF",
-    )
-    audit_cmd.add_argument(
-        "--provenance",
-        action="store_true",
-        help="Embed cryptographic generation proof",
-    )
+    _add_validate(audit_cmd)
+    _add_font_path(audit_cmd)
+    _add_zugferd(audit_cmd)
+    _add_provenance(audit_cmd)
     audit_cmd.add_argument(
         "--json",
         action="store_true",
@@ -187,11 +179,10 @@ def main(argv: list[str] | None = None) -> int:
         required=True,
         help="Baseline directory",
     )
-    baseline_save.add_argument("--font-path", action="append", dest="font_paths")
-    baseline_save.add_argument("--no-validate", action="store_false", dest="validate")
-    baseline_save.set_defaults(validate=True)
-    baseline_save.add_argument("--zugferd", choices=["en16931"])
-    baseline_save.add_argument("--provenance", action="store_true")
+    _add_font_path(baseline_save)
+    _add_validate(baseline_save)
+    _add_zugferd(baseline_save)
+    _add_provenance(baseline_save)
 
     baseline_check = baseline_sub.add_parser("check", help="Check against baseline")
     baseline_check.add_argument("template", help="Path to template")
@@ -201,11 +192,10 @@ def main(argv: list[str] | None = None) -> int:
         required=True,
         help="Baseline directory",
     )
-    baseline_check.add_argument("--font-path", action="append", dest="font_paths")
-    baseline_check.add_argument("--no-validate", action="store_false", dest="validate")
-    baseline_check.set_defaults(validate=True)
-    baseline_check.add_argument("--zugferd", choices=["en16931"])
-    baseline_check.add_argument("--provenance", action="store_true")
+    _add_font_path(baseline_check)
+    _add_validate(baseline_check)
+    _add_zugferd(baseline_check)
+    _add_provenance(baseline_check)
 
     history_cmd = sub.add_parser("history", help="View render history and lineage")
     history_cmd.add_argument("--template", help="Filter by template name")
@@ -362,30 +352,10 @@ def _run_trace(args: argparse.Namespace) -> int:
 
 
 def _resolve_hints(template_name: str):
-    """Auto-detect semantic hints based on template name.
+    """Auto-detect semantic hints based on template name."""
+    from .semantic import resolve_hints
 
-    Returns None for unrecognized template types — no fake confidence.
-    """
-    from .semantic import (
-        INVOICE_HINTS,
-        LETTER_HINTS,
-        RECEIPT_HINTS,
-        REPORT_HINTS,
-        STATEMENT_HINTS,
-    )
-
-    name = template_name.lower()
-    if "invoice" in name or "einvoice" in name:
-        return INVOICE_HINTS
-    if "receipt" in name:
-        return RECEIPT_HINTS
-    if "statement" in name:
-        return STATEMENT_HINTS
-    if "letter" in name:
-        return LETTER_HINTS
-    if "report" in name:
-        return REPORT_HINTS
-    return None
+    return resolve_hints(template_name)
 
 
 def _run_audit(args: argparse.Namespace) -> int:
@@ -622,13 +592,8 @@ def _run_preflight(args: argparse.Namespace) -> int:
     # Profile eligibility
     if verdict.profile_eligible:
         print()
-        profiles = []
-        for p in ("en16931",):
-            if p in verdict.profile_eligible:
-                profiles.append(f"{p} ✓")
-            else:
-                profiles.append(f"{p} ✗")
-        print(f"  Profile eligibility: {', '.join(profiles)}")
+        eligible = "en16931" in verdict.profile_eligible
+        print(f"  Profile eligibility: en16931 {'✓' if eligible else '✗'}")
 
     return 0 if verdict.ready else 1
 

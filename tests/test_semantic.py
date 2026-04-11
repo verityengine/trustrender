@@ -810,29 +810,29 @@ class TestReportSerialization:
 
 
 class TestCollectStringPaths:
-    """Tests for _collect_string_paths — auto-discovery of string fields."""
+    """Tests for collect_string_paths — auto-discovery of string fields."""
 
     def test_flat_dict(self):
-        from formforge.semantic import _collect_string_paths
+        from formforge.semantic import collect_string_paths
 
         data = {"name": "Acme", "city": "Berlin", "count": 42}
-        paths = _collect_string_paths(data)
+        paths = collect_string_paths(data)
         assert "name" in paths
         assert "city" in paths
         assert "count" not in paths  # int, not string
 
     def test_nested_dict(self):
-        from formforge.semantic import _collect_string_paths
+        from formforge.semantic import collect_string_paths
 
         data = {"sender": {"name": "Acme", "address": {"city": "Berlin"}}}
-        paths = _collect_string_paths(data)
+        paths = collect_string_paths(data)
         assert "sender.name" in paths
         assert "sender.address.city" in paths
 
     def test_arrays(self):
-        from formforge.semantic import _collect_string_paths
+        from formforge.semantic import collect_string_paths
 
         data = {"items": [{"desc": "Widget"}, {"desc": "Gadget"}]}
-        paths = _collect_string_paths(data)
+        paths = collect_string_paths(data)
         assert "items[0].desc" in paths
         assert "items[1].desc" in paths

@@ -190,6 +190,31 @@ REPORT_HINTS = SemanticHints(
 
 
 # ---------------------------------------------------------------------------
+# Hint resolution
+# ---------------------------------------------------------------------------
+
+
+def resolve_hints(template_name: str) -> SemanticHints | None:
+    """Auto-detect semantic hints based on template name.
+
+    Returns the matching preset for recognized template types,
+    or None for unrecognized templates (no fake confidence).
+    """
+    name = template_name.lower()
+    if "invoice" in name or "einvoice" in name:
+        return INVOICE_HINTS
+    if "receipt" in name:
+        return RECEIPT_HINTS
+    if "statement" in name:
+        return STATEMENT_HINTS
+    if "letter" in name:
+        return LETTER_HINTS
+    if "report" in name:
+        return REPORT_HINTS
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Value extraction helpers
 # ---------------------------------------------------------------------------
 
@@ -524,7 +549,7 @@ def _describe_char(ch: str) -> str:
     return f"U+{cp:04X}"
 
 
-def _collect_string_paths(
+def collect_string_paths(
     data: dict, prefix: str = "", depth: int = 0,
 ) -> list[str]:
     """Recursively walk a data dict, returning paths to all string values.
@@ -540,18 +565,18 @@ def _collect_string_paths(
         if isinstance(value, str):
             paths.append(path)
         elif isinstance(value, dict):
-            paths.extend(_collect_string_paths(value, path, depth + 1))
+            paths.extend(collect_string_paths(value, path, depth + 1))
         elif isinstance(value, list):
             for i, item in enumerate(value):
                 item_path = f"{path}[{i}]"
                 if isinstance(item, str):
                     paths.append(item_path)
                 elif isinstance(item, dict):
-                    paths.extend(_collect_string_paths(item, item_path, depth + 1))
+                    paths.extend(collect_string_paths(item, item_path, depth + 1))
     return paths
 
 
-def _scan_text(value: str) -> list[str]:
+def scan_text(value: str) -> list[str]:
     """Scan a string for control and zero-width characters.
 
     Returns list of human-readable descriptions of problems found.
@@ -592,7 +617,7 @@ def _check_text_anomalies(
                 val = item.get(item_field)
                 if not isinstance(val, str):
                     continue
-                for problem in _scan_text(val):
+                for problem in scan_text(val):
                     issues.append(SemanticIssue(
                         category="text_anomaly",
                         severity="warning",
@@ -606,7 +631,7 @@ def _check_text_anomalies(
             val = _resolve_path(data, field_spec)
             if not isinstance(val, str):
                 continue
-            for problem in _scan_text(val):
+            for problem in scan_text(val):
                 issues.append(SemanticIssue(
                     category="text_anomaly",
                     severity="warning",

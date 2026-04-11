@@ -24,12 +24,18 @@ import datetime
 from decimal import Decimal
 from pathlib import Path
 
-from drafthorse.models.accounting import ApplicableTradeTax
-from drafthorse.models.document import Document
-from drafthorse.models.party import TaxRegistration
-from drafthorse.models.payment import PaymentMeans, PaymentTerms
-from drafthorse.models.tradelines import LineItem
-from drafthorse.pdf import attach_xml
+try:
+    from drafthorse.models.accounting import ApplicableTradeTax
+    from drafthorse.models.document import Document
+    from drafthorse.models.party import TaxRegistration
+    from drafthorse.models.payment import PaymentMeans, PaymentTerms
+    from drafthorse.models.tradelines import LineItem
+    from drafthorse.pdf import attach_xml
+except ImportError:
+    raise ImportError(
+        "ZUGFeRD support requires the 'drafthorse' package. "
+        "Install with: pip install formforge[zugferd]"
+    )
 
 from .contract import ContractError
 
@@ -416,6 +422,43 @@ def build_invoice_xml(data: dict, *, profile: str = "en16931") -> bytes:
     ms.due_amount = Decimal(str(data["total"]))
 
     return doc.serialize(schema="FACTUR-X_EN16931")
+
+
+# ---------------------------------------------------------------------------
+# XML validation (shared by render pipeline and readiness)
+# ---------------------------------------------------------------------------
+
+
+def validate_zugferd_xml(xml_bytes: bytes) -> list[str] | None:
+    """Run XSD + Schematron validation on generated ZUGFeRD XML.
+
+    Returns:
+        None — facturx not installed, validation unavailable.
+        []   — valid (both XSD and Schematron passed).
+        [errors...] — list of validation error messages.
+    """
+    try:
+        from facturx import xml_check_xsd
+    except ImportError:
+        return None
+
+    errors: list[str] = []
+
+    try:
+        xml_check_xsd(xml_bytes)
+    except Exception as exc:
+        errors.append(f"XSD validation failed: {exc}")
+        return errors  # Skip Schematron if XSD fails
+
+    try:
+        from facturx.facturx import xml_check_schematron
+        xml_check_schematron(xml_bytes)
+    except ImportError:
+        pass  # Schematron not available in this facturx build
+    except Exception as exc:
+        errors.append(f"Schematron validation failed: {exc}")
+
+    return errors
 
 
 # ---------------------------------------------------------------------------
