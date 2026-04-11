@@ -25,6 +25,9 @@ output/
 *.pdf
 !examples/*.pdf
 
+# Linting
+.ruff_cache/
+
 # Testing
 .pytest_cache/
 htmlcov/
