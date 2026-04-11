@@ -69,6 +69,15 @@ def main(argv: list[str] | None = None) -> int:
         help="Additional font directory (can be repeated)",
     )
 
+    preflight_cmd = sub.add_parser("preflight", help="Pre-render readiness verification")
+    preflight_cmd.add_argument("template", help="Path to template (.j2.typ or .typ)")
+    preflight_cmd.add_argument("data", help="Path to JSON data file")
+    preflight_cmd.add_argument(
+        "--zugferd",
+        choices=["en16931", "xrechnung"],
+        help="Check compliance eligibility for this profile",
+    )
+
     doctor_cmd = sub.add_parser("doctor", help="Check environment and diagnose issues")
     doctor_cmd.add_argument(
         "--smoke",
@@ -88,6 +97,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "check":
         return _run_check(args)
 
+    if args.command == "preflight":
+        return _run_preflight(args)
+
     if args.command == "serve":
         return _run_serve(args)
 
@@ -97,6 +109,60 @@ def main(argv: list[str] | None = None) -> int:
         return run_doctor(smoke=args.smoke)
 
     return 1
+
+
+def _run_preflight(args: argparse.Namespace) -> int:
+    import json
+
+    from .readiness import preflight
+
+    template_path = Path(args.template)
+    data_path = Path(args.data)
+
+    if not data_path.exists():
+        print(f"error: Data file not found: {data_path}", file=sys.stderr)
+        return 1
+
+    with open(data_path) as f:
+        data = json.load(f)
+
+    verdict = preflight(template_path, data, zugferd=args.zugferd)
+
+    # Header
+    status = "PASS" if verdict.ready else "FAIL"
+    warning_count = len(verdict.warnings)
+    suffix = f" ({warning_count} warning{'s' if warning_count != 1 else ''})" if warning_count else ""
+    print(f"Readiness: {status}{suffix}")
+    print()
+
+    # Stage results
+    for stage in verdict.stages_checked:
+        stage_errors = [i for i in verdict.errors if i.stage == stage]
+        stage_warnings = [i for i in verdict.warnings if i.stage == stage]
+        if stage_errors:
+            marker = "✗ FAIL"
+        elif stage_warnings:
+            marker = "⚠ warn"
+        else:
+            marker = "✓ pass"
+        print(f"  {stage:<14} {marker}")
+        for issue in stage_errors:
+            print(f"    {issue.path}: {issue.message}")
+        for issue in stage_warnings:
+            print(f"    {issue.path}: {issue.message}")
+
+    # Profile eligibility
+    if verdict.profile_eligible:
+        print()
+        profiles = []
+        for p in ("en16931", "xrechnung"):
+            if p in verdict.profile_eligible:
+                profiles.append(f"{p} ✓")
+            else:
+                profiles.append(f"{p} ✗")
+        print(f"  Profile eligibility: {', '.join(profiles)}")
+
+    return 0 if verdict.ready else 1
 
 
 def _format_error(exc: FormforgeError) -> str:
