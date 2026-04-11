@@ -120,6 +120,127 @@ class TestCliIntegration:
         assert main(["doctor", "--smoke"]) == 0
 
 
+class TestDoctorFontEnhancements:
+    """Tests for enhanced font inventory: stack parsing, actionable fixes, env path."""
+
+    def test_font_stack_detected(self, tmp_path):
+        """Font stacks like font: ("Inter", "Noto") should detect both names."""
+        from formforge.doctor import check_template_fonts
+
+        template = tmp_path / "test.j2.typ"
+        template.write_text('#set text(font: ("Inter", "Noto Sans"))\nHello')
+
+        with patch("formforge.bundled_font_dir", return_value=None), \
+             patch("formforge.doctor._find_repo_root", return_value=None):
+            status, msg = check_template_fonts(templates_dir=tmp_path)
+        assert "Inter" in msg
+        assert "Noto Sans" in msg
+
+    def test_single_font_still_works(self, tmp_path):
+        """Single font declarations still detected after refactor."""
+        from formforge.doctor import check_template_fonts
+
+        template = tmp_path / "test.j2.typ"
+        template.write_text('#set text(font: "Roboto")\nHello')
+
+        with patch("formforge.bundled_font_dir", return_value=None), \
+             patch("formforge.doctor._find_repo_root", return_value=None):
+            status, msg = check_template_fonts(templates_dir=tmp_path)
+        assert "Roboto" in msg
+        assert status == WARN  # not available
+
+    def test_mixed_single_and_stack(self, tmp_path):
+        """Templates with both single fonts and stacks should list all."""
+        from formforge.doctor import check_template_fonts
+
+        template = tmp_path / "test.j2.typ"
+        template.write_text(
+            '#set text(font: "Inter")\n'
+            '#show heading: set text(font: ("Roboto", "Arial"))\n'
+        )
+
+        with patch("formforge.bundled_font_dir", return_value=None), \
+             patch("formforge.doctor._find_repo_root", return_value=None):
+            status, msg = check_template_fonts(templates_dir=tmp_path)
+        assert "Inter" in msg
+        assert "Roboto" in msg
+        assert "Arial" in msg
+
+    def test_missing_inter_shows_download_fix(self, tmp_path):
+        """When Inter is missing, doctor should suggest downloading it."""
+        from formforge.doctor import check_template_fonts
+
+        template = tmp_path / "test.j2.typ"
+        template.write_text('#set text(font: "Inter")\nHello')
+
+        with patch("formforge.bundled_font_dir", return_value=None), \
+             patch("formforge.doctor._find_repo_root", return_value=None):
+            env = dict(**__import__("os").environ)
+            env.pop("FORMFORGE_FONT_PATH", None)
+            with patch.dict("os.environ", env, clear=True):
+                status, msg = check_template_fonts(templates_dir=tmp_path)
+        assert "download Inter" in msg
+        assert "fonts.google.com" in msg
+
+    def test_missing_font_shows_target_path(self, tmp_path):
+        """When FORMFORGE_FONT_PATH is set, doctor should suggest installing there."""
+        from formforge.doctor import check_template_fonts
+
+        font_dir = tmp_path / "fonts"
+        font_dir.mkdir()
+
+        template_dir = tmp_path / "templates"
+        template_dir.mkdir()
+        template = template_dir / "test.j2.typ"
+        template.write_text('#set text(font: "CustomFont")\nHello')
+
+        with patch("formforge.bundled_font_dir", return_value=None), \
+             patch("formforge.doctor._find_repo_root", return_value=None), \
+             patch.dict("os.environ", {"FORMFORGE_FONT_PATH": str(font_dir)}):
+            status, msg = check_template_fonts(templates_dir=template_dir)
+        assert status == WARN
+        assert str(font_dir) in msg
+
+    def test_font_path_env_inventory(self, tmp_path):
+        """When FORMFORGE_FONT_PATH has fonts, doctor should show inventory."""
+        from formforge.doctor import check_template_fonts
+
+        font_dir = tmp_path / "fonts"
+        font_dir.mkdir()
+        (font_dir / "Roboto-Regular.ttf").write_bytes(b"fake")
+
+        template_dir = tmp_path / "templates"
+        template_dir.mkdir()
+        template = template_dir / "test.j2.typ"
+        template.write_text('#set text(font: "Inter")\nHello')
+
+        with patch("formforge.bundled_font_dir", return_value=None), \
+             patch("formforge.doctor._find_repo_root", return_value=None), \
+             patch.dict("os.environ", {"FORMFORGE_FONT_PATH": str(font_dir)}):
+            status, msg = check_template_fonts(templates_dir=template_dir)
+        assert "Env path:" in msg
+        assert "roboto" in msg.lower()
+
+    def test_font_path_env_empty_dir_no_crash(self, tmp_path):
+        """Empty FORMFORGE_FONT_PATH directory should not crash."""
+        from formforge.doctor import check_template_fonts
+
+        font_dir = tmp_path / "fonts"
+        font_dir.mkdir()
+
+        template_dir = tmp_path / "templates"
+        template_dir.mkdir()
+        template = template_dir / "test.j2.typ"
+        template.write_text('#set text(font: "Inter")\nHello')
+
+        with patch("formforge.bundled_font_dir", return_value=None), \
+             patch("formforge.doctor._find_repo_root", return_value=None), \
+             patch.dict("os.environ", {"FORMFORGE_FONT_PATH": str(font_dir)}):
+            status, msg = check_template_fonts(templates_dir=template_dir)
+        assert status == WARN
+        assert "Inter" in msg
+
+
 class TestFailurePaths:
     """Test the most important failure: no backend available."""
 

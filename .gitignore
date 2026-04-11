@@ -33,3 +33,6 @@ output/
 htmlcov/
 .coverage
 .claude/
+
+# Local caches (Mustang JAR, etc.)
+.cache/

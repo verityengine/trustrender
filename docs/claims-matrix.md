@@ -63,7 +63,6 @@ Every public or semi-public claim, checked against code.
 | EN 16931 compliant | README | NARROW | DE/EUR/B2B/single-rate/type-380 only. Unsupported shapes fail loudly. | **Tightened (2026-04-11)**: README now says "EN 16931 e-invoices for German domestic B2B" |
 | Passes Mustang validator | README (old) | RESOLVED | Wording downgraded to "XSD + Schematron validated." Mustang referenced as one-time manual proof. | **Done** |
 | XSD + Schematron validated | Website | NARROW | XSD/Schematron runs in test suite, not render pipeline. preflight() now runs XSD when facturx available. | **Tightened (2026-04-11)**: Website changed to "Schema-tested CII XML" |
-| XRechnung supported | Website, README | REMOVED | XRechnung Schematron fails — guideline ID rejected by factur-x Schematron rules. KOSIT rules not integrated. Zero tests. | **Removed (2026-04-11)**: Dropped from website and README. Listed as "not yet validated" in known-limits |
 | "Structured data in, compliant artifact out" | Website | REMOVED | Too broad — implies universal compliance. Replaced with scoped language. | **Removed (2026-04-11)** |
 | PDF/A-3b with embedded XML | README | TRUE | `drafthorse.pdf.attach_xml()` used, tested | None |
 | ZUGFeRD unsupported cases fail loudly | zugferd.py comments | TRUE | Tests for non-EUR, non-DE, mixed rates, empty items, missing fields, allowances/charges all exist and pass | **Strengthened (2026-04-11)**: allowance/charge rejection added |

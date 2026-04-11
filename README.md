@@ -314,7 +314,6 @@ The invoice data model uses raw numeric amounts (not pre-formatted strings), exp
 
 ### Not supported (fails loudly at validation time)
 
-- XRechnung (out of scope)
 - Reverse charge
 - Intra-community / cross-border
 - Allowances, charges, or discounts

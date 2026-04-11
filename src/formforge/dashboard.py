@@ -89,9 +89,9 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
   --border:#2c2c2c; --border-light:#3b3b3b;
   --ink:#f3ede3; --ink2:#b7a995; --muted:#847766; --faint:#847766;
   --accent:#b86a3a; --accent-hover:#cb7a47; --accent-soft:rgba(184,106,58,.10); --accent-border:rgba(184,106,58,.25);
-  --ok:#5f8f73; --ok-soft:rgba(95,143,115,.12); --ok-border:rgba(95,143,115,.22);
-  --err:#b45849; --err-soft:rgba(180,88,73,.12); --err-border:rgba(180,88,73,.22);
-  --info:#5f7690; --info-soft:rgba(95,118,144,.12);
+  --ok:#5f8f73; --ok-soft:rgba(95,143,115,.12); --ok-border:rgba(95,143,115,.22); --ok-faint:rgba(95,143,115,.07);
+  --err:#b45849; --err-soft:rgba(180,88,73,.12); --err-border:rgba(180,88,73,.22); --err-faint:rgba(180,88,73,.07);
+  --info:#5f7690; --info-soft:rgba(95,118,144,.12); --info-border:rgba(95,118,144,.22);
   --display:'DM Serif Display',Georgia,serif;
   --sans:'Inter',system-ui,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,monospace;
@@ -116,9 +116,12 @@ header button:hover{border-color:var(--accent-border);color:var(--ink2);backgrou
 .strip .stat{flex:1;padding:16px 28px;border-right:1px solid var(--border)}
 .strip .stat:last-child{border-right:none}
 .strip .stat .label{font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--faint);margin-bottom:6px;font-weight:500}
-.strip .stat .val{font-size:24px;font-weight:600;font-family:var(--mono);color:var(--ink2);line-height:1}
+.strip .stat .val{font-size:20px;font-weight:500;font-family:var(--mono);color:var(--ink2);line-height:1}
+.strip .stat .val.primary{font-size:28px;font-weight:700}
 .strip .stat .val.sage{color:var(--ok)}
+.strip .stat .val.sage.perfect{background:var(--ok-faint);padding:2px 8px;border-radius:4px;margin:-2px -8px}
 .strip .stat .val.wine{color:var(--err)}
+.strip .stat .val.wine.hot{background:var(--err-faint);padding:2px 8px;border-radius:4px;margin:-2px -8px}
 
 /* Split view */
 .split{display:flex;flex:1;overflow:hidden}
@@ -138,7 +141,9 @@ header button:hover{border-color:var(--accent-border);color:var(--ink2);backgrou
 .events::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 .event{padding:14px 20px 14px 18px;border-bottom:1px solid var(--border);border-left:2px solid transparent;cursor:pointer;transition:all .12s}
 .event:hover{background:var(--surface)}
-.event.selected{background:var(--panel);border-left:2px solid var(--accent)}
+.event.selected{background:var(--panel);border-left:3px solid var(--accent);box-shadow:inset 0 0 0 1px var(--accent-border)}
+.event.event-fail{border-left:2px solid var(--err-border)}
+.event.event-fail.selected{border-left:3px solid var(--err);box-shadow:inset 0 0 0 1px var(--err-border)}
 .event .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
 .event .template{font-size:13px;font-weight:500;color:var(--ink)}
 .event .time{font-size:10px;font-family:var(--mono);color:var(--faint);letter-spacing:.3px}
@@ -146,10 +151,11 @@ header button:hover{border-color:var(--accent-border);color:var(--ink2);backgrou
 .event .badge{font-size:9px;font-weight:600;padding:3px 7px;border-radius:3px;letter-spacing:.5px;text-transform:uppercase;border:1px solid transparent}
 .event .badge.ok{background:var(--ok-soft);color:var(--ok);border-color:var(--ok-border)}
 .event .badge.fail{background:var(--err-soft);color:var(--err);border-color:var(--err-border)}
+.event .badge.compliance{background:var(--info-soft);color:var(--info);border-color:var(--info-border)}
 .event .pill{font-size:9px;padding:2px 6px;border-radius:3px;font-family:var(--mono);letter-spacing:.2px}
 .event .pill.zugferd{background:var(--info-soft);color:var(--info)}
 .event .pill.prov{background:var(--accent-soft);color:var(--accent)}
-.event .dur{font-size:10px;color:var(--faint);font-family:var(--mono);margin-left:auto}
+.event .dur{font-size:10px;color:var(--ink2);font-family:var(--mono);font-weight:500;margin-left:auto}
 .event .error-line{margin-top:8px;font-size:11px;color:var(--err);font-family:var(--mono);padding-left:1px;line-height:1.5;opacity:.85}
 
 /* Detail pane */
@@ -158,7 +164,13 @@ header button:hover{border-color:var(--accent-border);color:var(--ink2);backgrou
 .detail-pane::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 .detail-empty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--faint);font-size:13px;letter-spacing:.2px}
 .detail{padding:36px 40px}
-.detail h2{font-family:var(--display);font-size:26px;font-weight:400;margin-bottom:24px;color:var(--ink);letter-spacing:.2px}
+.detail h2{font-family:var(--display);font-size:29px;font-weight:400;margin-bottom:0;color:var(--ink);letter-spacing:.2px;line-height:1.2}
+.detail-header{margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border);border-left:3px solid var(--accent);padding-left:20px}
+.detail-header .header-meta{display:flex;align-items:center;gap:14px;margin-top:10px}
+.detail-header .header-meta .otag{font-size:9px;font-weight:600;padding:2px 8px;border-radius:3px;letter-spacing:.6px;text-transform:uppercase;font-family:var(--sans)}
+.detail-header .header-meta .otag.ok{background:var(--ok-soft);color:var(--ok);border:1px solid var(--ok-border)}
+.detail-header .header-meta .otag.fail{background:var(--err-soft);color:var(--err);border:1px solid var(--err-border)}
+.detail-header .header-meta span{font-size:11px;color:var(--muted);font-family:var(--mono)}
 .detail .fields{display:grid;grid-template-columns:1fr 1fr;gap:20px 32px;margin-bottom:32px;padding:20px 24px;background:var(--surface);border:1px solid var(--border);border-radius:8px}
 .detail .field .label{font-size:9px;text-transform:uppercase;letter-spacing:1.1px;color:var(--faint);margin-bottom:5px;font-weight:500}
 .detail .field .val{font-size:13px;color:var(--ink2);font-family:var(--mono);line-height:1.4}
@@ -168,25 +180,30 @@ header button:hover{border-color:var(--accent-border);color:var(--ink2);backgrou
 /* Pipeline stages */
 .pipeline{margin-bottom:32px}
 .pipeline h3{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--faint);margin-bottom:14px;font-weight:500}
-.stage{display:flex;align-items:flex-start;gap:14px;padding:14px 18px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;transition:border-color .12s}
+.stage{display:flex;align-items:flex-start;gap:14px;padding:14px 18px;background:var(--surface);border:1px solid var(--border);border-left:3px solid transparent;border-radius:8px;margin-bottom:6px;transition:border-color .12s}
 .stage:hover{border-color:var(--border-light)}
+.stage.stage-pass{border-left-color:var(--ok-border);background:var(--ok-faint)}
+.stage.stage-fail{border-left-color:var(--err-border);background:var(--err-faint)}
+.stage.stage-skip{opacity:.6}
+.stage.stage-compliance{border-left-color:var(--info-border);background:var(--info-soft)}
 .stage .icon{font-size:14px;margin-top:2px;width:16px;flex-shrink:0;opacity:.9}
 .stage .icon.pass{color:var(--ok)}
 .stage .icon.fail{color:var(--err)}
 .stage .icon.skip{color:var(--faint)}
 .stage .body{flex:1;min-width:0}
-.stage .name{font-size:12px;font-family:var(--mono);font-weight:500;color:var(--ink);letter-spacing:.2px}
+.stage .name{font-size:12px;font-family:var(--mono);font-weight:600;color:var(--ink);letter-spacing:.2px}
 .stage .row{display:flex;gap:14px;margin-top:5px}
 .stage .row span{font-size:10px;color:var(--muted);font-family:var(--mono);letter-spacing:.2px}
 .stage .errors{margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
 .stage .errors div{font-size:11px;color:var(--err);font-family:var(--mono);padding:3px 0;line-height:1.5;opacity:.9}
 
 /* Identity block */
-.hashes{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:18px 22px}
-.hashes h3{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--faint);margin-bottom:12px;font-weight:500}
-.hashes .row{display:flex;justify-content:space-between;padding:5px 0;font-size:11px;font-family:var(--mono)}
+.hashes{background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--accent);border-radius:8px;padding:22px 24px;margin-top:8px}
+.hashes h3{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--accent);margin-bottom:14px;font-weight:600}
+.hashes .row{display:flex;justify-content:space-between;padding:7px 0;font-size:11px;font-family:var(--mono);border-bottom:1px solid var(--border)}
+.hashes .row:last-child{border-bottom:none}
 .hashes .row .k{color:var(--muted)}
-.hashes .row .v{color:var(--ink2);text-align:right}
+.hashes .row .v{color:var(--ink);text-align:right;font-weight:500}
 
 .empty-state{text-align:center;padding:60px 20px;color:var(--faint)}
 .empty-state p{margin-top:8px;font-size:12px;letter-spacing:.2px}
@@ -198,15 +215,16 @@ header button:hover{border-color:var(--accent-border);color:var(--ink2);backgrou
     <h1>Formforge</h1>
     <div class="meta">
       <span id="instance-info"></span>
-      <button onclick="loadData()">Refresh</button>
+      <span id="last-updated"></span>
+      <button id="refresh-btn" onclick="doRefresh()">Refresh</button>
     </div>
   </header>
 
   <div class="strip">
     <div class="stat"><div class="label">Renders</div><div class="val" id="s-total">-</div></div>
-    <div class="stat"><div class="label">Success</div><div class="val sage" id="s-rate">-</div></div>
+    <div class="stat"><div class="label">Success</div><div class="val" id="s-rate">-</div></div>
     <div class="stat"><div class="label">Avg Duration</div><div class="val" id="s-avg">-</div></div>
-    <div class="stat"><div class="label">Failures</div><div class="val wine" id="s-fail">-</div></div>
+    <div class="stat"><div class="label">Failures</div><div class="val" id="s-fail">-</div></div>
     <div class="stat"><div class="label">Templates</div><div class="val" id="s-tpl">-</div></div>
   </div>
 
@@ -228,13 +246,30 @@ header button:hover{border-color:var(--accent-border);color:var(--ink2);backgrou
 <script>
 let filter='all', selectedId=null;
 
+function updateTimestamp(){
+  const now=new Date();
+  document.getElementById('last-updated').textContent=now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+function doRefresh(){
+  const btn=document.getElementById('refresh-btn');
+  btn.textContent='Refreshed';btn.style.color='var(--ok)';btn.style.borderColor='var(--ok-border)';
+  setTimeout(()=>{btn.textContent='Refresh';btn.style.color='';btn.style.borderColor='';},1000);
+  loadData();
+}
+
 async function loadData(){
   const [sr,hr]=await Promise.all([fetch('/stats'),fetch('/history?limit=100'+(filter==='error'?'&outcome=error':''))]);
   const stats=await sr.json(), traces=await hr.json();
+  updateTimestamp();
   document.getElementById('s-total').textContent=stats.total;
-  document.getElementById('s-rate').textContent=stats.total>0?stats.success_rate+'%':'-';
+  const rateEl=document.getElementById('s-rate');
+  rateEl.textContent=stats.total>0?stats.success_rate+'%':'-';
+  rateEl.className='val sage primary'+(stats.success_rate===100&&stats.total>0?' perfect':'');
   document.getElementById('s-avg').textContent=stats.avg_ms+'ms';
-  document.getElementById('s-fail').textContent=stats.failures;
+  const failEl=document.getElementById('s-fail');
+  failEl.textContent=stats.failures;
+  failEl.className='val wine primary'+(stats.failures>0?' hot':'');
   document.getElementById('s-tpl').textContent=stats.unique_templates;
   let filtered=traces;
   if(filter==='zugferd') filtered=traces.filter(t=>t.zugferd_profile);
@@ -253,15 +288,15 @@ function renderEvents(traces){
   if(!traces.length){el.innerHTML='<div class="empty-state"><p>No renders recorded</p><p>Set FORMFORGE_HISTORY to enable</p></div>';return}
   el.innerHTML=traces.map(t=>{
     const time=t.timestamp.substring(11,19);
-    const sel=t.id===selectedId?' selected':'';
+    const sel=(t.id===selectedId?' selected':'')+(t.outcome==='error'?' event-fail':'');
     const badge=t.outcome==='success'?'<span class="badge ok">OK</span>':'<span class="badge fail">FAIL</span>';
+    const compBadge=t.zugferd_profile?'<span class="badge compliance">EN16931</span>':'';
     let pills='';
-    if(t.zugferd_profile) pills+='<span class="pill zugferd">'+t.zugferd_profile+'</span>';
     if(t.provenance_hash) pills+='<span class="pill prov">provenance</span>';
     const dur=t.total_ms+'ms';
     let err='';
     if(t.outcome==='error') err='<div class="error-line">'+t.error_code+' at '+t.error_stage+'</div>';
-    return '<div class="event'+sel+'" onclick="selectTrace(&quot;'+t.id+'&quot;)"><div class="top"><span class="template">'+t.template_name+'</span><span class="time">'+time+'</span></div><div class="bottom">'+badge+pills+'<span class="dur">'+dur+'</span></div>'+err+'</div>';
+    return '<div class="event'+sel+'" onclick="selectTrace(&quot;'+t.id+'&quot;)"><div class="top"><span class="template">'+t.template_name+'</span><span class="time">'+time+'</span></div><div class="bottom">'+badge+compBadge+pills+'<span class="dur">'+dur+'</span></div>'+err+'</div>';
   }).join('');
 }
 
@@ -284,6 +319,7 @@ async function selectTrace(id){
 
 function showDetail(t){
   const p=document.getElementById('detail-pane');
+  const otag=t.outcome==='success'?'<span class="otag ok">OK</span>':'<span class="otag fail">FAIL</span>';
   const outcome=t.outcome==='success'?'<span class="val ok">SUCCESS</span>':'<span class="val fail">FAIL</span>';
   let stagesHtml='';
   if(t.stages&&t.stages.length){
@@ -297,14 +333,16 @@ function showDetail(t){
         if(s.metadata.profile) meta.push(s.metadata.profile);
         if(s.metadata.proof_hash) meta.push(s.metadata.proof_hash.substring(0,20)+'...');
       }
+      const isComp=s.stage==='zugferd_validation'||s.stage==='zugferd_postprocess';
+      const stageCls=isComp&&cls==='pass'?' stage-compliance':cls==='pass'?' stage-pass':cls==='fail'?' stage-fail':' stage-skip';
       let errs='';
       if(s.errors&&s.errors.length){
         errs='<div class="errors">'+s.errors.map(e=>'<div>'+e.path+': '+e.message+'</div>').join('')+'</div>';
       }
-      return '<div class="stage"><div class="icon '+cls+'">'+icon+'</div><div class="body"><div class="name">'+s.stage+'</div><div class="row"><span>'+s.status+'</span><span>'+s.duration_ms+'ms</span>'+(meta.length?'<span>'+meta.join(' \\u00b7 ')+'</span>':'')+'</div>'+errs+'</div></div>';
+      return '<div class="stage'+stageCls+'"><div class="icon '+cls+'">'+icon+'</div><div class="body"><div class="name">'+s.stage+'</div><div class="row"><span>'+s.status+'</span><span>'+s.duration_ms+'ms</span>'+(meta.length?'<span>'+meta.join(' \\u00b7 ')+'</span>':'')+'</div>'+errs+'</div></div>';
     }).join('');
   }
-  p.innerHTML='<div class="detail"><h2>'+t.template_name+'</h2><div class="fields"><div class="field"><div class="label">Outcome</div>'+outcome+'</div><div class="field"><div class="label">Duration</div><div class="val">'+t.total_ms+'ms</div></div>'+(t.pdf_size?'<div class="field"><div class="label">PDF Size</div><div class="val">'+Math.round(t.pdf_size/1024)+'KB</div></div>':'')+'<div class="field"><div class="label">Time</div><div class="val">'+t.timestamp.replace('T',' ').substring(0,19)+'</div></div>'+(t.zugferd_profile?'<div class="field"><div class="label">Compliance</div><div class="val">'+t.zugferd_profile+'</div></div>':'')+(t.provenance_hash?'<div class="field"><div class="label">Provenance</div><div class="val">'+t.provenance_hash.substring(0,24)+'...</div></div>':'')+(t.error_code?'<div class="field"><div class="label">Error</div><div class="val fail">'+t.error_code+'</div></div><div class="field"><div class="label">Stage</div><div class="val fail">'+t.error_stage+'</div></div>':'')+'</div><div class="pipeline"><h3>Pipeline Stages</h3>'+stagesHtml+'</div><div class="hashes"><h3>Identity</h3><div class="row"><span class="k">Trace ID</span><span class="v">'+t.id+'</span></div><div class="row"><span class="k">Template</span><span class="v">'+t.template_hash+'</span></div><div class="row"><span class="k">Data</span><span class="v">'+t.data_hash+'</span></div>'+(t.output_hash?'<div class="row"><span class="k">Output</span><span class="v">'+t.output_hash+'</span></div>':'')+'<div class="row"><span class="k">Engine</span><span class="v">formforge '+t.engine_version+'</span></div></div></div>';
+  p.innerHTML='<div class="detail"><div class="detail-header"><h2>'+t.template_name+'</h2><div class="header-meta">'+otag+'<span>'+t.total_ms+'ms</span><span>'+t.timestamp.replace('T',' ').substring(0,19)+'</span></div></div><div class="fields"><div class="field"><div class="label">Outcome</div>'+outcome+'</div><div class="field"><div class="label">Duration</div><div class="val">'+t.total_ms+'ms</div></div>'+(t.pdf_size?'<div class="field"><div class="label">PDF Size</div><div class="val">'+Math.round(t.pdf_size/1024)+'KB</div></div>':'')+'<div class="field"><div class="label">Time</div><div class="val">'+t.timestamp.replace('T',' ').substring(0,19)+'</div></div>'+(t.zugferd_profile?'<div class="field"><div class="label">Compliance</div><div class="val">'+t.zugferd_profile+'</div></div>':'')+(t.provenance_hash?'<div class="field"><div class="label">Provenance</div><div class="val">'+t.provenance_hash.substring(0,24)+'...</div></div>':'')+(t.error_code?'<div class="field"><div class="label">Error</div><div class="val fail">'+t.error_code+'</div></div><div class="field"><div class="label">Stage</div><div class="val fail">'+t.error_stage+'</div></div>':'')+'</div><div class="pipeline"><h3>Pipeline Stages</h3>'+stagesHtml+'</div><div class="hashes"><h3>Identity</h3><div class="row"><span class="k">Trace ID</span><span class="v">'+t.id+'</span></div><div class="row"><span class="k">Template</span><span class="v">'+t.template_hash+'</span></div><div class="row"><span class="k">Data</span><span class="v">'+t.data_hash+'</span></div>'+(t.output_hash?'<div class="row"><span class="k">Output</span><span class="v">'+t.output_hash+'</span></div>':'')+'<div class="row"><span class="k">Engine</span><span class="v">formforge '+t.engine_version+'</span></div></div></div>';
 }
 
 loadData();

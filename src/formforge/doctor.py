@@ -102,10 +102,17 @@ def check_fonts_dir() -> tuple[str, str]:
 
 
 def check_template_fonts(templates_dir: Path | None = None) -> tuple[str, str]:
-    """Font inventory — check that fonts declared in templates are available."""
+    """Font inventory — check that fonts declared in templates are available.
+
+    Uses the same font-declaration parser as preflight (readiness module) to
+    ensure the Doctor and the Preflight engine see the exact same requirements.
+    Handles both single fonts (``font: "Inter"``) and font stacks
+    (``font: ("Inter", "Noto Sans")``).
+    """
     import re
 
     from formforge import bundled_font_dir
+    from formforge.readiness import _parse_declared_fonts
 
     fonts_dir = bundled_font_dir()
 
@@ -119,12 +126,15 @@ def check_template_fonts(templates_dir: Path | None = None) -> tuple[str, str]:
                     available[name] = f"bundled: {fonts_dir}"
 
     env_path = os.environ.get("FORMFORGE_FONT_PATH")
+    env_families: set[str] = set()
     if env_path and Path(env_path).is_dir():
         for ext in ("*.ttf", "*.otf"):
             for f in Path(env_path).glob(f"**/{ext}"):
                 name = re.split(r"[-_]", f.stem)[0].lower()
-                if name and name not in available:
-                    available[name] = f"FORMFORGE_FONT_PATH: {env_path}"
+                if name:
+                    env_families.add(name)
+                    if name not in available:
+                        available[name] = f"FORMFORGE_FONT_PATH: {env_path}"
 
     # Find templates
     if templates_dir is None:
@@ -133,8 +143,7 @@ def check_template_fonts(templates_dir: Path | None = None) -> tuple[str, str]:
             return WARN, "Font check skipped — examples/ directory not found"
         templates_dir = repo_root / "examples"
 
-    # Parse font declarations from templates
-    font_pattern = re.compile(r'font:\s*"([^"]+)"')
+    # Parse font declarations from templates (single fonts + font stacks)
     declared: set[str] = set()
     missing: list[tuple[str, str]] = []  # (template, font_name)
 
@@ -145,11 +154,11 @@ def check_template_fonts(templates_dir: Path | None = None) -> tuple[str, str]:
             content = template.read_text()
         except Exception:
             continue
-        for match in font_pattern.finditer(content):
-            font_name = match.group(1)
-            declared.add(font_name)
-            if font_name.lower() not in available:
-                missing.append((template.name, font_name))
+        for stack in _parse_declared_fonts(content):
+            for font_name in stack:
+                declared.add(font_name)
+                if font_name.lower() not in available:
+                    missing.append((template.name, font_name))
 
     if not declared:
         return OK, "Font inventory: no font declarations found in templates"
@@ -161,7 +170,7 @@ def check_template_fonts(templates_dir: Path | None = None) -> tuple[str, str]:
 
     if missing_names:
         lines = [
-            f"Font inventory:",
+            "Font inventory:",
             f"         Declared: {declared_str}",
         ]
         if found_names:
@@ -172,14 +181,37 @@ def check_template_fonts(templates_dir: Path | None = None) -> tuple[str, str]:
         else:
             lines.append("         Found:    (none in configured paths)")
         lines.append(f"         Missing:  {', '.join(missing_names)}")
-        if fonts_dir is not None:
-            lines.append(f"         Fix:      install missing fonts to {fonts_dir}")
+        if env_families:
+            lines.append(
+                f"         Env path: {env_path} ({len(env_families)} "
+                f"{'family' if len(env_families) == 1 else 'families'}: "
+                f"{', '.join(sorted(env_families))})"
+            )
+        # Actionable fix commands
+        if "Inter" in missing_names:
+            lines.append(
+                "         Fix:      download Inter from https://fonts.google.com/specimen/Inter"
+            )
+        target = env_path or (str(fonts_dir) if fonts_dir else None)
+        if target:
+            lines.append(f"         Path:     install missing fonts to {target}")
+        else:
+            lines.append(
+                "         Tip:      set FORMFORGE_FONT_PATH to a directory with your fonts"
+            )
         return WARN, "\n".join(lines)
 
     found_detail = ", ".join(
         f"{n} ({available[n.lower()]})" for n in found_names
     )
-    return OK, f"Font inventory: {declared_str} — all found ({found_detail})"
+    result = f"Font inventory: {declared_str} — all found ({found_detail})"
+    if env_families:
+        result += (
+            f"\n         Env path: {env_path} ({len(env_families)} "
+            f"{'family' if len(env_families) == 1 else 'families'}: "
+            f"{', '.join(sorted(env_families))})"
+        )
+    return OK, result
 
 
 def check_env_backend() -> tuple[str, str]:

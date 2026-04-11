@@ -1,4 +1,4 @@
-.PHONY: help setup dev test lint clean docker smoke doctor
+.PHONY: help setup dev test lint clean docker smoke doctor mustang-validate
 
 PYTHON ?= python3
 VENV   := .venv
@@ -48,3 +48,20 @@ smoke: ## Quick render + server health smoke test
 
 doctor: ## Run environment diagnostics
 	formforge doctor
+
+MUSTANG_VERSION := 2.15.0
+MUSTANG_JAR     := .cache/mustang-cli-$(MUSTANG_VERSION).jar
+
+mustang-validate: ## Validate e-invoice against Mustang reference validator (requires Java)
+	@which java > /dev/null 2>&1 || { echo "Error: Java not found — install JDK 11+"; exit 1; }
+	@mkdir -p .cache
+	@test -f $(MUSTANG_JAR) || { echo "Downloading Mustang CLI $(MUSTANG_VERSION)..."; \
+		curl -fSL -o $(MUSTANG_JAR) \
+		"https://repo1.maven.org/maven2/org/mustangproject/Mustang-CLI/$(MUSTANG_VERSION)/Mustang-CLI-$(MUSTANG_VERSION).jar"; }
+	@echo "Rendering e-invoice..."
+	@python -c "from formforge import render; import json; \
+		d = json.load(open('examples/einvoice_data.json')); \
+		pdf = render('examples/einvoice.j2.typ', d, zugferd='en16931'); \
+		open('.cache/einvoice_test.pdf','wb').write(pdf)"
+	@echo "Validating with Mustang..."
+	java -jar $(MUSTANG_JAR) --action validate --source .cache/einvoice_test.pdf

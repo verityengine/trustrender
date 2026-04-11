@@ -27,17 +27,13 @@ Not supported (fails loudly at validation time):
 - Allowances, charges, or discounts (hardcoded to zero in XML; rejected at validation if present in data)
 - Extended/Basic/Minimum profiles
 
-### XRechnung is out of scope
-
-XRechnung is not supported. The code path was removed in v0.1.0 because it required KOSIT Schematron rules that are not integrated. Formforge focuses on EN 16931 (ZUGFeRD/Factur-X) only.
-
 ### Mustang validation is manual
 
-One-time manual validation against the Mustang reference validator has passed for the EN 16931 profile (see `docs/zugferd-prototype.md`). This is not automated in CI. `preflight()` runs XSD validation when `facturx` is installed, but Schematron and Mustang validation are test-suite-only.
+One-time manual validation against the Mustang reference validator has passed for the EN 16931 profile (see `docs/zugferd-prototype.md`). This is not automated in CI but is available locally via `make mustang-validate` (requires Java). `preflight()` and `render()` both run XSD validation when `facturx` is installed. Schematron and Mustang validation are not in the render pipeline.
 
-### XSD/Schematron validation is not in the render pipeline
+### Schematron validation is not in the render pipeline
 
-The `render()` function validates invoice data fields (required fields, currency, country, tax rates) but does not run XSD or Schematron validation on the generated XML. `preflight()` runs XSD validation when the `facturx` library is available. Schematron validation runs only in the test suite.
+XSD validation runs in both `render()` (as a guard rail after XML generation, before PDF embedding — raises `ZUGFERD_ERROR` on failure) and `preflight()` (when the `facturx` library is available). Schematron validation runs only in the test suite and is not enforced at render time.
 
 ### Font fallback is silent — detected in preflight
 
