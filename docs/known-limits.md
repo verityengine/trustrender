@@ -27,11 +27,9 @@ Not supported (fails loudly at validation time):
 - Allowances, charges, or discounts (hardcoded to zero in XML; rejected at validation if present in data)
 - Extended/Basic/Minimum profiles
 
-### XRechnung not yet validated
+### XRechnung is out of scope
 
-Code paths exist for XRechnung (guideline ID, Leitweg-ID, BR-DE-5 contact requirements). However, the generated XML fails Schematron validation against the factur-x Schematron rules because the XRechnung guideline ID is not in the allowed set for the EN 16931 Schematron. Proper XRechnung validation requires KOSIT's XRechnung-specific Schematron rules, which are not currently integrated.
-
-XRechnung is not listed as a supported profile. The `zugferd="xrechnung"` code path exists but should not be used in production until Schematron validation passes.
+XRechnung is not supported. The code path was removed in v0.1.0 because it required KOSIT Schematron rules that are not integrated. Formforge focuses on EN 16931 (ZUGFeRD/Factur-X) only.
 
 ### Mustang validation is manual
 
@@ -41,9 +39,9 @@ One-time manual validation against the Mustang reference validator has passed fo
 
 The `render()` function validates invoice data fields (required fields, currency, country, tax rates) but does not run XSD or Schematron validation on the generated XML. `preflight()` runs XSD validation when the `facturx` library is available. Schematron validation runs only in the test suite.
 
-### Font fallback is silent — partially detected
+### Font fallback is silent — detected in preflight
 
-Typst silently falls back to a default font when a requested font family is unavailable. No error is raised. The PDF is valid but visually different.
+Typst silently falls back to a default font when a requested font family is unavailable. No error is raised at render time. The PDF is valid but visually different.
 
 This has been measured (see `benchmarks/font_swap_results.md`):
 - Render succeeds silently with wrong font
@@ -51,16 +49,19 @@ This has been measured (see `benchmarks/font_swap_results.md`):
 - File size stays the same (0% difference)
 - Output bytes are different (visual change)
 
-Detection: Drift detection now extracts embedded font names from the PDF (via pypdf) and compares against the baseline. When the font set changes, a **warning** is produced (e.g. "Embedded fonts changed: removed Inter-Regular; added Libertinus-Regular"). This catches the most common failure mode — an environment missing the expected fonts.
+**Pre-render detection (preflight):** `preflight()` parses `#set text(font: "...")` declarations from template source and verifies each declared font against configured font paths (bundled + explicit). For bundled templates expecting bundled fonts (Inter), a missing font is an **error** that blocks readiness. For custom templates, a missing font is a **warning** (it may be available as a system font). `strict=True` promotes all missing-font warnings to errors.
+
+**Post-render detection (drift):** Drift detection extracts embedded font names from the PDF (via pypdf) and compares against the baseline. When the font set changes, a **warning** is produced (e.g. "Embedded fonts changed: removed Inter-Regular; added Libertinus-Regular").
 
 Limitations:
-- Detection is baseline-dependent: only works after a known-good baseline is saved
-- Detection is warning-level, not an error — font-substituted PDFs are still valid
+- Preflight verifies against configured font paths only — system fonts cannot be reliably enumerated, so a font not in configured paths gets a warning (not an error) unless it's a bundled font on a bundled template
+- Preflight is a gate for callers who use it — the render path itself does not block on missing fonts
+- Drift detection is baseline-dependent: only works after a known-good baseline is saved
 - `ErrorCode.MISSING_FONT` only fires for explicit Typst font errors (e.g., corrupted font files), which are rare
 - Currently observed default fallback: Libertinus (not guaranteed by upstream Typst)
 - Not a visual diff — only checks font names, not rendering fidelity
 
-Mitigation: Use bundled fonts (Inter) or explicitly supplied fonts via `font_paths`. Run `formforge doctor` to verify template font availability before deployment. Save baselines in CI to catch font drift across environments.
+Mitigation: Use `preflight()` or `formforge preflight` before rendering to catch missing fonts. Use bundled fonts (Inter) or explicitly supplied fonts via `font_paths`. Run `formforge doctor` for a full font inventory with fix commands. Save baselines in CI to catch font drift across environments.
 
 ### Template escaping has boundaries
 
@@ -130,7 +131,7 @@ WeasyPrint comparison (2.3x faster) was measured on the same hardware for a simp
 
 Formforge's HTTP server has no built-in rate limiting or IP throttling. It does have:
 - Render concurrency limit: ``--max-concurrent`` (default 8), returns 503 when at capacity
-- 1MB request body size limit
+- 10MB request body size limit (configurable via ``--max-body-size``)
 - Configurable render timeout: ``--render-timeout`` (default 30s, subprocess kill)
 - Request validation (required fields, types, path traversal)
 
@@ -150,7 +151,12 @@ Failed renders can accumulate temp files over time. No automatic cleanup facilit
 
 ### Font fallback
 
-Typst can silently substitute missing fonts. Formforge now records embedded-font drift in baselines and raises a warning when the font set changes, but this is not a full visual-diff guarantee. For deterministic output, rely on bundled or explicitly supplied fonts and use `formforge doctor` to catch missing declarations before deployment.
+Typst can silently substitute missing fonts. Formforge detects this at two levels:
+
+1. **Preflight** (pre-render): parses font declarations from template source, verifies against configured font paths. Bundled templates with missing bundled fonts produce errors; custom templates produce warnings. This is a gate for callers who use `preflight()` — the render path itself is unchanged.
+2. **Drift detection** (post-render): records embedded-font drift in baselines and raises a warning when the font set changes.
+
+Neither is a full visual-diff guarantee. For deterministic output, rely on bundled or explicitly supplied fonts. Run `formforge doctor` for a full font inventory with actionable fix commands.
 
 ### typst-py backend cannot kill timeouts
 

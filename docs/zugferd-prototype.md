@@ -91,25 +91,12 @@ docker run --rm --platform linux/amd64 -v /tmp:/data mustang-validator \
 | Component | Status | Notes |
 |-----------|--------|-------|
 | PDF/A-3b | **valid** | `isCompliant=true, assertions=[]` — zero violations |
-| XML | **valid** | EN 16931 profile detected. 26 rules fired, 8 notices (all type 27 = informational, XRechnung-specific, non-blocking for EN 16931) |
+| XML | **valid** | EN 16931 profile detected. 26 rules fired, 8 informational notices (non-blocking) |
 | Overall | **valid** | Exit code 0. Both PDF and XML pass. |
 
 ### Previous run (without `pdf_standards=['a-3b']`)
 
 PDF/A-3b was `invalid` due to Typst rendering transparency without blending colour space. Fixed by passing `pdf_standards=['a-3b']` to `typst.compile()`. This is a one-line change in the Step 2 pipeline wiring.
-
-### XRechnung notices (informational, non-blocking for EN 16931)
-
-These are from XRechnung-specific rules (German CIUS), not EN 16931 core. Our invoice targets EN 16931, not XRechnung:
-
-1. `PEPPOL-EN16931-R001` — Business process not provided (XRechnung requirement)
-2. `PEPPOL-EN16931-R020` — Seller electronic address not provided
-3. `PEPPOL-EN16931-R010` — Buyer electronic address not provided
-4. `BR-DE-15` — Buyer reference (BT-10) not provided
-5. `BR-DE-21` — Specification identifier doesn't match XRechnung format
-6. `BR-DE-5` — Seller contact point (PersonName/DepartmentName) not provided
-7. `BR-DE-10` — Deliver-to city not provided (when delivery address is present)
-8. `BR-DE-11` — Deliver-to post code not provided (when delivery address is present)
 
 ### PDF/A-3b fix
 

@@ -234,11 +234,11 @@ def create_app(
                 request_id,
                 stage="execution",
             )
-        if req_zugferd is not None and req_zugferd not in ("en16931", "xrechnung"):
+        if req_zugferd is not None and req_zugferd not in ("en16931",):
             return _error(
                 400,
                 ErrorCode.INVALID_DATA,
-                "'zugferd' must be 'en16931' or 'xrechnung'",
+                "'zugferd' must be 'en16931'",
                 request_id,
                 stage="execution",
             )
@@ -391,8 +391,8 @@ def create_app(
             return _error(400, ErrorCode.INVALID_DATA, "Missing or invalid 'template' field", request_id, stage="execution")
         if data is None or not isinstance(data, dict):
             return _error(400, ErrorCode.INVALID_DATA, "Missing or invalid 'data' field", request_id, stage="execution")
-        if req_zugferd is not None and req_zugferd not in ("en16931", "xrechnung"):
-            return _error(400, ErrorCode.INVALID_DATA, "'zugferd' must be 'en16931' or 'xrechnung'", request_id, stage="execution")
+        if req_zugferd is not None and req_zugferd not in ("en16931",):
+            return _error(400, ErrorCode.INVALID_DATA, "'zugferd' must be 'en16931'", request_id, stage="execution")
 
         # Ephemeral template source support
         template_source = payload.get("template_source")
@@ -418,7 +418,7 @@ def create_app(
                 return _error(404, ErrorCode.TEMPLATE_NOT_FOUND, f"Template not found: {template_name}", request_id, stage="execution")
 
         try:
-            verdict = preflight(template_path, data, zugferd=req_zugferd)
+            verdict = preflight(template_path, data, font_paths=resolved_fonts, zugferd=req_zugferd)
             return JSONResponse(
                 {
                     "ready": verdict.ready,

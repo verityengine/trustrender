@@ -161,6 +161,161 @@ def _check_template_assets(
             ))
 
 
+# ---------------------------------------------------------------------------
+# Font verification helpers
+# ---------------------------------------------------------------------------
+
+# Known bundled font families — these ship with Formforge and are expected
+# to be available when using bundled templates.
+_BUNDLED_FONT_FAMILIES = frozenset({"inter"})
+
+# Regex patterns for Typst font declarations
+_FONT_SINGLE_RE = re.compile(r'font:\s*"([^"]+)"')
+_FONT_STACK_RE = re.compile(r'font:\s*\(([^)]+)\)')
+_FONT_NAME_RE = re.compile(r'"([^"]+)"')
+
+
+def _enumerate_font_families(font_dirs: list[str] | None) -> set[str]:
+    """Return lowercase font family names found in the given directories.
+
+    Uses the same heuristic as doctor.py — split filename on [-_], take
+    the first segment, lowercase.  E.g. ``Inter-Bold.ttf`` → ``"inter"``.
+    """
+    families: set[str] = set()
+    if not font_dirs:
+        return families
+    for d in font_dirs:
+        dp = Path(d)
+        if not dp.is_dir():
+            continue
+        for ext in ("*.ttf", "*.otf"):
+            for f in dp.glob(f"**/{ext}"):
+                name = re.split(r"[-_]", f.stem)[0].lower()
+                if name:
+                    families.add(name)
+    return families
+
+
+def _parse_declared_fonts(source: str) -> list[list[str]]:
+    """Extract font declarations from Typst source.
+
+    Returns a list of font stacks.  A single font declaration like
+    ``font: "Inter"`` becomes ``[["Inter"]]``.  A font stack like
+    ``font: ("Inter", "Noto Sans")`` becomes ``[["Inter", "Noto Sans"]]``.
+
+    Jinja2 variable references (containing ``{{``) are skipped.
+    """
+    stacks: list[list[str]] = []
+    seen_positions: set[int] = set()
+
+    # 1. Font stacks: font: ("Inter", "Noto Sans")
+    for m in _FONT_STACK_RE.finditer(source):
+        seen_positions.add(m.start())
+        inner = m.group(1)
+        names = [n.group(1) for n in _FONT_NAME_RE.finditer(inner)]
+        names = [n for n in names if "{{" not in n]
+        if names:
+            stacks.append(names)
+
+    # 2. Single fonts: font: "Inter" — skip positions already covered by stacks
+    for m in _FONT_SINGLE_RE.finditer(source):
+        if m.start() in seen_positions:
+            continue
+        name = m.group(1)
+        if "{{" not in name:
+            stacks.append([name])
+
+    return stacks
+
+
+def _is_bundled_template(template_path: Path) -> bool:
+    """Return True if the template lives in the package's examples/ directory."""
+    try:
+        resolved = template_path.resolve()
+        # Walk up from the package dir to find examples/
+        pkg_dir = Path(__file__).resolve().parent  # src/formforge/
+        examples_dir = pkg_dir.parent.parent / "examples"
+        if examples_dir.is_dir():
+            return str(resolved).startswith(str(examples_dir.resolve()))
+    except (OSError, ValueError):
+        pass
+    return False
+
+
+def _check_fonts(
+    template_path: Path,
+    font_paths: list[str] | None,
+    issues: list[ReadinessIssue],
+    *,
+    strict: bool = False,
+) -> None:
+    """Check that fonts declared in the template are available.
+
+    Verifies declared fonts against explicitly configured font paths
+    (bundled + explicit).  When ``font_paths`` is None, auto-resolves
+    the bundled font directory so that default callers still get font
+    checking.
+
+    System fonts cannot be reliably enumerated, so a missing font in
+    configured paths gets a warning (it might be a system font).
+
+    The error case is narrow: a bundled template expecting a known
+    bundled font (Inter) that is missing from configured paths means
+    the installation is broken — that is an error.
+    """
+    try:
+        source = template_path.read_text()
+    except (OSError, UnicodeDecodeError):
+        return  # Can't read template — other stages will catch this
+
+    font_stacks = _parse_declared_fonts(source)
+    if not font_stacks:
+        return  # No font declarations — nothing to check
+
+    # Auto-resolve bundled fonts when no explicit paths are provided.
+    # This ensures default callers still get font verification.
+    effective_paths = font_paths
+    if effective_paths is None:
+        from . import bundled_font_dir
+
+        bd = bundled_font_dir()
+        if bd is not None:
+            effective_paths = [str(bd)]
+
+    available = _enumerate_font_families(effective_paths)
+    bundled = _is_bundled_template(template_path)
+
+    for stack in font_stacks:
+        # If ANY font in the stack is found in configured paths, it's OK
+        found = any(name.lower() in available for name in stack)
+        if found:
+            continue
+
+        # None of the fonts in this stack were found in configured paths
+        display = ", ".join(stack)
+        first_font = stack[0].lower()
+
+        if strict:
+            severity = "error"
+        elif bundled and first_font in _BUNDLED_FONT_FAMILIES:
+            # Bundled template expects a bundled font that's missing —
+            # the installation is broken.
+            severity = "error"
+        else:
+            # Custom template or non-bundled font — might be a system font
+            severity = "warning"
+
+        issues.append(ReadinessIssue(
+            stage="template",
+            check="missing_font",
+            severity=severity,
+            path=display,
+            message=f"Font not found in configured paths: {display}"
+            + (" (bundled font expected)" if bundled and first_font in _BUNDLED_FONT_FAMILIES else "")
+            + (" (may be available as system font)" if severity == "warning" else ""),
+        ))
+
+
 def _check_environment(
     zugferd: str | None,
     issues: list[ReadinessIssue],
@@ -295,25 +450,30 @@ def preflight(
     template: str | os.PathLike,
     data: dict,
     *,
+    font_paths: list[str] | None = None,
     zugferd: str | None = None,
     semantic_hints: object | None = None,
     strict: bool = False,
 ) -> ReadinessVerdict:
     """Run all readiness checks without rendering.
 
-    Combines payload validation, template checks, environment checks,
-    compliance eligibility, and optional semantic validation into a
-    single structured verdict.
+    Combines payload validation, template checks, font checks,
+    environment checks, compliance eligibility, and optional semantic
+    validation into a single structured verdict.
 
     Args:
         template: Path to a ``.j2.typ`` or ``.typ`` template file.
         data: Template data as a dict.
+        font_paths: Resolved font directory paths (bundled + explicit).
+            Used to verify declared fonts are available.
         zugferd: If set, also run compliance checks for this profile.
         semantic_hints: SemanticHints instance for semantic validation.
             If None, semantic checks are skipped.
         strict: If True, partial contracts from unresolved dynamic
-            includes are promoted from warnings to errors. This blocks
-            readiness when the contract is provably incomplete.
+            includes are promoted from warnings to errors, and missing
+            fonts are promoted from warnings to errors. This blocks
+            readiness when the contract is provably incomplete or when
+            font availability cannot be confirmed.
 
     Returns:
         ReadinessVerdict with ``ready=True`` if no errors.
@@ -347,8 +507,9 @@ def preflight(
     _check_payload(template_path, data, all_issues, strict=strict)
     stages.append("payload")
 
-    # Stage 2: Template
+    # Stage 2: Template (syntax + assets + fonts)
     _check_template(template_path, all_issues)
+    _check_fonts(template_path, font_paths, all_issues, strict=strict)
     stages.append("template")
 
     # Stage 3: Environment

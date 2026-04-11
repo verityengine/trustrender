@@ -248,6 +248,22 @@ def _render_document_pipeline(
             t0 = time.monotonic()
             try:
                 xml_bytes = build_invoice_xml(data, profile=zugferd)
+
+                # XSD validation: guard rail before embedding XML into PDF
+                try:
+                    from facturx import xml_check_xsd
+                    xml_check_xsd(xml_bytes)
+                except ImportError:
+                    pass  # facturx not installed — skip XSD check
+                except Exception as xsd_exc:
+                    raise FormforgeError(
+                        f"Generated XML failed XSD validation: {xsd_exc}",
+                        code=ErrorCode.ZUGFERD_ERROR,
+                        stage="zugferd",
+                        detail=str(xsd_exc),
+                        template_path=str(template_path),
+                    ) from xsd_exc
+
                 pdf_bytes = apply_zugferd(pdf_bytes, xml_bytes)
                 trace.stages.append(StageTrace(
                     stage="zugferd_postprocess",
@@ -334,7 +350,7 @@ def render(
             ``stage`` for where it failed, and ``detail`` for the full diagnostic.
         FileNotFoundError: If the template or data file does not exist.
     """
-    _SUPPORTED_ZUGFERD = {"en16931", "xrechnung"}
+    _SUPPORTED_ZUGFERD = {"en16931"}
     if zugferd is not None and zugferd not in _SUPPORTED_ZUGFERD:
         raise FormforgeError(
             f"Unsupported zugferd profile: '{zugferd}'. Supported: {sorted(_SUPPORTED_ZUGFERD)}",
@@ -415,7 +431,7 @@ def audit(
         debug: Preserve intermediate files.
         font_paths: Additional font directories.
         validate: Run structural contract validation.
-        zugferd: ZUGFeRD profile (``"en16931"`` or ``"xrechnung"``).
+        zugferd: ZUGFeRD profile (``"en16931"``).
         provenance: Embed generation proof.
         baseline_dir: Root directory for baselines. If provided and a
             baseline exists, drift checks are run. If None, only
@@ -434,7 +450,7 @@ def audit(
     from .regression import check_drift, save_baseline as _save_baseline
     from .semantic import SemanticReport, validate_semantics
 
-    _SUPPORTED_ZUGFERD = {"en16931", "xrechnung"}
+    _SUPPORTED_ZUGFERD = {"en16931"}
     if zugferd is not None and zugferd not in _SUPPORTED_ZUGFERD:
         raise FormforgeError(
             f"Unsupported zugferd profile: '{zugferd}'. Supported: {sorted(_SUPPORTED_ZUGFERD)}",

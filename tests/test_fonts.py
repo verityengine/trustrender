@@ -248,6 +248,45 @@ class TestCrossBackendFontParity:
 # ---------------------------------------------------------------------------
 
 
+class TestDoctorFontInventory:
+    """Tests for enhanced doctor font inventory."""
+
+    def test_inventory_reports_inter(self):
+        from formforge.doctor import check_template_fonts
+
+        status, msg = check_template_fonts()
+        # Inter should always be found; status depends on whether other
+        # fonts (e.g. from output/ files) are also declared
+        assert status in ("ok", "warn")
+        assert "Inter" in msg
+
+    def test_inventory_warns_on_missing(self):
+        """Templates in a dir referencing unavailable fonts → warning."""
+        import tempfile
+
+        from formforge.doctor import check_template_fonts
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create a template with a font not in bundled
+            p = Path(tmpdir) / "custom.typ"
+            p.write_text('#set text(font: "MissingFont99")\nHello')
+            status, msg = check_template_fonts(templates_dir=Path(tmpdir))
+            assert status == "warn"
+            assert "MissingFont99" in msg
+            assert "Missing" in msg
+
+    def test_inventory_empty_templates_dir(self):
+        """No templates → ok, no declarations found."""
+        import tempfile
+
+        from formforge.doctor import check_template_fonts
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            status, msg = check_template_fonts(templates_dir=Path(tmpdir))
+            assert status == "ok"
+            assert "no font declarations" in msg
+
+
 class TestSilentFallback:
     """Typst silently falls back when a requested font is missing.
 

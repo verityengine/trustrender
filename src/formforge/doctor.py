@@ -102,22 +102,29 @@ def check_fonts_dir() -> tuple[str, str]:
 
 
 def check_template_fonts(templates_dir: Path | None = None) -> tuple[str, str]:
-    """Check that fonts referenced in templates are available in bundled fonts."""
+    """Font inventory — check that fonts declared in templates are available."""
     import re
 
     from formforge import bundled_font_dir
 
     fonts_dir = bundled_font_dir()
-    if fonts_dir is None:
-        return WARN, "Font check skipped — bundled font directory not found"
 
-    # Collect available font family names from bundled .ttf/.otf filenames
-    available = set()
-    for ext in ("*.ttf", "*.otf"):
-        for f in fonts_dir.glob(f"**/{ext}"):
-            # Inter-Bold.ttf -> "inter", Inter-Regular.ttf -> "inter"
-            name = re.split(r"[-_]", f.stem)[0].lower()
-            available.add(name)
+    # Collect available font family names from all configured font paths
+    available: dict[str, str] = {}  # lowercase name → source description
+    if fonts_dir is not None:
+        for ext in ("*.ttf", "*.otf"):
+            for f in fonts_dir.glob(f"**/{ext}"):
+                name = re.split(r"[-_]", f.stem)[0].lower()
+                if name and name not in available:
+                    available[name] = f"bundled: {fonts_dir}"
+
+    env_path = os.environ.get("FORMFORGE_FONT_PATH")
+    if env_path and Path(env_path).is_dir():
+        for ext in ("*.ttf", "*.otf"):
+            for f in Path(env_path).glob(f"**/{ext}"):
+                name = re.split(r"[-_]", f.stem)[0].lower()
+                if name and name not in available:
+                    available[name] = f"FORMFORGE_FONT_PATH: {env_path}"
 
     # Find templates
     if templates_dir is None:
@@ -128,6 +135,7 @@ def check_template_fonts(templates_dir: Path | None = None) -> tuple[str, str]:
 
     # Parse font declarations from templates
     font_pattern = re.compile(r'font:\s*"([^"]+)"')
+    declared: set[str] = set()
     missing: list[tuple[str, str]] = []  # (template, font_name)
 
     for template in templates_dir.glob("**/*.typ"):
@@ -139,13 +147,39 @@ def check_template_fonts(templates_dir: Path | None = None) -> tuple[str, str]:
             continue
         for match in font_pattern.finditer(content):
             font_name = match.group(1)
+            declared.add(font_name)
             if font_name.lower() not in available:
                 missing.append((template.name, font_name))
 
-    if missing:
-        details = ", ".join(f"{t}: {f}" for t, f in missing[:5])
-        return WARN, f"Templates reference unavailable fonts: {details}"
-    return OK, f"Template fonts: all declared fonts found in bundled ({', '.join(sorted(available))})"
+    if not declared:
+        return OK, "Font inventory: no font declarations found in templates"
+
+    # Build multi-line inventory
+    declared_str = ", ".join(sorted(declared))
+    found_names = sorted(n for n in declared if n.lower() in available)
+    missing_names = sorted({f for _, f in missing})
+
+    if missing_names:
+        lines = [
+            f"Font inventory:",
+            f"         Declared: {declared_str}",
+        ]
+        if found_names:
+            found_detail = ", ".join(
+                f"{n} ({available[n.lower()]})" for n in found_names
+            )
+            lines.append(f"         Found:    {found_detail}")
+        else:
+            lines.append("         Found:    (none in configured paths)")
+        lines.append(f"         Missing:  {', '.join(missing_names)}")
+        if fonts_dir is not None:
+            lines.append(f"         Fix:      install missing fonts to {fonts_dir}")
+        return WARN, "\n".join(lines)
+
+    found_detail = ", ".join(
+        f"{n} ({available[n.lower()]})" for n in found_names
+    )
+    return OK, f"Font inventory: {declared_str} — all found ({found_detail})"
 
 
 def check_env_backend() -> tuple[str, str]:

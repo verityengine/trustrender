@@ -145,51 +145,6 @@ class TestValidateInvoiceData:
 
 
 # ---------------------------------------------------------------------------
-# XRechnung: code path exists but Schematron fails
-# ---------------------------------------------------------------------------
-
-
-class TestXRechnungNotValidated:
-    """Document that XRechnung code path exists but does NOT pass Schematron.
-
-    These tests exist to prevent accidental claims of XRechnung support.
-    If KOSIT Schematron is integrated in the future, these tests should
-    be updated to expect passes instead of failures.
-    """
-
-    def _xrechnung_data(self):
-        data = _load_einvoice_data()
-        data["buyer_reference"] = "04011000-12345-67"
-        data["seller"]["contact_name"] = "Max Mustermann"
-        data["buyer"]["email"] = "einkauf@kunde.de"
-        return data
-
-    def test_xrechnung_validation_passes(self):
-        """Field validation passes — the data shape is correct."""
-        errors = validate_zugferd_invoice_data(self._xrechnung_data(), profile="xrechnung")
-        assert errors == []
-
-    def test_xrechnung_xsd_passes(self):
-        """XSD passes — the XML structure is valid CII."""
-        xml = build_invoice_xml(self._xrechnung_data(), profile="xrechnung")
-        from facturx import xml_check_xsd
-
-        xml_check_xsd(xml)
-
-    def test_xrechnung_schematron_fails(self):
-        """Schematron FAILS — guideline ID not in factur-x allowed set.
-
-        This is the reason XRechnung is not claimed as supported.
-        KOSIT XRechnung Schematron rules would be needed to validate properly.
-        """
-        xml = build_invoice_xml(self._xrechnung_data(), profile="xrechnung")
-        from facturx.facturx import xml_check_schematron
-
-        with pytest.raises(Exception, match="not valid against the official schematron"):
-            xml_check_schematron(xml)
-
-
-# ---------------------------------------------------------------------------
 # XML generation
 # ---------------------------------------------------------------------------
 

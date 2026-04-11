@@ -58,16 +58,9 @@ Single authoritative reference for what Formforge supports, rejects, and does no
 | Basic profile | Not implemented | EN 16931 only |
 | Minimum profile | Not implemented | EN 16931 only |
 
-## XRechnung status
+## XRechnung
 
-Code paths exist for XRechnung (guideline ID, Leitweg-ID/BT-10, BR-DE-5 seller contact, electronic addresses). However:
-
-- Generated XML passes XSD validation
-- Generated XML **fails** Schematron validation (guideline ID not in factur-x allowed set)
-- Proper validation requires KOSIT XRechnung Schematron rules (not currently integrated)
-- Zero tests exist for XRechnung-specific paths
-
-**XRechnung is not a supported profile.** The code path exists for future work but should not be used in production.
+Out of scope. Code path removed in v0.1.0. XRechnung requires KOSIT Schematron rules which are not integrated. Formforge supports EN 16931 only.
 
 ## Validation layers
 
@@ -88,5 +81,5 @@ Code paths exist for XRechnung (guideline ID, Leitweg-ID/BT-10, BR-DE-5 seller c
 | Field validation rejects unsupported shapes | Tested (10 validation tests) |
 | Allowance/charge rejection | Tested |
 | Mixed VAT rates (7% + 19%) | Schema-tested (XSD + Schematron pass), render integration tested |
-| XRechnung | Schematron fails — not proven |
+| XRechnung | Out of scope — code removed |
 | Reverse charge | No code, no tests |

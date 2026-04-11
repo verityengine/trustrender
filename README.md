@@ -314,7 +314,7 @@ The invoice data model uses raw numeric amounts (not pre-formatted strings), exp
 
 ### Not supported (fails loudly at validation time)
 
-- XRechnung (code path exists, not yet schema-validated)
+- XRechnung (out of scope)
 - Reverse charge
 - Intra-community / cross-border
 - Allowances, charges, or discounts
@@ -600,7 +600,7 @@ Server error responses include `error`, `message`, `stage`, and `request_id`. Wi
 - `formforge check` CLI for template introspection and data validation
 - ZUGFeRD / Factur-X: EN 16931 e-invoice generation for DE domestic B2B (PDF/A-3b + embedded CII XML, schema-tested)
 - Generation proof: cryptographic provenance embedded in PDF metadata, verifiable without re-rendering
-- 787 tests passing (unit, integration, contract, include inference, semantic, ZUGFeRD, credit note, provenance, audit, ugly-data pressure, diagnostics)
+- 816 tests passing (unit, integration, contract, include inference, semantic, ZUGFeRD, credit note, provenance, audit, ugly-data pressure, font verification, diagnostics)
 
 ## Development
 

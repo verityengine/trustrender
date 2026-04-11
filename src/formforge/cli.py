@@ -43,8 +43,8 @@ def main(argv: list[str] | None = None) -> int:
     render_cmd.set_defaults(validate=True)
     render_cmd.add_argument(
         "--zugferd",
-        choices=["en16931", "xrechnung"],
-        help="Generate ZUGFeRD-compliant PDF (en16931 or xrechnung)",
+        choices=["en16931"],
+        help="Generate ZUGFeRD-compliant PDF (EN 16931)",
     )
     render_cmd.add_argument(
         "--provenance",
@@ -108,7 +108,7 @@ def main(argv: list[str] | None = None) -> int:
     preflight_cmd.add_argument("data", help="Path to JSON data file")
     preflight_cmd.add_argument(
         "--zugferd",
-        choices=["en16931", "xrechnung"],
+        choices=["en16931"],
         help="Check compliance eligibility for this profile",
     )
     preflight_cmd.add_argument(
@@ -120,6 +120,12 @@ def main(argv: list[str] | None = None) -> int:
         "--strict",
         action="store_true",
         help="Block on partial contracts from unresolved dynamic includes",
+    )
+    preflight_cmd.add_argument(
+        "--font-path",
+        action="append",
+        dest="font_paths",
+        help="Additional font directory (can be repeated)",
     )
 
     audit_cmd = sub.add_parser("audit", help="Render with full audit trail")
@@ -155,7 +161,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     audit_cmd.add_argument(
         "--zugferd",
-        choices=["en16931", "xrechnung"],
+        choices=["en16931"],
         help="Generate ZUGFeRD-compliant PDF",
     )
     audit_cmd.add_argument(
@@ -184,7 +190,7 @@ def main(argv: list[str] | None = None) -> int:
     baseline_save.add_argument("--font-path", action="append", dest="font_paths")
     baseline_save.add_argument("--no-validate", action="store_false", dest="validate")
     baseline_save.set_defaults(validate=True)
-    baseline_save.add_argument("--zugferd", choices=["en16931", "xrechnung"])
+    baseline_save.add_argument("--zugferd", choices=["en16931"])
     baseline_save.add_argument("--provenance", action="store_true")
 
     baseline_check = baseline_sub.add_parser("check", help="Check against baseline")
@@ -198,7 +204,7 @@ def main(argv: list[str] | None = None) -> int:
     baseline_check.add_argument("--font-path", action="append", dest="font_paths")
     baseline_check.add_argument("--no-validate", action="store_false", dest="validate")
     baseline_check.set_defaults(validate=True)
-    baseline_check.add_argument("--zugferd", choices=["en16931", "xrechnung"])
+    baseline_check.add_argument("--zugferd", choices=["en16931"])
     baseline_check.add_argument("--provenance", action="store_true")
 
     history_cmd = sub.add_parser("history", help="View render history and lineage")
@@ -578,9 +584,13 @@ def _run_preflight(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
 
+    from . import _build_font_paths
+
     strict = getattr(args, "strict", False)
+    resolved_fonts = _build_font_paths(getattr(args, "font_paths", None))
     verdict = preflight(
         template_path, data,
+        font_paths=resolved_fonts,
         zugferd=args.zugferd,
         semantic_hints=semantic_hints,
         strict=strict,
@@ -613,7 +623,7 @@ def _run_preflight(args: argparse.Namespace) -> int:
     if verdict.profile_eligible:
         print()
         profiles = []
-        for p in ("en16931", "xrechnung"):
+        for p in ("en16931",):
             if p in verdict.profile_eligible:
                 profiles.append(f"{p} ✓")
             else:

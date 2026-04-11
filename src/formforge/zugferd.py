@@ -55,7 +55,7 @@ _SUPPORTED_TYPE_CODES = {"380", "381"}  # standard invoice, credit note
 def validate_zugferd_invoice_data(
     data: dict, *, profile: str = "en16931",
 ) -> list[ContractError]:
-    """Validate that data satisfies EN 16931 / XRechnung requirements.
+    """Validate that data satisfies EN 16931 requirements.
 
     This is stricter than generic template contract validation.  It checks
     fields needed for CII XML generation, not just template rendering.
@@ -270,31 +270,6 @@ def validate_zugferd_invoice_data(
                 actual=f"{len(data[field])} entries" if isinstance(data[field], list) else "present",
             ))
 
-    # --- XRechnung-specific requirements ---
-    if profile == "xrechnung":
-        if not data.get("buyer_reference"):
-            errors.append(ContractError(
-                path="buyer_reference",
-                message="Leitweg-ID (buyer_reference) required for XRechnung",
-                expected="string",
-                actual="missing",
-            ))
-        seller = data.get("seller", {})
-        if not seller.get("contact_name"):
-            errors.append(ContractError(
-                path="seller.contact_name",
-                message="seller contact person name required for XRechnung (BR-DE-5)",
-                expected="string",
-                actual="missing",
-            ))
-        if not seller.get("email"):
-            errors.append(ContractError(
-                path="seller.email",
-                message="seller electronic address required for XRechnung",
-                expected="string",
-                actual="missing",
-            ))
-
     return errors
 
 
@@ -309,7 +284,6 @@ def _parse_date(date_str: str) -> datetime.date:
 
 _GUIDELINE_IDS = {
     "en16931": "urn:cen.eu:en16931:2017",
-    "xrechnung": "urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0",
 }
 
 
@@ -317,11 +291,11 @@ def build_invoice_xml(data: dict, *, profile: str = "en16931") -> bytes:
     """Convert Formforge invoice data dict to CII XML bytes.
 
     Uses ``drafthorse`` to build a UN/CEFACT Cross Industry Invoice
-    document conforming to EN 16931 or XRechnung.
+    document conforming to EN 16931.
 
     Args:
         data: Invoice data dict matching the einvoice_data.json schema.
-        profile: ``"en16931"`` (default) or ``"xrechnung"``.
+        profile: ``"en16931"`` (default).
 
     Returns:
         UTF-8 encoded CII XML bytes.
@@ -333,10 +307,6 @@ def build_invoice_xml(data: dict, *, profile: str = "en16931") -> bytes:
 
     # --- Context: guideline ---
     doc.context.guideline_parameter.id = _GUIDELINE_IDS[profile]
-
-    # XRechnung requires a business process
-    if profile == "xrechnung":
-        doc.context.business_parameter.id = "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
 
     # --- Header ---
     doc.header.id = data["invoice_number"]
@@ -373,21 +343,6 @@ def build_invoice_xml(data: dict, *, profile: str = "en16931") -> bytes:
     if buyer_data.get("country"):
         buyer.address.country_id = buyer_data["country"]
 
-    # --- XRechnung-specific fields ---
-    if profile == "xrechnung":
-        # BT-10 Buyer Reference (Leitweg-ID for routing)
-        if data.get("buyer_reference"):
-            doc.trade.agreement.buyer_reference = data["buyer_reference"]
-        # BT-34 Seller electronic address (tuple: scheme_id, value)
-        if seller_data.get("email"):
-            seller.electronic_address.uri_ID = ("EM", seller_data["email"])
-        # BT-49 Buyer electronic address
-        if buyer_data.get("email"):
-            buyer.electronic_address.uri_ID = ("EM", buyer_data["email"])
-        # BT-41 Seller contact person name (required by BR-DE-5)
-        if seller_data.get("contact_name"):
-            seller.contact.person_name = seller_data["contact_name"]
-
     # --- Line items ---
     for i, item in enumerate(data["items"]):
         li = LineItem()
@@ -408,7 +363,7 @@ def build_invoice_xml(data: dict, *, profile: str = "en16931") -> bytes:
     # --- Delivery ---
     # BT-72 actual delivery date (required for EN 16931 unless invoicing period used)
     doc.trade.delivery.event.occurrence = _parse_date(data["invoice_date"])
-    # BT-80 country of delivery (+ city/postcode for XRechnung BR-DE-10/BR-DE-11)
+    # BT-80 country of delivery
     doc.trade.delivery.ship_to.address.country_id = buyer_data.get("country", seller_data["country"])
     if buyer_data.get("city"):
         doc.trade.delivery.ship_to.address.city_name = buyer_data["city"]
