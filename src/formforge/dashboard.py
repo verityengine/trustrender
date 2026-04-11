@@ -5,9 +5,9 @@ no workflow. Served from the existing Starlette server behind --dashboard.
 
 Routes:
     GET /dashboard          -> HTML dashboard (single-page)
-    GET /api/history        -> JSON render history with filters
-    GET /api/history/{id}   -> JSON single trace with all stages
-    GET /api/stats          -> JSON aggregate statistics
+    GET /history        -> JSON render history with filters
+    GET /history/{id}   -> JSON single trace with all stages
+    GET /stats          -> JSON aggregate statistics
 """
 
 from __future__ import annotations
@@ -229,7 +229,7 @@ header button:hover{border-color:var(--accent-border);color:var(--ink2);backgrou
 let filter='all', selectedId=null;
 
 async function loadData(){
-  const [sr,hr]=await Promise.all([fetch('/api/stats'),fetch('/api/history?limit=100'+(filter==='error'?'&outcome=error':''))]);
+  const [sr,hr]=await Promise.all([fetch('/stats'),fetch('/history?limit=100'+(filter==='error'?'&outcome=error':''))]);
   const stats=await sr.json(), traces=await hr.json();
   document.getElementById('s-total').textContent=stats.total;
   document.getElementById('s-rate').textContent=stats.total>0?stats.success_rate+'%':'-';
@@ -277,7 +277,7 @@ async function selectTrace(id){
   document.querySelectorAll('.event').forEach(e=>e.classList.remove('selected'));
   const el=document.querySelector('.event[onclick*="'+id+'"]');
   if(el)el.classList.add('selected');
-  const res=await fetch('/api/history/'+id);
+  const res=await fetch('/history/'+id);
   const t=await res.json();
   showDetail(t);
 }
@@ -327,7 +327,7 @@ def dashboard_routes() -> list[Route]:
     """Return the dashboard routes to mount in the Starlette app."""
     return [
         Route("/dashboard", dashboard_page, methods=["GET"]),
-        Route("/api/history", api_history, methods=["GET"]),
-        Route("/api/history/{trace_id}", api_trace, methods=["GET"]),
-        Route("/api/stats", api_stats, methods=["GET"]),
+        Route("/history", api_history, methods=["GET"]),
+        Route("/history/{trace_id}", api_trace, methods=["GET"]),
+        Route("/stats", api_stats, methods=["GET"]),
     ]
