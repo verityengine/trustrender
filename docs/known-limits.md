@@ -41,7 +41,7 @@ One-time manual validation against the Mustang reference validator has passed fo
 
 The `render()` function validates invoice data fields (required fields, currency, country, tax rates) but does not run XSD or Schematron validation on the generated XML. `preflight()` runs XSD validation when the `facturx` library is available. Schematron validation runs only in the test suite.
 
-### Font fallback is silent — verified gap
+### Font fallback is silent — partially detected
 
 Typst silently falls back to a default font when a requested font family is unavailable. No error is raised. The PDF is valid but visually different.
 
@@ -50,25 +50,28 @@ This has been measured (see `benchmarks/font_swap_results.md`):
 - Page count stays the same
 - File size stays the same (0% difference)
 - Output bytes are different (visual change)
-- Current drift detection does NOT catch it
 
-Implications:
-- A typo in a font name produces a valid, deliverable PDF with the wrong font and zero errors
+Detection: Drift detection now extracts embedded font names from the PDF (via pypdf) and compares against the baseline. When the font set changes, a **warning** is produced (e.g. "Embedded fonts changed: removed Inter-Regular; added Libertinus-Regular"). This catches the most common failure mode — an environment missing the expected fonts.
+
+Limitations:
+- Detection is baseline-dependent: only works after a known-good baseline is saved
+- Detection is warning-level, not an error — font-substituted PDFs are still valid
 - `ErrorCode.MISSING_FONT` only fires for explicit Typst font errors (e.g., corrupted font files), which are rare
-- Drift detection catches measurable output changes (page count, file size) but NOT silent font substitution
 - Currently observed default fallback: Libertinus (not guaranteed by upstream Typst)
+- Not a visual diff — only checks font names, not rendering fidelity
 
-Mitigation: Use bundled fonts (Inter) or explicitly supplied fonts via `font_paths`. Run `formforge doctor` to verify template font availability before deployment. Do not rely on system font availability.
+Mitigation: Use bundled fonts (Inter) or explicitly supplied fonts via `font_paths`. Run `formforge doctor` to verify template font availability before deployment. Save baselines in CI to catch font drift across environments.
 
 ### Template escaping has boundaries
 
-Auto-escaping covers text content contexts. It handles: `\`, `$`, `#`, `@`, `{`, `}`, `[`, `]`, `<`, `` ` ``, `~`.
+Auto-escaping covers text content contexts. It handles: `\`, `$`, `#`, `@`, `{`, `}`, `[`, `]`, `<`, `` ` ``, `~`, plus `=`, `-`, `+`, `/` at line-start positions (prevents heading/list/description-list injection from user data).
 
 Not auto-escaped:
 - Typst code mode contexts (content inside `#` expressions)
 - Typst math mode contexts (content inside `$` delimiters)
 - Values passed through the `typst_markup` filter (intentionally bypasses escaping)
 - The `color` parameter of the `typst_color` filter (template-author-controlled)
+- `_` and `*` (word-boundary emphasis — escaping everywhere would degrade `snake_case` readability)
 
 If user data must appear in code or math mode, template authors must escape it manually.
 
@@ -149,7 +152,9 @@ Failed renders can accumulate temp files over time. No automatic cleanup facilit
 
 If a template requests a font that is not available, Typst will silently use a fallback font. The render succeeds. The PDF is valid. The font is wrong. No error code is returned.
 
-This means: font misconfiguration in production will produce subtly wrong PDFs with no alerting. The only defense is to use bundled or explicitly supplied fonts and verify output visually during deployment.
+Drift detection now partially mitigates this: baseline drift checks compare embedded font names and produce a warning when the font set changes. This catches the common case of deploying to an environment that lacks the expected fonts. However, this requires a saved baseline from a known-good render — without a baseline, there is no detection.
+
+Defense: use bundled or explicitly supplied fonts, save baselines in CI, and verify output during deployment.
 
 ### typst-py backend cannot kill timeouts
 

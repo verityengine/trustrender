@@ -73,6 +73,49 @@ class TestTypstEscape:
     def test_no_special_chars(self):
         assert typst_escape("hello world") == "hello world"
 
+    # --- Line-start block-markup escaping ---
+
+    def test_escapes_equals_at_line_start(self):
+        assert typst_escape("= Heading") == "\\u{003d} Heading"
+
+    def test_escapes_dash_at_line_start(self):
+        assert typst_escape("- Item") == "\\u{002d} Item"
+
+    def test_escapes_plus_at_line_start(self):
+        assert typst_escape("+ Item") == "\\u{002b} Item"
+
+    def test_escapes_slash_at_line_start(self):
+        assert typst_escape("/ Term: Desc") == "\\u{002f} Term: Desc"
+
+    def test_dash_inline_not_escaped(self):
+        assert typst_escape("2024-01-15") == "2024-01-15"
+
+    def test_equals_inline_not_escaped(self):
+        assert typst_escape("x = 5") == "x = 5"
+
+    def test_slash_inline_not_escaped(self):
+        assert typst_escape("path/to/file") == "path/to/file"
+
+    def test_line_start_after_newline(self):
+        assert typst_escape("line\n= head\n- item") == (
+            "line\n\\u{003d} head\n\\u{002d} item"
+        )
+
+    def test_line_start_combined_with_other_escapes(self):
+        assert typst_escape("= $100") == "\\u{003d} \\$100"
+
+    def test_windows_newline_escapes_line_start(self):
+        assert typst_escape("line\r\n= head") == "line\r\n\\u{003d} head"
+
+    def test_multiple_line_starts(self):
+        assert typst_escape("= first\n= second") == (
+            "\\u{003d} first\n\\u{003d} second"
+        )
+
+    def test_double_equals_only_first_escaped(self):
+        """== heading — only the first = at line start is escaped, breaking markup."""
+        assert typst_escape("== Level 2") == "\\u{003d}= Level 2"
+
 
 class TestRenderTemplate:
     def test_renders_simple_template(self):
@@ -174,6 +217,21 @@ class TestRenderTemplate:
                     f"Built-in template {template.name} has code-mode interpolation: "
                     f"{match.group()!r} — this is an injection risk"
                 )
+
+    def test_line_start_chars_in_render_path(self):
+        """User data starting with = or - must not produce headings/lists."""
+        result = render_template(
+            f"{FIXTURES}/simple.j2.typ",
+            {
+                "title": "Normal Title",
+                "body": "= Injected Heading\n- List item\n+ Ordered",
+                "note": "",
+            },
+        )
+        # The body value should have its line-start chars escaped
+        assert "\\u{003d} Injected Heading" in result
+        assert "\\u{002d} List item" in result
+        assert "\\u{002b} Ordered" in result
 
     def test_conditional_block(self):
         with_note = render_template(

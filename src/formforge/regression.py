@@ -36,7 +36,7 @@ from typing import Literal
 from .fingerprint import InputFingerprint
 
 # Baseline schema version — increment when the baseline format changes.
-_SCHEMA_VERSION = 1
+_SCHEMA_VERSION = 2
 
 
 # ---------------------------------------------------------------------------
@@ -73,6 +73,9 @@ class DriftBaseline:
     # Semantic baseline
     semantic_issue_count: int
 
+    # Embedded font names from PDF (None if extraction failed or old baseline)
+    embedded_fonts: list[str] | None = None
+
     def to_dict(self) -> dict:
         return {
             "schema_version": self.schema_version,
@@ -88,6 +91,7 @@ class DriftBaseline:
             "zugferd_valid": self.zugferd_valid,
             "contract_valid": self.contract_valid,
             "semantic_issue_count": self.semantic_issue_count,
+            "embedded_fonts": self.embedded_fonts,
         }
 
     @classmethod
@@ -106,6 +110,7 @@ class DriftBaseline:
             zugferd_valid=d.get("zugferd_valid"),
             contract_valid=d.get("contract_valid"),
             semantic_issue_count=d.get("semantic_issue_count", 0),
+            embedded_fonts=d.get("embedded_fonts"),
         )
 
 
@@ -178,6 +183,51 @@ def _get_page_count(pdf_bytes: bytes) -> int | None:
         from pypdf import PdfReader
         reader = PdfReader(BytesIO(pdf_bytes))
         return len(reader.pages)
+    except Exception:
+        return None
+
+
+def _extract_embedded_fonts(pdf_bytes: bytes) -> set[str] | None:
+    """Extract embedded font family names from PDF bytes.
+
+    Walks each page's ``/Resources`` → ``/Font`` → ``/BaseFont`` entries.
+    Strips 6-char subset prefixes (e.g. ``ABCDEF+Inter-Regular`` →
+    ``Inter-Regular``) and leading slashes.
+
+    Returns a set of font names, or *None* if extraction fails or the PDF
+    contains no font resources.
+    """
+    try:
+        from pypdf import PdfReader
+
+        reader = PdfReader(BytesIO(pdf_bytes))
+        fonts: set[str] = set()
+        for page in reader.pages:
+            resources = page.get("/Resources")
+            if resources is None:
+                continue
+            font_dict = resources.get("/Font")
+            if font_dict is None:
+                continue
+            for font_ref in font_dict.values():
+                font_obj = (
+                    font_ref.get_object()
+                    if hasattr(font_ref, "get_object")
+                    else font_ref
+                )
+                base_font = font_obj.get("/BaseFont")
+                if base_font is None:
+                    continue
+                name = str(base_font)
+                if name.startswith("/"):
+                    name = name[1:]
+                # Strip subset prefix (e.g. "ABCDEF+Inter-Regular")
+                if "+" in name:
+                    prefix, rest = name.split("+", 1)
+                    if len(prefix) == 6 and prefix.isalpha():
+                        name = rest
+                fonts.add(name)
+        return fonts if fonts else None
     except Exception:
         return None
 
@@ -331,6 +381,40 @@ def _check_zugferd_status(
         ))
 
 
+def _check_embedded_fonts(
+    baseline: DriftBaseline,
+    current_fonts: set[str] | None,
+    findings: list[DriftFinding],
+) -> None:
+    """Check if embedded font set changed."""
+    if baseline.embedded_fonts is None or current_fonts is None:
+        return
+
+    baseline_set = set(baseline.embedded_fonts)
+    if baseline_set == current_fonts:
+        return
+
+    removed = baseline_set - current_fonts
+    added = current_fonts - baseline_set
+
+    parts = []
+    if removed:
+        parts.append(f"removed {', '.join(sorted(removed))}")
+    if added:
+        parts.append(f"added {', '.join(sorted(added))}")
+
+    findings.append(DriftFinding(
+        check_name="embedded_fonts_changed",
+        severity="warning",
+        category="structure",
+        message=f"Embedded fonts changed: {'; '.join(parts)}",
+        baseline_value=", ".join(sorted(baseline_set)),
+        current_value=", ".join(sorted(current_fonts)),
+        deterministic=True,
+        confidence="high",
+    ))
+
+
 # ---------------------------------------------------------------------------
 # Baseline storage
 # ---------------------------------------------------------------------------
@@ -378,6 +462,8 @@ def save_baseline(
     template_dir.mkdir(parents=True, exist_ok=True)
 
     page_count = _get_page_count(pdf_bytes)
+    fonts_set = _extract_embedded_fonts(pdf_bytes)
+    embedded_fonts = sorted(fonts_set) if fonts_set else None
     now = datetime.now(timezone.utc).isoformat()
 
     baseline = DriftBaseline(
@@ -394,6 +480,7 @@ def save_baseline(
         zugferd_valid=zugferd_valid,
         contract_valid=contract_valid,
         semantic_issue_count=semantic_issue_count,
+        embedded_fonts=embedded_fonts,
     )
 
     # Write latest
@@ -475,6 +562,10 @@ def check_drift(
 
         _check_file_size(baseline, len(pdf_bytes), findings)
         checks_run.extend(["file_size_drift", "file_size_spike"])
+
+        current_fonts = _extract_embedded_fonts(pdf_bytes)
+        _check_embedded_fonts(baseline, current_fonts, findings)
+        checks_run.append("embedded_fonts_changed")
 
     _check_contract_status(baseline, contract_valid, findings)
     checks_run.append("contract_status_change")

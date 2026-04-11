@@ -25,6 +25,12 @@ Escaped characters:
     [   →  \\u{005b}  (content block start — no backslash escape available)
     ]   →  \\u{005d}  (content block end — no backslash escape available)
 
+Line-start only (escaped via Unicode to prevent block-markup activation):
+    =   →  \\u{003d}  (heading — only at start of line)
+    -   →  \\u{002d}  (list item / horizontal rule — only at start of line)
+    +   →  \\u{002b}  (numbered list item — only at start of line)
+    /   →  \\u{002f}  (description list — only at start of line)
+
 Intentionally NOT escaped:
     _   Only triggers emphasis at word boundaries; escaping everywhere
         would make normal text ugly (e.g. ``snake_case``).
@@ -34,6 +40,7 @@ Intentionally NOT escaped:
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError, UndefinedError
@@ -56,6 +63,16 @@ _BRACKET_TABLE = str.maketrans(
     }
 )
 
+# Characters that trigger Typst block markup ONLY at line start.
+# Escaped via Unicode so inline usage (dates, paths, equations) is untouched.
+_LINE_START_CHARS = re.compile(r"^([=\-+/])", re.MULTILINE)
+_LINE_START_ESCAPE = {
+    "=": "\\u{003d}",
+    "-": "\\u{002d}",
+    "+": "\\u{002b}",
+    "/": "\\u{002f}",
+}
+
 
 def typst_escape(value: object) -> object:
     """Escape Typst markup characters in a string value.
@@ -77,6 +94,7 @@ def typst_escape(value: object) -> object:
     s = s.replace("<", "\\u{003c}")
     s = s.replace("`", "\\u{0060}")
     s = s.replace("~", "\\~")
+    s = _LINE_START_CHARS.sub(lambda m: _LINE_START_ESCAPE[m.group(1)], s)
     return s
 
 

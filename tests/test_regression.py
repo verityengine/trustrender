@@ -14,6 +14,7 @@ from formforge.regression import (
     DriftBaseline,
     DriftResult,
     _SCHEMA_VERSION,
+    _extract_embedded_fonts,
     check_drift,
     load_baseline,
     save_baseline,
@@ -211,3 +212,99 @@ class TestDriftChecks:
         assert "passed" in d
         assert "findings" in d
         assert "checks_run" in d
+
+
+class TestEmbeddedFontDrift:
+    def test_font_extraction_from_real_pdf(self):
+        """Rendered invoice contains Inter font names."""
+        pdf = _render_invoice()
+        fonts = _extract_embedded_fonts(pdf)
+        assert fonts is not None
+        # At least one Inter variant should be embedded
+        assert any("Inter" in f for f in fonts)
+
+    def test_embedded_fonts_in_baseline_json(self, tmp_path):
+        """save_baseline() stores embedded_fonts in JSON."""
+        data = _load_data()
+        fp = compute_fingerprint(EXAMPLES / "invoice.j2.typ", data)
+        pdf = _render_invoice(data)
+        save_baseline(tmp_path, "invoice.j2.typ", fp, pdf)
+
+        raw = json.loads((tmp_path / "invoice.j2.typ" / "latest.json").read_text())
+        assert "embedded_fonts" in raw
+        assert isinstance(raw["embedded_fonts"], list)
+        assert len(raw["embedded_fonts"]) > 0
+
+    def test_schema_version_bumped(self, tmp_path):
+        data = _load_data()
+        fp = compute_fingerprint(EXAMPLES / "invoice.j2.typ", data)
+        pdf = _render_invoice(data)
+        save_baseline(tmp_path, "invoice.j2.typ", fp, pdf)
+
+        raw = json.loads((tmp_path / "invoice.j2.typ" / "latest.json").read_text())
+        assert raw["schema_version"] == 2
+
+    def test_font_drift_detected(self, tmp_path):
+        """Font set change produces a warning finding."""
+        data = _load_data()
+        fp = compute_fingerprint(EXAMPLES / "invoice.j2.typ", data)
+        pdf = _render_invoice(data)
+        save_baseline(tmp_path, "invoice.j2.typ", fp, pdf)
+
+        # Manipulate baseline to have different fonts
+        raw = json.loads((tmp_path / "invoice.j2.typ" / "latest.json").read_text())
+        raw["embedded_fonts"] = ["Libertinus-Regular", "Libertinus-Bold"]
+        (tmp_path / "invoice.j2.typ" / "latest.json").write_text(
+            json.dumps(raw, indent=2)
+        )
+
+        result = check_drift(tmp_path, "invoice.j2.typ", fp, pdf)
+        assert result is not None
+        font_findings = [
+            f for f in result.findings if f.check_name == "embedded_fonts_changed"
+        ]
+        assert len(font_findings) == 1
+        assert font_findings[0].severity == "warning"
+        assert "removed" in font_findings[0].message
+        assert "added" in font_findings[0].message
+        assert font_findings[0].deterministic is True
+
+    def test_font_drift_none_baseline_skips(self, tmp_path):
+        """Old baseline without embedded_fonts → no font findings."""
+        data = _load_data()
+        fp = compute_fingerprint(EXAMPLES / "invoice.j2.typ", data)
+        pdf = _render_invoice(data)
+        save_baseline(tmp_path, "invoice.j2.typ", fp, pdf)
+
+        # Simulate old v1 baseline by removing embedded_fonts
+        raw = json.loads((tmp_path / "invoice.j2.typ" / "latest.json").read_text())
+        del raw["embedded_fonts"]
+        raw["schema_version"] = 1
+        (tmp_path / "invoice.j2.typ" / "latest.json").write_text(
+            json.dumps(raw, indent=2)
+        )
+
+        result = check_drift(tmp_path, "invoice.j2.typ", fp, pdf)
+        assert result is not None
+        font_findings = [
+            f for f in result.findings if f.check_name == "embedded_fonts_changed"
+        ]
+        assert len(font_findings) == 0
+
+    def test_no_font_drift_same_render(self, tmp_path):
+        """Same render → no font drift."""
+        data = _load_data()
+        fp = compute_fingerprint(EXAMPLES / "invoice.j2.typ", data)
+        pdf = _render_invoice(data)
+        save_baseline(tmp_path, "invoice.j2.typ", fp, pdf)
+
+        result = check_drift(tmp_path, "invoice.j2.typ", fp, pdf)
+        font_findings = [
+            f for f in result.findings if f.check_name == "embedded_fonts_changed"
+        ]
+        assert len(font_findings) == 0
+
+    def test_font_extraction_empty_pdf(self):
+        """Non-PDF bytes return None gracefully."""
+        assert _extract_embedded_fonts(b"not a pdf") is None
+        assert _extract_embedded_fonts(b"") is None
