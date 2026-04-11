@@ -255,12 +255,12 @@ error[DATA_CONTRACT]: 3 validation error(s)
 - `required` is a template-read heuristic, not business-semantic truth
 - Semantic checks require explicit hints — no automatic business-logic inference
 - Dynamic `{% include %}` produces a partial contract (warning by default; use `strict=True` to block)
-- Text anomaly detection covers control characters and zero-width characters on hinted fields only — no garbage-string scoring or Unicode normalization
+- Text anomaly detection (control characters, zero-width characters) scans all strings by default in preflight; semantic hint layer provides focused scanning of identity fields
 - Numeric coercion is intentionally narrow — locale-specific money formats should be normalized upstream before validation
 
 ## ZUGFeRD / Factur-X e-invoicing
 
-Formforge generates EN 16931 e-invoices for German domestic B2B invoicing. Generated XML passes XSD and Schematron validation in the test suite. One profile is currently supported:
+Formforge generates EN 16931 e-invoices for German domestic B2B invoicing. Both XSD and Schematron validation run in the render pipeline when `facturx` is installed — invalid XML is rejected before embedding into the PDF. One profile is currently supported:
 
 | Profile | Standard | Use case |
 |---------|----------|----------|
@@ -268,7 +268,7 @@ Formforge generates EN 16931 e-invoices for German domestic B2B invoicing. Gener
 
 When `zugferd="en16931"` is set, the pipeline adds two steps after normal PDF rendering: CII XML generation from the invoice data, and embedding the XML into a PDF/A-3b container with ZUGFeRD metadata.
 
-Pre-render validation checks required fields, currency, country, tax rate constraints, and data completeness. `preflight()` additionally runs XSD schema validation on the generated XML (requires `facturx`). One-time manual validation against the Mustang reference validator has also passed (see `docs/zugferd-prototype.md`).
+Pre-render validation checks required fields, currency, country, tax rate constraints, and data completeness. `render()` and `preflight()` both run XSD and Schematron validation on the generated XML (requires `facturx`). One-time manual validation against the Mustang reference validator has also passed (see `docs/zugferd-prototype.md`). Local developer validation is available via `make mustang-validate` (requires Java).
 
 ZUGFeRD and Factur-X are the same specification — ZUGFeRD is the German name, Factur-X is the French name.
 
@@ -601,7 +601,7 @@ Server error responses include `error`, `message`, `stage`, and `request_id`. Wi
 - Generation proof: cryptographic provenance embedded in PDF metadata, verifiable without re-rendering
 - Output fingerprinting: SHA-256 of final PDF bytes stored in render trace (input + output hash chain)
 - Bundled playground: `formforge serve` serves interactive dev sandbox at `/` — edit data, edit templates, preflight, render, inspect traces
-- Ops dashboard: production monitoring UI at `/dashboard` — aggregate stats, trace detail, identity hashes
+- Ops dashboard: production monitoring UI at `/dashboard` — two-tier stat hierarchy, trace detail with commanding header, color-coded pipeline stages, elevated identity chain, auto-refresh with manual override
 - Ephemeral template editing: browser-based template editor sends source for preflight/render without saving to disk
 - `formforge doctor --smoke`: environment diagnostics + render/server smoke test in one command
 - Benchmarked: 1,000-row invoice renders in 211ms (33 pages, 0.21ms/row), 53.8 RPS server throughput, 69.5 MB peak RSS
