@@ -91,6 +91,7 @@ def _render_document_pipeline(
     provenance: bool = False,
     backend: CompileBackend | None = None,
     timeout: float | None = None,
+    display_name: str | None = None,
 ) -> RenderResult:
     """Shared render pipeline: validate, preprocess, compile, post-process.
 
@@ -118,7 +119,7 @@ def _render_document_pipeline(
 
     is_jinja = template_path.name.endswith(".j2.typ")
     trace = RenderTrace(
-        template_name=template_path.name,
+        template_name=display_name or template_path.name,
         template_hash=f"sha256:{hashlib.sha256(template_path.read_bytes()).hexdigest()[:16]}",
         data_hash=f"sha256:{hashlib.sha256(json.dumps(data, sort_keys=True, separators=(',',':')).encode()).hexdigest()[:16]}",
         engine_version=__version__,

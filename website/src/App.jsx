@@ -1459,6 +1459,14 @@ function AppWorkspace() {
     fetchTemplateSource(tpl)
   }
 
+  const startFresh = () => {
+    switchFixture('invoice.j2.typ', 'valid')
+    setEditorTab('data')
+    setTraceId(null)
+    setSelectedTrace(null)
+    setTab('ready')
+  }
+
   const fetchTemplateSource = async (tpl) => {
     setSourceLoading(true)
     try {
@@ -1602,10 +1610,16 @@ function AppWorkspace() {
       {/* Header */}
       <header className="border-b border-rule-light bg-panel">
         <div className="max-w-[1280px] mx-auto px-6 md:px-10 flex items-center justify-between h-14">
-          <a href="#" className="flex items-center gap-2.5">
-            <AnimatedLogo size="small" />
-            <span className="text-[13px] font-semibold text-ink tracking-tight">Formforge</span>
-          </a>
+          <div className="flex items-center gap-4">
+            <a href="#" className="flex items-center gap-2.5">
+              <AnimatedLogo size="small" />
+              <span className="text-[13px] font-semibold text-ink tracking-tight">Formforge</span>
+            </a>
+            <button onClick={startFresh}
+              className="text-[11px] text-muted hover:text-ink px-3 py-1.5 rounded-md border border-rule-light hover:border-rule transition-colors cursor-pointer font-medium">
+              New draft
+            </button>
+          </div>
           <div className="flex items-center gap-1 bg-surface rounded-lg p-1 border border-rule-light">
             {[['ready', 'Ready'], ['generate', 'Generate'], ['history', 'History']].map(([key, label]) => (
               <button key={key} onClick={() => setTab(key)}

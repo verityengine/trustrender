@@ -55,6 +55,7 @@ def _server_render(
     provenance: bool,
     font_paths: list[str] | None,
     timeout: float,
+    display_name: str | None = None,
 ) -> bytes:
     """Server render path: CLI subprocess backend for killable execution.
 
@@ -73,6 +74,7 @@ def _server_render(
         provenance=provenance,
         backend=backend,
         timeout=timeout,
+        display_name=display_name,
     )
 
 
@@ -306,6 +308,7 @@ def create_app(
                             provenance=req_provenance,
                             font_paths=resolved_fonts,
                             timeout=render_timeout,
+                            display_name=template_name if ephemeral_path else None,
                         ),
                         timeout=render_timeout + 5,  # watchdog — subprocess kill is primary
                     )
