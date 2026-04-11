@@ -40,8 +40,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     render_cmd.add_argument(
         "--zugferd",
-        choices=["en16931"],
-        help="Generate ZUGFeRD EN 16931 compliant PDF with embedded XML",
+        choices=["en16931", "xrechnung"],
+        help="Generate ZUGFeRD-compliant PDF (en16931 or xrechnung)",
+    )
+    render_cmd.add_argument(
+        "--provenance",
+        action="store_true",
+        help="Embed cryptographic generation proof in PDF metadata",
     )
 
     check_cmd = sub.add_parser("check", help="Inspect or validate template data contract")
@@ -181,6 +186,7 @@ def _run_render(args: argparse.Namespace) -> int:
             font_paths=args.font_paths,
             validate=args.validate,
             zugferd=args.zugferd,
+            provenance=args.provenance,
         )
         print(f"Rendered {len(pdf_bytes):,} bytes -> {args.output}")
         if args.debug:

@@ -173,11 +173,18 @@ Returns 422 with `DATA_CONTRACT` error code if validation fails.
 - `{% include %}` fragments are not followed — contract may be incomplete for templates that rely on included fragments for data access
 - Validation is opt-in. Default render behavior is unchanged.
 
-## ZUGFeRD EN 16931 e-invoicing
+## ZUGFeRD / Factur-X e-invoicing
 
-Formforge can generate Mustang-validated EN 16931 e-invoices for a supported German domestic B2B invoice shape.
+Formforge can generate Mustang-validated e-invoices for supported invoice shapes. Two profiles are available:
 
-When `zugferd="en16931"` is set, the pipeline adds two steps after normal PDF rendering: CII XML generation from the invoice data, and embedding the XML into a PDF/A-3b container with ZUGFeRD metadata. The output passes the Mustang validator (exit code 0, PDF valid, XML valid).
+| Profile | Standard | Use case |
+|---------|----------|----------|
+| `en16931` | EN 16931 (ZUGFeRD / Factur-X) | B2B invoices in Germany and France |
+| `xrechnung` | XRechnung 3.0 | German government (B2G) invoices |
+
+When a `zugferd` profile is set, the pipeline adds two steps after normal PDF rendering: CII XML generation from the invoice data, and embedding the XML into a PDF/A-3b container with ZUGFeRD metadata. The output passes the Mustang validator (exit code 0, PDF valid, XML valid).
+
+ZUGFeRD and Factur-X are the same specification — ZUGFeRD is the German name, Factur-X is the French name. Both are supported by the `en16931` profile.
 
 **CLI:**
 
@@ -206,17 +213,19 @@ pdf = render(
 }
 ```
 
-Returns 422 with `ZUGFERD_ERROR` if invoice data is missing required EN 16931 fields. Bad `zugferd` values return 400.
+Returns 422 with `ZUGFERD_ERROR` if invoice data is missing required fields. Bad `zugferd` values return 400.
+
+For XRechnung (German government invoicing), additional fields are required: `buyer_reference` (Leitweg-ID), `seller.contact_name`, and seller/buyer electronic addresses.
 
 The invoice data model uses raw numeric amounts (not pre-formatted strings), explicit currency codes, VAT IDs, and structured tax entries. See `examples/einvoice_data.json` for the full shape.
 
 ### Supported scope
 
-- Profile: EN 16931 only
+- Profiles: EN 16931 (ZUGFeRD / Factur-X) and XRechnung
 - Country: Germany (DE)
 - Currency: EUR
 - Tax: standard VAT, single rate per invoice
-- Invoice type: domestic B2B (type code 380)
+- Invoice type: domestic B2B and B2G (type code 380)
 
 ### Not supported
 
@@ -226,9 +235,40 @@ The invoice data model uses raw numeric amounts (not pre-formatted strings), exp
 - Mixed tax rates within one invoice
 - Non-EUR currencies
 - Non-DE countries
-- XRechnung (separate German CIUS, stricter requirements)
 
 Unsupported shapes fail loudly at validation time, before any rendering or XML generation occurs.
+
+## Generation proof
+
+Formforge can embed a cryptographic generation proof in the PDF metadata, recording which template, which data, which engine version, and when the document was generated. This enables downstream verification that a document was produced from specific inputs without re-rendering.
+
+This is not a digital signature (no PKI required). It is a generation proof: it answers "was this document produced from this data using this template?"
+
+**CLI:**
+
+```
+formforge render invoice.j2.typ data.json -o out.pdf --provenance
+```
+
+**Python API:**
+
+```python
+pdf = render("invoice.j2.typ", data, output="out.pdf", provenance=True)
+```
+
+**Verification:**
+
+```python
+from formforge.provenance import verify_provenance
+
+result = verify_provenance(pdf_bytes, "invoice.j2.typ", original_data)
+print(result.verified)  # True if template + data hashes match
+print(result.reason)    # "match", "data_mismatch", "template_mismatch", "no_provenance"
+```
+
+The proof records: engine name and version, SHA-256 hash of the template file, SHA-256 hash of the canonical JSON data, UTC timestamp, and a combined proof hash. It is embedded in the PDF Info dictionary and survives normal PDF handling.
+
+Provenance works with all render modes — with or without ZUGFeRD, with or without contract validation. All flags compose.
 
 ---
 
@@ -263,7 +303,7 @@ Returns `application/pdf` on success.
 }
 ```
 
-**Request format:** JSON object with fields `template` (required string), `data` (required object), `debug` (optional boolean), `validate` (optional boolean), `zugferd` (optional, only `"en16931"`). See `examples/request_invoice.json` for a complete runnable example.
+**Request format:** JSON object with fields `template` (required string), `data` (required object), `debug` (optional boolean), `validate` (optional boolean), `zugferd` (optional: `"en16931"` or `"xrechnung"`), `provenance` (optional boolean). See `examples/request_invoice.json` for a complete runnable example.
 
 **Request ID:** The server accepts a client-provided `X-Request-ID` header or generates a UUID. It is echoed on both success and error responses for request tracing.
 
@@ -457,8 +497,9 @@ Server error responses include `error`, `message`, `stage`, and `request_id`. Wi
 - 5 starter templates: invoice, statement, receipt, letter, report
 - Pre-render contract validation: opt-in structural check catches missing/wrong fields before Jinja runs
 - `formforge check` CLI for template introspection and data validation
-- ZUGFeRD EN 16931: Mustang-validated German domestic B2B e-invoice generation (PDF/A-3b + embedded CII XML)
-- 312 tests passing (unit, integration, contract, ZUGFeRD, ugly-data stress, environment diagnostics)
+- ZUGFeRD / Factur-X: Mustang-validated EN 16931 and XRechnung e-invoice generation (PDF/A-3b + embedded CII XML)
+- Generation proof: cryptographic provenance embedded in PDF metadata, verifiable without re-rendering
+- 325+ tests passing (unit, integration, contract, ZUGFeRD, provenance, ugly-data stress, diagnostics)
 
 ## Development
 

@@ -39,7 +39,7 @@ from .templates import render_template
 
 MAX_BODY_SIZE = 1_048_576  # 1 MB
 RENDER_TIMEOUT = 30  # seconds
-ALLOWED_FIELDS = {"template", "data", "debug", "validate", "zugferd"}
+ALLOWED_FIELDS = {"template", "data", "debug", "validate", "zugferd", "provenance"}
 
 
 def _server_render(
@@ -49,6 +49,7 @@ def _server_render(
     debug: bool,
     validate: bool,
     zugferd: str | None,
+    provenance: bool,
     font_paths: list[str] | None,
     timeout: float,
 ) -> bytes:
@@ -67,7 +68,7 @@ def _server_render(
     if zugferd:
         from .zugferd import validate_zugferd_invoice_data
 
-        errors = validate_zugferd_invoice_data(data)
+        errors = validate_zugferd_invoice_data(data, profile=zugferd)
         if errors:
             detail = "\n".join(f"  {e.path}: {e.message}" for e in errors)
             raise FormforgeError(
@@ -126,7 +127,7 @@ def _server_render(
         from .zugferd import apply_zugferd, build_invoice_xml
 
         try:
-            xml_bytes = build_invoice_xml(data)
+            xml_bytes = build_invoice_xml(data, profile=zugferd)
             pdf_bytes = apply_zugferd(pdf_bytes, xml_bytes)
         except FormforgeError:
             raise
@@ -138,6 +139,13 @@ def _server_render(
                 detail=str(exc),
                 template_path=str(template_path),
             ) from exc
+
+    # Generation proof
+    if provenance:
+        from .provenance import create_provenance, embed_provenance
+
+        record = create_provenance(template_path, data)
+        pdf_bytes = embed_provenance(pdf_bytes, record)
 
     return pdf_bytes
 
@@ -232,6 +240,7 @@ def create_app(
         req_debug = payload.get("debug", False)
         req_validate = payload.get("validate", False)
         req_zugferd = payload.get("zugferd")
+        req_provenance = payload.get("provenance", False)
 
         if not template_name or not isinstance(template_name, str):
             return _error(
@@ -257,11 +266,11 @@ def create_app(
                 request_id,
                 stage="execution",
             )
-        if req_zugferd is not None and req_zugferd != "en16931":
+        if req_zugferd is not None and req_zugferd not in ("en16931", "xrechnung"):
             return _error(
                 400,
                 ErrorCode.INVALID_DATA,
-                "'zugferd' must be 'en16931'",
+                "'zugferd' must be 'en16931' or 'xrechnung'",
                 request_id,
                 stage="execution",
             )
@@ -299,6 +308,7 @@ def create_app(
                     debug=use_debug,
                     validate=req_validate,
                     zugferd=req_zugferd,
+                    provenance=req_provenance,
                     font_paths=resolved_fonts,
                     timeout=render_timeout,
                 ),

@@ -51,8 +51,10 @@ _SUPPORTED_COUNTRIES = {"DE"}
 # Invoice data validation (EN 16931 specific)
 # ---------------------------------------------------------------------------
 
-def validate_zugferd_invoice_data(data: dict) -> list[ContractError]:
-    """Validate that data satisfies EN 16931 requirements for XML generation.
+def validate_zugferd_invoice_data(
+    data: dict, *, profile: str = "en16931",
+) -> list[ContractError]:
+    """Validate that data satisfies EN 16931 / XRechnung requirements.
 
     This is stricter than generic template contract validation.  It checks
     fields needed for CII XML generation, not just template rendering.
@@ -204,6 +206,31 @@ def validate_zugferd_invoice_data(data: dict) -> list[ContractError]:
                 actual="missing",
             ))
 
+    # --- XRechnung-specific requirements ---
+    if profile == "xrechnung":
+        if not data.get("buyer_reference"):
+            errors.append(ContractError(
+                path="buyer_reference",
+                message="Leitweg-ID (buyer_reference) required for XRechnung",
+                expected="string",
+                actual="missing",
+            ))
+        seller = data.get("seller", {})
+        if not seller.get("contact_name"):
+            errors.append(ContractError(
+                path="seller.contact_name",
+                message="seller contact person name required for XRechnung (BR-DE-5)",
+                expected="string",
+                actual="missing",
+            ))
+        if not seller.get("email"):
+            errors.append(ContractError(
+                path="seller.email",
+                message="seller electronic address required for XRechnung",
+                expected="string",
+                actual="missing",
+            ))
+
     return errors
 
 
@@ -216,14 +243,21 @@ def _parse_date(date_str: str) -> datetime.date:
     return datetime.date.fromisoformat(date_str)
 
 
-def build_invoice_xml(data: dict) -> bytes:
+_GUIDELINE_IDS = {
+    "en16931": "urn:cen.eu:en16931:2017",
+    "xrechnung": "urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0",
+}
+
+
+def build_invoice_xml(data: dict, *, profile: str = "en16931") -> bytes:
     """Convert Formforge invoice data dict to CII XML bytes.
 
     Uses ``drafthorse`` to build a UN/CEFACT Cross Industry Invoice
-    document conforming to EN 16931 (ZUGFeRD 2.x / Factur-X).
+    document conforming to EN 16931 or XRechnung.
 
     Args:
         data: Invoice data dict matching the einvoice_data.json schema.
+        profile: ``"en16931"`` (default) or ``"xrechnung"``.
 
     Returns:
         UTF-8 encoded CII XML bytes.
@@ -233,8 +267,12 @@ def build_invoice_xml(data: dict) -> bytes:
     """
     doc = Document()
 
-    # --- Context: EN 16931 guideline ---
-    doc.context.guideline_parameter.id = "urn:cen.eu:en16931:2017"
+    # --- Context: guideline ---
+    doc.context.guideline_parameter.id = _GUIDELINE_IDS[profile]
+
+    # XRechnung requires a business process
+    if profile == "xrechnung":
+        doc.context.business_parameter.id = "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
 
     # --- Header ---
     doc.header.id = data["invoice_number"]
@@ -270,6 +308,23 @@ def build_invoice_xml(data: dict) -> bytes:
         buyer.address.postcode = buyer_data["postal_code"]
     if buyer_data.get("country"):
         buyer.address.country_id = buyer_data["country"]
+
+    # --- XRechnung-specific fields ---
+    if profile == "xrechnung":
+        # BT-10 Buyer Reference (Leitweg-ID for routing)
+        if data.get("buyer_reference"):
+            doc.trade.agreement.buyer_reference = data["buyer_reference"]
+        # BT-34 Seller electronic address
+        if seller_data.get("email"):
+            seller.electronic_address.id = seller_data["email"]
+            seller.electronic_address.scheme_id = "EM"
+        # BT-49 Buyer electronic address
+        if buyer_data.get("email"):
+            buyer.electronic_address.id = buyer_data["email"]
+            buyer.electronic_address.scheme_id = "EM"
+        # BT-41 Seller contact person name (required by BR-DE-5)
+        if seller_data.get("contact_name"):
+            seller.contact.person_name = seller_data["contact_name"]
 
     # --- Line items ---
     for i, item in enumerate(data["items"]):

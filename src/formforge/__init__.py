@@ -77,6 +77,7 @@ def render(
     font_paths: list[str | os.PathLike] | None = None,
     validate: bool = False,
     zugferd: str | None = None,
+    provenance: bool = False,
 ) -> bytes:
     """Render a PDF from a template and data.
 
@@ -96,6 +97,9 @@ def render(
         zugferd: If set to ``"en16931"``, generate a ZUGFeRD-compliant
             PDF/A-3b with embedded CII XML.  Validates invoice data against
             EN 16931 requirements before generation.
+        provenance: If True, embed a cryptographic generation proof in the
+            PDF metadata.  Records template hash, data hash, engine version,
+            and timestamp.  Use ``verify_provenance()`` to verify later.
 
     Returns:
         PDF file contents as bytes.
@@ -105,9 +109,10 @@ def render(
             ``stage`` for where it failed, and ``detail`` for the full diagnostic.
         FileNotFoundError: If the template or data file does not exist.
     """
-    if zugferd is not None and zugferd != "en16931":
+    _SUPPORTED_ZUGFERD = {"en16931", "xrechnung"}
+    if zugferd is not None and zugferd not in _SUPPORTED_ZUGFERD:
         raise FormforgeError(
-            f"Unsupported zugferd profile: '{zugferd}'. Only 'en16931' is supported.",
+            f"Unsupported zugferd profile: '{zugferd}'. Supported: {sorted(_SUPPORTED_ZUGFERD)}",
             code=ErrorCode.INVALID_DATA,
             stage="data_resolution",
         )
@@ -129,7 +134,7 @@ def render(
     if zugferd:
         from .zugferd import validate_zugferd_invoice_data
 
-        errors = validate_zugferd_invoice_data(data_dict)
+        errors = validate_zugferd_invoice_data(data_dict, profile=zugferd)
         if errors:
             detail = "\n".join(f"  {e.path}: {e.message}" for e in errors)
             raise FormforgeError(
@@ -186,7 +191,7 @@ def render(
         from .zugferd import apply_zugferd, build_invoice_xml
 
         try:
-            xml_bytes = build_invoice_xml(data_dict)
+            xml_bytes = build_invoice_xml(data_dict, profile=zugferd)
             pdf_bytes = apply_zugferd(pdf_bytes, xml_bytes)
         except FormforgeError:
             raise
@@ -198,6 +203,13 @@ def render(
                 detail=str(exc),
                 template_path=str(template_path),
             ) from exc
+
+    # Generation proof: embed cryptographic provenance in PDF metadata
+    if provenance:
+        from .provenance import create_provenance, embed_provenance
+
+        record = create_provenance(template_path, data_dict)
+        pdf_bytes = embed_provenance(pdf_bytes, record)
 
     if output is not None:
         output_path = Path(output)
