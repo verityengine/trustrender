@@ -204,7 +204,8 @@ def render(
                 template_path=str(template_path),
             ) from exc
 
-    # Generation proof: embed cryptographic provenance in PDF metadata
+    # Generation proof: embed AFTER all processing.
+    # Uses clone_from to preserve ZUGFeRD metadata and embedded files.
     if provenance:
         from .provenance import create_provenance, embed_provenance
 

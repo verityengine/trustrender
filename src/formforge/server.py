@@ -140,7 +140,7 @@ def _server_render(
                 template_path=str(template_path),
             ) from exc
 
-    # Generation proof
+    # Generation proof AFTER ZUGFeRD (clone_from preserves ZUGFeRD metadata)
     if provenance:
         from .provenance import create_provenance, embed_provenance
 

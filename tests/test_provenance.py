@@ -122,6 +122,42 @@ class TestRenderIntegration:
         assert extract_provenance(pdf) is None
 
 
+class TestProvenanceWithZugferd:
+    """Regression: provenance + ZUGFeRD must coexist without corruption."""
+
+    def test_zugferd_plus_provenance_both_survive(self):
+        """All three: render + ZUGFeRD + provenance. All must be present."""
+        data = json.loads((EXAMPLES / "einvoice_data.json").read_text())
+        pdf = render(
+            "examples/einvoice.j2.typ", data,
+            zugferd="en16931", provenance=True,
+        )
+        assert pdf[:5] == b"%PDF-"
+
+        # Provenance must be extractable
+        record = extract_provenance(pdf)
+        assert record is not None
+        assert record.template_name == "einvoice.j2.typ"
+
+        # ZUGFeRD XML must be extractable
+        from facturx import get_xml_from_pdf
+        filename, xml = get_xml_from_pdf(pdf)
+        assert filename == "factur-x.xml"
+        assert len(xml) > 100
+        assert b"CrossIndustryInvoice" in xml
+
+    def test_provenance_verifies_after_zugferd(self):
+        """Provenance verification works on ZUGFeRD PDFs."""
+        data = json.loads((EXAMPLES / "einvoice_data.json").read_text())
+        pdf = render(
+            "examples/einvoice.j2.typ", data,
+            zugferd="en16931", provenance=True,
+        )
+        result = verify_provenance(pdf, EXAMPLES / "einvoice.j2.typ", data)
+        assert result.verified is True
+        assert result.reason == "match"
+
+
 class TestRegression:
     def test_old_invoice_no_provenance(self):
         """Default render unchanged — no provenance embedded."""

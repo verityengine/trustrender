@@ -170,16 +170,14 @@ def embed_provenance(pdf_bytes: bytes, record: ProvenanceRecord) -> bytes:
     Uses pypdf to inject the record as a custom metadata field.
     The provenance is stored as JSON in the PDF's Info dictionary
     under the key ``formforge:provenance``.
+
+    Uses ``clone_from`` to preserve the full PDF structure (including
+    ZUGFeRD embedded files, XMP metadata, and output intents).
     """
     from pypdf import PdfReader, PdfWriter
 
     reader = PdfReader(BytesIO(pdf_bytes))
-    writer = PdfWriter()
-    writer.append_pages_from_reader(reader)
-
-    # Preserve existing metadata
-    if reader.metadata:
-        writer.add_metadata({k: v for k, v in reader.metadata.items() if v})
+    writer = PdfWriter(clone_from=reader)
 
     # Add provenance
     provenance_json = json.dumps(record.to_dict(), separators=(",", ":"))
