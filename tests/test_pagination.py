@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 from pypdf import PdfReader
 
-import formforge
+import trustrender
 
 EXAMPLES = Path("examples")
 
@@ -44,7 +44,7 @@ def pdf_page_texts(pdf_bytes: bytes) -> list[str]:
 def render(template: str, data_file: str) -> bytes:
     """Render a template with data, return raw PDF bytes."""
     data = json.loads((EXAMPLES / data_file).read_text(encoding="utf-8"))
-    return formforge.render(
+    return trustrender.render(
         str(EXAMPLES / template),
         data,
         validate=False,

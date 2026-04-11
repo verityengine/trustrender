@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from formforge.contract import (
+from trustrender.contract import (
     LIST_OBJECT,
     LIST_SCALAR,
     OBJECT,
@@ -15,7 +15,7 @@ from formforge.contract import (
     infer_contract,
     validate_data,
 )
-from formforge.errors import ErrorCode, FormforgeError
+from trustrender.errors import ErrorCode, TrustRenderError
 
 EXAMPLES = Path(__file__).parent.parent / "examples"
 
@@ -449,7 +449,7 @@ class TestIncludeInference:
 
     def test_dynamic_include_marks_partial(self, tmp_path):
         """{% include some_var %} marks the contract as partial."""
-        from formforge.contract import infer_contract_with_metadata
+        from trustrender.contract import infer_contract_with_metadata
 
         (tmp_path / "main.j2.typ").write_text(
             "{% include template_name %}\n{{ title }}"
@@ -462,7 +462,7 @@ class TestIncludeInference:
 
     def test_missing_fragment_marks_partial(self, tmp_path):
         """{% include 'nonexistent.j2.typ' %} marks partial, no crash."""
-        from formforge.contract import infer_contract_with_metadata
+        from trustrender.contract import infer_contract_with_metadata
 
         (tmp_path / "main.j2.typ").write_text(
             '{% include "nonexistent.j2.typ" %}\n{{ title }}'
@@ -475,7 +475,7 @@ class TestIncludeInference:
 
     def test_ignore_missing_not_partial(self, tmp_path):
         """{% include 'x' ignore missing %} does not mark as partial."""
-        from formforge.contract import infer_contract_with_metadata
+        from trustrender.contract import infer_contract_with_metadata
 
         (tmp_path / "main.j2.typ").write_text(
             '{% include "nonexistent.j2.typ" ignore missing %}\n{{ title }}'
@@ -532,9 +532,9 @@ class TestIncludeInference:
 class TestIntegration:
     def test_render_bad_data_raises_data_contract(self):
         """render(validate=True) with incomplete data raises DATA_CONTRACT."""
-        from formforge import render
+        from trustrender import render
 
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             render(EXAMPLES / "invoice.j2.typ", {}, validate=True)
 
         exc = exc_info.value
@@ -543,7 +543,7 @@ class TestIntegration:
 
     def test_render_good_data_passes(self):
         """render(validate=True) with complete data should succeed."""
-        from formforge import render
+        from trustrender import render
 
         data = _load_data("invoice")
         pdf = render(EXAMPLES / "invoice.j2.typ", data, validate=True)
@@ -551,10 +551,10 @@ class TestIntegration:
 
     def test_render_with_validate_false_skips_contract(self):
         """render(validate=False) skips contract validation."""
-        from formforge import render
+        from trustrender import render
 
         # Bad data with explicit validate=False — should hit Jinja error, not contract.
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             render(EXAMPLES / "invoice.j2.typ", {"invoice_number": "X"}, validate=False)
 
         # Should be a template error, not DATA_CONTRACT.
@@ -562,18 +562,18 @@ class TestIntegration:
 
     def test_validate_true_is_default(self):
         """render() validates by default for .j2.typ templates."""
-        from formforge import render
+        from trustrender import render
 
         # No validate= argument — default should be True
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             render(EXAMPLES / "invoice.j2.typ", {"invoice_number": "X"})
         assert exc_info.value.code == ErrorCode.DATA_CONTRACT
 
     def test_error_detail_contains_paths(self):
         """Error detail should contain the missing field paths."""
-        from formforge import render
+        from trustrender import render
 
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             render(
                 EXAMPLES / "invoice.j2.typ",
                 {"invoice_number": "X"},

@@ -18,7 +18,7 @@ do not block rendering.  Callers who want to block can check
 
 Usage::
 
-    from formforge.semantic import validate_semantics
+    from trustrender.semantic import validate_semantics
 
     report = validate_semantics(data, hints={"line_items": "items",
                                               "line_total": "line_total",

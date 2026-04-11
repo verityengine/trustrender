@@ -87,7 +87,7 @@ Full suite: 736 passing
 
 ## Code fix applied
 
-**`src/formforge/semantic.py` — `_try_parse_number()`**
+**`src/trustrender/semantic.py` — `_try_parse_number()`**
 
 Added `math.isfinite()` check after `float()` parsing. Non-finite values (Infinity, -Infinity, NaN) now return `None`, which means:
 - They trigger `numeric_coercion` warnings when hinted

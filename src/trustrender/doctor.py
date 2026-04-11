@@ -1,4 +1,4 @@
-"""Environment diagnostics for Formforge."""
+"""Environment diagnostics for TrustRender."""
 
 from __future__ import annotations
 
@@ -28,13 +28,13 @@ def check_python_version() -> tuple[str, str]:
     return FAIL, f"Python {version_str} — requires >=3.11"
 
 
-def check_formforge_import() -> tuple[str, str]:
+def check_trustrender_import() -> tuple[str, str]:
     try:
-        import formforge
+        import trustrender
 
-        return OK, f"formforge {formforge.__version__} importable"
+        return OK, f"trustrender {trustrender.__version__} importable"
     except ImportError as exc:
-        return FAIL, f"Cannot import formforge: {exc}"
+        return FAIL, f"Cannot import trustrender: {exc}"
 
 
 def check_typst_py() -> tuple[str, str]:
@@ -92,7 +92,7 @@ def check_backends(typst_py_status: str, typst_cli_status: str) -> tuple[str, st
 
 
 def check_fonts_dir() -> tuple[str, str]:
-    from formforge import bundled_font_dir
+    from trustrender import bundled_font_dir
 
     fonts = bundled_font_dir()
     if fonts is None:
@@ -111,8 +111,8 @@ def check_template_fonts(templates_dir: Path | None = None) -> tuple[str, str]:
     """
     import re
 
-    from formforge import bundled_font_dir
-    from formforge.readiness import _parse_declared_fonts
+    from trustrender import bundled_font_dir
+    from trustrender.readiness import _parse_declared_fonts
 
     fonts_dir = bundled_font_dir()
 
@@ -125,7 +125,7 @@ def check_template_fonts(templates_dir: Path | None = None) -> tuple[str, str]:
                 if name and name not in available:
                     available[name] = f"bundled: {fonts_dir}"
 
-    env_path = os.environ.get("FORMFORGE_FONT_PATH")
+    env_path = os.environ.get("TRUSTRENDER_FONT_PATH")
     env_families: set[str] = set()
     if env_path and Path(env_path).is_dir():
         for ext in ("*.ttf", "*.otf"):
@@ -134,7 +134,7 @@ def check_template_fonts(templates_dir: Path | None = None) -> tuple[str, str]:
                 if name:
                     env_families.add(name)
                     if name not in available:
-                        available[name] = f"FORMFORGE_FONT_PATH: {env_path}"
+                        available[name] = f"TRUSTRENDER_FONT_PATH: {env_path}"
 
     # Find templates
     if templates_dir is None:
@@ -148,7 +148,7 @@ def check_template_fonts(templates_dir: Path | None = None) -> tuple[str, str]:
     missing: list[tuple[str, str]] = []  # (template, font_name)
 
     for template in templates_dir.glob("**/*.typ"):
-        if template.name.startswith("_formforge_"):
+        if template.name.startswith("_trustrender_"):
             continue
         try:
             content = template.read_text()
@@ -197,7 +197,7 @@ def check_template_fonts(templates_dir: Path | None = None) -> tuple[str, str]:
             lines.append(f"         Path:     install missing fonts to {target}")
         else:
             lines.append(
-                "         Tip:      set FORMFORGE_FONT_PATH to a directory with your fonts"
+                "         Tip:      set TRUSTRENDER_FONT_PATH to a directory with your fonts"
             )
         return WARN, "\n".join(lines)
 
@@ -215,30 +215,30 @@ def check_template_fonts(templates_dir: Path | None = None) -> tuple[str, str]:
 
 
 def check_env_backend() -> tuple[str, str]:
-    val = os.environ.get("FORMFORGE_BACKEND")
+    val = os.environ.get("TRUSTRENDER_BACKEND")
     if val is None:
-        return INFO, "FORMFORGE_BACKEND not set (auto-detect)"
+        return INFO, "TRUSTRENDER_BACKEND not set (auto-detect)"
     if val in ("typst-py", "typst-cli"):
-        return INFO, f"FORMFORGE_BACKEND={val}"
-    return WARN, f"FORMFORGE_BACKEND={val!r} (invalid — use 'typst-py' or 'typst-cli')"
+        return INFO, f"TRUSTRENDER_BACKEND={val}"
+    return WARN, f"TRUSTRENDER_BACKEND={val!r} (invalid — use 'typst-py' or 'typst-cli')"
 
 
 def check_env_font_path() -> tuple[str, str]:
-    val = os.environ.get("FORMFORGE_FONT_PATH")
+    val = os.environ.get("TRUSTRENDER_FONT_PATH")
     if val is None:
-        return INFO, "FORMFORGE_FONT_PATH not set (using bundled)"
+        return INFO, "TRUSTRENDER_FONT_PATH not set (using bundled)"
     if Path(val).is_dir():
-        return INFO, f"FORMFORGE_FONT_PATH={val}"
-    return WARN, f"FORMFORGE_FONT_PATH={val} (directory does not exist)"
+        return INFO, f"TRUSTRENDER_FONT_PATH={val}"
+    return WARN, f"TRUSTRENDER_FONT_PATH={val} (directory does not exist)"
 
 
 def _find_repo_root() -> Path | None:
-    """Walk up from the formforge package to find the repo root with examples/."""
+    """Walk up from the trustrender package to find the repo root with examples/."""
     try:
-        import formforge
+        import trustrender
 
-        pkg_path = Path(formforge.__file__).resolve().parent
-        # src-layout: src/formforge/__init__.py -> repo_root is ../../
+        pkg_path = Path(trustrender.__file__).resolve().parent
+        # src-layout: src/trustrender/__init__.py -> repo_root is ../../
         candidate = pkg_path.parent.parent
         if (candidate / "examples").is_dir():
             return candidate
@@ -266,7 +266,7 @@ def check_smoke_render() -> tuple[str, str]:
         return WARN, "Smoke render skipped — example invoice files not found"
 
     try:
-        from formforge import render
+        from trustrender import render
 
         start = time.monotonic()
         pdf_bytes = render(str(template), str(data))
@@ -294,7 +294,7 @@ def check_smoke_server() -> tuple[str, str]:
     try:
         from starlette.testclient import TestClient
 
-        from formforge.server import create_app
+        from trustrender.server import create_app
 
         app = create_app(str(examples_dir))
         client = TestClient(app)
@@ -311,13 +311,13 @@ def check_smoke_server() -> tuple[str, str]:
 
 def run_doctor(smoke: bool = False) -> int:
     """Run all diagnostic checks. Returns 0 if all pass, 1 if any fail."""
-    print("\nformforge doctor\n")
+    print("\ntrustrender doctor\n")
 
     checks: list[tuple[str, str]] = []
 
     # Core checks
     checks.append(check_python_version())
-    checks.append(check_formforge_import())
+    checks.append(check_trustrender_import())
 
     typst_py_result = check_typst_py()
     checks.append(typst_py_result)

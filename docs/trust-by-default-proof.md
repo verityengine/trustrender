@@ -7,7 +7,7 @@ Test count: 620 (up from 592)
 
 ## What changed
 
-Three moves that shift Formforge from "renderer with checks" to "trust layer for structured documents."
+Three moves that shift TrustRender from "renderer with checks" to "trust layer for structured documents."
 
 1. **Validation is now the default** for `.j2.typ` templates
 2. **Include fragments are followed** in contract inference
@@ -19,10 +19,10 @@ Three moves that shift Formforge from "renderer with checks" to "trust layer for
 
 Before: `render("invoice.j2.typ", bad_data)` would crash with an opaque Jinja2 `UndefinedError` or silently render a broken document.
 
-After: `render("invoice.j2.typ", bad_data)` raises `FormforgeError(code=DATA_CONTRACT)` with specific field paths before any Typst compilation starts.
+After: `render("invoice.j2.typ", bad_data)` raises `TrustRenderError(code=DATA_CONTRACT)` with specific field paths before any Typst compilation starts.
 
 ```
-$ formforge render examples/invoice.j2.typ bad_data.json -o out.pdf
+$ trustrender render examples/invoice.j2.typ bad_data.json -o out.pdf
 
 error[DATA_CONTRACT]: 11 field errors in invoice.j2.typ
   stage: data_validation
@@ -34,7 +34,7 @@ error[DATA_CONTRACT]: 11 field errors in invoice.j2.typ
   ...
 ```
 
-Opt-out: `formforge render ... --no-validate` or `render(..., validate=False)`.
+Opt-out: `trustrender render ... --no-validate` or `render(..., validate=False)`.
 
 **Tested by:** `test_validate_true_is_default` in test_contract.py
 
@@ -50,7 +50,7 @@ Missing includes: marked partial, no crash.
 Circular includes: cycle-detected, no infinite recursion.
 
 ```python
-from formforge.contract import infer_contract_with_metadata
+from trustrender.contract import infer_contract_with_metadata
 
 result = infer_contract_with_metadata("template_with_dynamic_include.j2.typ")
 # result.is_partial == True
@@ -89,7 +89,7 @@ Readiness: PASS (1 warning)
 - receipt_number and company.name are non-empty
 
 ```python
-from formforge.semantic import validate_semantics, RECEIPT_HINTS
+from trustrender.semantic import validate_semantics, RECEIPT_HINTS
 report = validate_semantics(receipt_data, RECEIPT_HINTS)
 # 0 issues on valid fixture data
 # Arithmetic warning if subtotal doesn't match item sum
@@ -105,7 +105,7 @@ report = validate_semantics(receipt_data, RECEIPT_HINTS)
 - customer.name and account_number non-empty
 
 ```python
-from formforge.semantic import validate_semantics, STATEMENT_HINTS
+from trustrender.semantic import validate_semantics, STATEMENT_HINTS
 report = validate_semantics(statement_data, STATEMENT_HINTS)
 # 0 issues on valid fixture data
 # Arithmetic warning if aging totals don't sum
@@ -133,7 +133,7 @@ No fake confidence for unknown templates.
 | `render()` | `validate=False` | `validate=True` |
 | `audit()` | `validate=False` | `validate=True` |
 | Server POST /render | `"validate"` defaults False | `"validate"` defaults True |
-| CLI `formforge render` | `--validate` flag | `--no-validate` flag |
+| CLI `trustrender render` | `--validate` flag | `--no-validate` flag |
 | Contract inference | Skips includes | Follows includes recursively |
 | `infer_contract()` | Returns DataContract | Returns DataContract (unchanged) |
 | `infer_contract_with_metadata()` | N/A (new) | Returns InferenceResult with is_partial |
@@ -145,12 +145,12 @@ No fake confidence for unknown templates.
 
 ## Files modified
 
-- `src/formforge/__init__.py` — validate defaults
-- `src/formforge/server.py` — server validate default
-- `src/formforge/cli.py` — --no-validate flag, _resolve_hints(), infer_contract_with_metadata usage
-- `src/formforge/contract.py` — InferenceResult, infer_contract_with_metadata(), _visit_Include implementation
-- `src/formforge/semantic.py` — RECEIPT_HINTS, STATEMENT_HINTS, reconciliations field, _check_reconciliation()
-- `src/formforge/readiness.py` — partial contract warnings in preflight
+- `src/trustrender/__init__.py` — validate defaults
+- `src/trustrender/server.py` — server validate default
+- `src/trustrender/cli.py` — --no-validate flag, _resolve_hints(), infer_contract_with_metadata usage
+- `src/trustrender/contract.py` — InferenceResult, infer_contract_with_metadata(), _visit_Include implementation
+- `src/trustrender/semantic.py` — RECEIPT_HINTS, STATEMENT_HINTS, reconciliations field, _check_reconciliation()
+- `src/trustrender/readiness.py` — partial contract warnings in preflight
 - `tests/test_contract.py` — 11 new tests (1 default-validation + 10 include inference)
 - `tests/test_semantic.py` — 17 new tests (receipt, statement, reconciliation, auto-detection)
 - `tests/test_error_pipeline.py` — 3 tests updated (explicit validate=False)

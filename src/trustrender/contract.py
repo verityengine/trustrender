@@ -753,14 +753,14 @@ def _type_name(value: object) -> str:
 
 
 def format_contract_errors(errors: list[ContractError], template_name: str) -> str:
-    """One-line summary for FormforgeError message."""
+    """One-line summary for TrustRenderError message."""
     n = len(errors)
     noun = "error" if n == 1 else "errors"
     return f"Data validation failed: {n} field {noun} in {template_name}"
 
 
 def format_contract_detail(errors: list[ContractError], contract: DataContract) -> str:
-    """Multi-line detail for FormforgeError.detail."""
+    """Multi-line detail for TrustRenderError.detail."""
     lines: list[str] = []
     for err in errors:
         lines.append(f"  {err.path}: {err.message}")

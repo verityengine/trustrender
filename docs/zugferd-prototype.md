@@ -35,7 +35,7 @@
 | 2 | CII XML generation (`build_invoice_xml`) | PASS (8,472 bytes) |
 | 3 | XSD validation (`facturx.xml_check_xsd`) | PASS |
 | 4 | Schematron validation (`facturx.xml_check_schematron`) | PASS |
-| 5 | Visual PDF render (Typst via formforge) | PASS (56,639 bytes) |
+| 5 | Visual PDF render (Typst via trustrender) | PASS (56,639 bytes) |
 | 6 | ZUGFeRD PDF/A-3b combination (`apply_zugferd`) | PASS (43,049 bytes) |
 | 7 | XML extracted from output PDF (`get_xml_from_pdf`) | PASS (filename=factur-x.xml, 8,472 bytes) |
 | 8 | Extracted XML re-validated (XSD + Schematron) | PASS |
@@ -58,14 +58,14 @@
 einvoice_data.json (raw numeric amounts, VAT IDs, IBAN)
     → validate_zugferd_invoice_data() — EN 16931 field validation
     → build_invoice_xml() — data → drafthorse Document → CII XML bytes
-    → formforge.render() — template + data → Typst → visual PDF bytes
+    → trustrender.render() — template + data → Typst → visual PDF bytes
     → apply_zugferd() — drafthorse.pdf.attach_xml(pdf, xml) → PDF/A-3b
     → output: ZUGFeRD-compliant PDF with embedded XML
 ```
 
 ## Files
 
-- `src/formforge/zugferd.py` — validation, XML generation, PDF post-processing
+- `src/trustrender/zugferd.py` — validation, XML generation, PDF post-processing
 - `examples/einvoice_data.json` — EN 16931 data fixture
 
 ## Verdict

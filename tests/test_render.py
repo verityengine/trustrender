@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from formforge import FormforgeError, render
+from trustrender import TrustRenderError, render
 
 FIXTURES = Path("tests/fixtures")
 
@@ -69,11 +69,11 @@ class TestDataResolution:
         assert pdf[:5] == b"%PDF-"
 
     def test_invalid_json_string(self):
-        with pytest.raises(FormforgeError, match="Invalid data"):
+        with pytest.raises(TrustRenderError, match="Invalid data"):
             render(FIXTURES / "simple.j2.typ", "not json at all {{{")
 
     def test_json_array_rejected(self):
-        with pytest.raises(FormforgeError, match="must be an object"):
+        with pytest.raises(TrustRenderError, match="must be an object"):
             render(FIXTURES / "simple.j2.typ", "[1, 2, 3]")
 
 
@@ -81,10 +81,10 @@ class TestDebugMode:
     @pytest.fixture(autouse=True)
     def _clean_intermediates(self):
         """Remove any leftover intermediate files before and after each test."""
-        for f in FIXTURES.glob("_formforge_*.typ"):
+        for f in FIXTURES.glob("_trustrender_*.typ"):
             f.unlink()
         yield
-        for f in FIXTURES.glob("_formforge_*.typ"):
+        for f in FIXTURES.glob("_trustrender_*.typ"):
             f.unlink()
 
     def test_debug_preserves_intermediate(self):
@@ -93,17 +93,17 @@ class TestDebugMode:
             FIXTURES / "simple.json",
             debug=True,
         )
-        intermediates = list(FIXTURES.glob("_formforge_*.typ"))
+        intermediates = list(FIXTURES.glob("_trustrender_*.typ"))
         assert len(intermediates) == 1
 
     def test_no_debug_cleans_up(self):
         render(FIXTURES / "simple.j2.typ", FIXTURES / "simple.json")
-        intermediates = list(FIXTURES.glob("_formforge_*.typ"))
+        intermediates = list(FIXTURES.glob("_trustrender_*.typ"))
         assert len(intermediates) == 0
 
 
 class TestFileNotFound:
     def test_missing_template(self):
-        with pytest.raises(FormforgeError, match="Template not found") as exc_info:
+        with pytest.raises(TrustRenderError, match="Template not found") as exc_info:
             render("nonexistent.j2.typ", {})
         assert exc_info.value.code.value == "TEMPLATE_NOT_FOUND"

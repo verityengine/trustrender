@@ -81,7 +81,7 @@ Note: p50 is low because contract validation failures are caught before Typst co
 
 ## Server Soak (not run this session)
 
-Server soak requires a running server (`formforge serve --templates examples --port 8192`). Previous manual run (documented in docs/outreach.md):
+Server soak requires a running server (`trustrender serve --templates examples --port 8192`). Previous manual run (documented in docs/outreach.md):
 
 | Metric | Value |
 |--------|-------|
@@ -111,6 +111,6 @@ python benchmarks/soak_test.py --mixed -n 200
 
 For server soak:
 ```
-formforge serve --templates examples --port 8192 &
+trustrender serve --templates examples --port 8192 &
 python benchmarks/soak_test.py --server -n 300
 ```

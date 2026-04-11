@@ -4,14 +4,14 @@ Records what happened at each pipeline stage during a render: what was
 checked, what passed, what failed, how long it took. No raw data stored —
 only hashes, timings, stage outcomes, and metadata.
 
-Storage is SQLite, append-only. Opt-in via ``FORMFORGE_HISTORY`` env var
+Storage is SQLite, append-only. Opt-in via ``TRUSTRENDER_HISTORY`` env var
 or ``history`` parameter.
 
 Usage::
 
-    from formforge.trace import TraceStore
+    from trustrender.trace import TraceStore
 
-    store = TraceStore("~/.formforge/history.db")
+    store = TraceStore("~/.trustrender/history.db")
     store.record(trace)
 
     for event in store.query(template="invoice.j2.typ", limit=20):
@@ -301,12 +301,12 @@ def get_store() -> TraceStore | None:
     if _store is not None:
         return _store
 
-    history_path = os.environ.get("FORMFORGE_HISTORY")
+    history_path = os.environ.get("TRUSTRENDER_HISTORY")
     if not history_path:
         return None
 
     if history_path == "1":
-        history_path = os.path.expanduser("~/.formforge/history.db")
+        history_path = os.path.expanduser("~/.trustrender/history.db")
 
     _store = TraceStore(history_path)
     return _store

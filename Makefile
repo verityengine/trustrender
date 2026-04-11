@@ -11,14 +11,14 @@ setup: ## Create venv with standard install
 	$(PYTHON) -m venv $(VENV)
 	$(VENV)/bin/pip install --upgrade pip setuptools wheel --quiet
 	$(VENV)/bin/pip install . --quiet
-	@echo "\n  Installed formforge into $(VENV)"
+	@echo "\n  Installed trustrender into $(VENV)"
 	@echo "  Activate: source $(VENV)/bin/activate"
 
 dev: ## Create venv with editable install + dev deps
 	$(PYTHON) -m venv $(VENV)
 	$(VENV)/bin/pip install --upgrade pip setuptools wheel --quiet
 	$(VENV)/bin/pip install -e ".[dev]" --quiet
-	@echo "\n  Installed formforge (editable + dev) into $(VENV)"
+	@echo "\n  Installed trustrender (editable + dev) into $(VENV)"
 	@echo "  Activate: source $(VENV)/bin/activate"
 
 test: ## Run pytest
@@ -37,17 +37,17 @@ clean: ## Remove build artifacts (not .venv)
 
 build-playground: ## Build playground UI and copy to package
 	cd website && npm run build
-	rm -rf src/formforge/playground
-	cp -r website/dist src/formforge/playground
+	rm -rf src/trustrender/playground
+	cp -r website/dist src/trustrender/playground
 
 docker: ## Build Docker image
-	docker build -t formforge .
+	docker build -t trustrender .
 
 smoke: ## Quick render + server health smoke test
-	formforge doctor --smoke
+	trustrender doctor --smoke
 
 doctor: ## Run environment diagnostics
-	formforge doctor
+	trustrender doctor
 
 MUSTANG_VERSION := 2.15.0
 MUSTANG_JAR     := .cache/mustang-cli-$(MUSTANG_VERSION).jar
@@ -59,7 +59,7 @@ mustang-validate: ## Validate e-invoice against Mustang reference validator (req
 		curl -fSL -o $(MUSTANG_JAR) \
 		"https://repo1.maven.org/maven2/org/mustangproject/Mustang-CLI/$(MUSTANG_VERSION)/Mustang-CLI-$(MUSTANG_VERSION).jar"; }
 	@echo "Rendering e-invoice..."
-	@python -c "from formforge import render; import json; \
+	@python -c "from trustrender import render; import json; \
 		d = json.load(open('examples/einvoice_data.json')); \
 		pdf = render('examples/einvoice.j2.typ', d, zugferd='en16931'); \
 		open('.cache/einvoice_test.pdf','wb').write(pdf)"

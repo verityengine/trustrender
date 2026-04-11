@@ -1,4 +1,4 @@
-"""HTTP server for Formforge — thin wrapper over the render pipeline.
+"""HTTP server for TrustRender — thin wrapper over the render pipeline.
 
 Endpoints:
     POST /render     — render a template to PDF
@@ -33,7 +33,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
-from . import FormforgeError, RenderResult, __version__, _build_font_paths, _render_document_pipeline
+from . import TrustRenderError, RenderResult, __version__, _build_font_paths, _render_document_pipeline
 from .engine import TypstCliBackend
 from .errors import ErrorCode
 
@@ -134,7 +134,7 @@ def create_app(
     def _write_ephemeral_template(template_name: str, source: str) -> Path:
         """Write ephemeral template source to a temp file for pipeline consumption.
 
-        Uses the same ``_formforge_*`` naming pattern as Jinja2 preprocessing.
+        Uses the same ``_trustrender_*`` naming pattern as Jinja2 preprocessing.
         The caller is responsible for cleanup.
         """
         import random
@@ -143,7 +143,7 @@ def create_app(
         suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
         # Preserve extension so the pipeline detects Jinja2 vs raw Typst
         ext = "".join(Path(template_name).suffixes)  # e.g. ".j2.typ"
-        temp_path = templates_dir / f"_formforge_{suffix}{ext}"
+        temp_path = templates_dir / f"_trustrender_{suffix}{ext}"
         temp_path.write_text(source, encoding="utf-8")
         return temp_path
 
@@ -321,7 +321,7 @@ def create_app(
                     request_id,
                     stage="execution",
                 )
-            except FormforgeError as exc:
+            except TrustRenderError as exc:
                 if exc.code == ErrorCode.RENDER_TIMEOUT:
                     status = 504
                 elif exc.code in (ErrorCode.DATA_CONTRACT, ErrorCode.ZUGFERD_ERROR):

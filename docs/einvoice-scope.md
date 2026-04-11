@@ -2,7 +2,7 @@
 
 Updated: 2026-04-12
 
-Single authoritative reference for what Formforge supports, rejects, and does not claim for e-invoicing.
+Single authoritative reference for what TrustRender supports, rejects, and does not claim for e-invoicing.
 
 ---
 

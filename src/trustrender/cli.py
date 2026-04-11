@@ -1,4 +1,4 @@
-"""CLI entry point for Formforge."""
+"""CLI entry point for TrustRender."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import os
 import sys
 from pathlib import Path
 
-from . import AuditResult, FormforgeError, __version__, audit, render
+from . import AuditResult, TrustRenderError, __version__, audit, render
 
 
 # ---------------------------------------------------------------------------
@@ -52,10 +52,10 @@ def _add_provenance(parser: argparse.ArgumentParser) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="formforge",
+        prog="trustrender",
         description="Generate PDFs from structured data. No browser required.",
     )
-    parser.add_argument("--version", action="version", version=f"formforge {__version__}")
+    parser.add_argument("--version", action="version", version=f"trustrender {__version__}")
 
     sub = parser.add_subparsers(dest="command")
 
@@ -80,8 +80,8 @@ def main(argv: list[str] | None = None) -> int:
     serve_cmd = sub.add_parser("serve", help="Start HTTP render server")
     serve_cmd.add_argument(
         "--templates",
-        default=os.environ.get("FORMFORGE_TEMPLATES_DIR"),
-        help="Template directory root (or set FORMFORGE_TEMPLATES_DIR env var)",
+        default=os.environ.get("TRUSTRENDER_TEMPLATES_DIR"),
+        help="Template directory root (or set TRUSTRENDER_TEMPLATES_DIR env var)",
     )
     serve_cmd.add_argument(
         "--port", type=int, default=8190, help="Port to listen on (default: 8190)"
@@ -116,7 +116,7 @@ def main(argv: list[str] | None = None) -> int:
         "--max-body-size",
         type=int,
         default=None,
-        help="Maximum request body size in bytes (default: 10485760 = 10 MB, or set FORMFORGE_MAX_BODY_SIZE)",
+        help="Maximum request body size in bytes (default: 10485760 = 10 MB, or set TRUSTRENDER_MAX_BODY_SIZE)",
     )
 
     preflight_cmd = sub.add_parser("preflight", help="Pre-render readiness verification")
@@ -258,7 +258,7 @@ def _run_history(args: argparse.Namespace) -> int:
     store = get_store()
     if not store:
         print(
-            "error: History not enabled. Set FORMFORGE_HISTORY=~/.formforge/history.db",
+            "error: History not enabled. Set TRUSTRENDER_HISTORY=~/.trustrender/history.db",
             file=sys.stderr,
         )
         return 1
@@ -307,7 +307,7 @@ def _run_trace(args: argparse.Namespace) -> int:
     store = get_store()
     if not store:
         print(
-            "error: History not enabled. Set FORMFORGE_HISTORY=~/.formforge/history.db",
+            "error: History not enabled. Set TRUSTRENDER_HISTORY=~/.trustrender/history.db",
             file=sys.stderr,
         )
         return 1
@@ -393,7 +393,7 @@ def _run_audit(args: argparse.Namespace) -> int:
             save_baseline=args.save_baseline,
             semantic_hints=semantic_hints,
         )
-    except FormforgeError as exc:
+    except TrustRenderError as exc:
         print(_format_error(exc), file=sys.stderr)
         return 1
 
@@ -490,7 +490,7 @@ def _run_baseline(args: argparse.Namespace) -> int:
             print(f"  PDF size: {len(result.pdf_bytes):,} bytes")
             print(f"  Fingerprint: {result.fingerprint.fingerprint[:40]}...")
             return 0
-        except FormforgeError as exc:
+        except TrustRenderError as exc:
             print(_format_error(exc), file=sys.stderr)
             return 1
 
@@ -505,13 +505,13 @@ def _run_baseline(args: argparse.Namespace) -> int:
                 provenance=args.provenance,
                 baseline_dir=args.baseline_dir,
             )
-        except FormforgeError as exc:
+        except TrustRenderError as exc:
             print(_format_error(exc), file=sys.stderr)
             return 1
 
         if result.drift_result is None:
             print(f"No baseline found for {template_path.name}")
-            print(f"  Run 'formforge baseline save' first")
+            print(f"  Run 'trustrender baseline save' first")
             return 1
 
         dr = result.drift_result
@@ -598,8 +598,8 @@ def _run_preflight(args: argparse.Namespace) -> int:
     return 0 if verdict.ready else 1
 
 
-def _format_error(exc: FormforgeError) -> str:
-    """Format a FormforgeError for CLI output with full diagnostics."""
+def _format_error(exc: TrustRenderError) -> str:
+    """Format a TrustRenderError for CLI output with full diagnostics."""
     lines = []
     lines.append(f"error[{exc.code.value}]: {str(exc).split(chr(10))[0]}")
     lines.append(f"  stage: {exc.stage}")
@@ -696,7 +696,7 @@ def _run_render(args: argparse.Namespace) -> int:
         if args.debug:
             print("  Debug mode: intermediate .typ file preserved in template directory")
         return 0
-    except FormforgeError as exc:
+    except TrustRenderError as exc:
         print(_format_error(exc), file=sys.stderr)
         return 1
     except FileNotFoundError as exc:
@@ -711,7 +711,7 @@ def _run_serve(args: argparse.Namespace) -> int:
 
     if not args.templates:
         print(
-            "error: --templates is required (or set FORMFORGE_TEMPLATES_DIR env var)",
+            "error: --templates is required (or set TRUSTRENDER_TEMPLATES_DIR env var)",
             file=sys.stderr,
         )
         return 1
@@ -719,12 +719,12 @@ def _run_serve(args: argparse.Namespace) -> int:
     # Resolve max body size: CLI arg > env var > default
     max_body_size = args.max_body_size
     if max_body_size is None:
-        env_val = os.environ.get("FORMFORGE_MAX_BODY_SIZE")
+        env_val = os.environ.get("TRUSTRENDER_MAX_BODY_SIZE")
         if env_val is not None:
             try:
                 max_body_size = int(env_val)
             except ValueError:
-                print(f"error: FORMFORGE_MAX_BODY_SIZE must be an integer, got: {env_val}", file=sys.stderr)
+                print(f"error: TRUSTRENDER_MAX_BODY_SIZE must be an integer, got: {env_val}", file=sys.stderr)
                 return 1
     if max_body_size is None:
         max_body_size = DEFAULT_MAX_BODY_SIZE
@@ -739,7 +739,7 @@ def _run_serve(args: argparse.Namespace) -> int:
         dashboard=args.dashboard,
         history_path=args.history,
     )
-    print(f"Formforge server starting on {args.host}:{args.port}")
+    print(f"TrustRender server starting on {args.host}:{args.port}")
     print(f"  Templates: {args.templates}")
     print(f"  Debug: {args.debug}")
     print(f"  Render timeout: {args.render_timeout}s")

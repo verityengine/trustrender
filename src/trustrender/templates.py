@@ -46,7 +46,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError, UndefinedError
 from markupsafe import Markup
 
-from .errors import ErrorCode, FormforgeError
+from .errors import ErrorCode, TrustRenderError
 
 # Single-pass translation table for bracket/brace characters.
 # These MUST be replaced in one pass (via str.translate) because their
@@ -105,7 +105,7 @@ def render_template(template_path: str | os.PathLike, data: dict) -> str:
     Values passed through the ``typst_markup`` filter bypass escaping.
 
     Raises:
-        FormforgeError: With appropriate code for syntax or variable errors.
+        TrustRenderError: With appropriate code for syntax or variable errors.
     """
     template_path = Path(template_path)
 
@@ -121,7 +121,7 @@ def render_template(template_path: str | os.PathLike, data: dict) -> str:
     try:
         template = env.get_template(template_path.name)
     except TemplateSyntaxError as exc:
-        raise FormforgeError(
+        raise TrustRenderError(
             f"Template syntax error: {exc.message}",
             code=ErrorCode.TEMPLATE_SYNTAX,
             stage="template_preprocess",
@@ -132,7 +132,7 @@ def render_template(template_path: str | os.PathLike, data: dict) -> str:
     try:
         return template.render(**data)
     except UndefinedError as exc:
-        raise FormforgeError(
+        raise TrustRenderError(
             f"Undefined template variable: {exc.message}",
             code=ErrorCode.TEMPLATE_VARIABLE,
             stage="template_preprocess",
@@ -140,7 +140,7 @@ def render_template(template_path: str | os.PathLike, data: dict) -> str:
             template_path=str(template_path),
         ) from exc
     except TemplateSyntaxError as exc:
-        raise FormforgeError(
+        raise TrustRenderError(
             f"Template syntax error: {exc.message}",
             code=ErrorCode.TEMPLATE_SYNTAX,
             stage="template_preprocess",

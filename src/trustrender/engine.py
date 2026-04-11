@@ -7,7 +7,7 @@ Two backends share one compile contract:
 
 Backend selection:
   1. ``force`` parameter on ``get_backend()``
-  2. ``FORMFORGE_BACKEND`` env var (``typst-py`` or ``typst-cli``)
+  2. ``TRUSTRENDER_BACKEND`` env var (``typst-py`` or ``typst-cli``)
   3. Auto-detect: try typst-py import, fall back to CLI
 """
 
@@ -19,7 +19,7 @@ import tempfile
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
-from .errors import ErrorCode, FormforgeError
+from .errors import ErrorCode, TrustRenderError
 
 
 def _classify_typst_error(message: str) -> ErrorCode:
@@ -67,7 +67,7 @@ class CompileBackend(Protocol):
     """Contract for Typst compilation backends.
 
     Each implementation takes a path to a ``.typ`` file, compiles it, and
-    returns PDF bytes.  Errors are raised as ``FormforgeError`` with a
+    returns PDF bytes.  Errors are raised as ``TrustRenderError`` with a
     classified ``ErrorCode``.
     """
 
@@ -116,7 +116,7 @@ class TypstPyBackend:
         except _typst.TypstError as exc:
             raw = str(exc)
             code = _classify_typst_error(raw)
-            raise FormforgeError(
+            raise TrustRenderError(
                 raw.split("\n")[0],
                 code=code,
                 stage="compilation",
@@ -168,14 +168,14 @@ class TypstCliBackend:
                 timeout=effective_timeout,
             )
         except FileNotFoundError:
-            raise FormforgeError(
+            raise TrustRenderError(
                 f"Typst CLI not found at '{self._bin}'. "
-                f"Install Typst (https://typst.app) or set FORMFORGE_BACKEND=typst-py",
+                f"Install Typst (https://typst.app) or set TRUSTRENDER_BACKEND=typst-py",
                 code=ErrorCode.BACKEND_ERROR,
                 stage="compilation",
             )
         except subprocess.TimeoutExpired as exc:
-            raise FormforgeError(
+            raise TrustRenderError(
                 f"Typst compilation timed out after {effective_timeout}s",
                 code=ErrorCode.RENDER_TIMEOUT,
                 stage="compilation",
@@ -184,7 +184,7 @@ class TypstCliBackend:
         if result.returncode != 0:
             raw = result.stderr.decode("utf-8", errors="replace")
             code = _classify_typst_error(raw)
-            raise FormforgeError(
+            raise TrustRenderError(
                 raw.split("\n")[0],
                 code=code,
                 stage="compilation",
@@ -205,13 +205,13 @@ def get_backend(*, force: str | None = None) -> CompileBackend:
 
     Selection precedence:
       1. ``force`` parameter (``"typst-py"`` or ``"typst-cli"``)
-      2. ``FORMFORGE_BACKEND`` environment variable
+      2. ``TRUSTRENDER_BACKEND`` environment variable
       3. Auto-detect: try ``import typst``, fall back to CLI
 
     Backends are cheap to construct (no state, no connections), so a fresh
     instance is returned each call.  No global caching.
     """
-    choice = force or os.environ.get("FORMFORGE_BACKEND")
+    choice = force or os.environ.get("TRUSTRENDER_BACKEND")
 
     if choice == "typst-cli":
         return TypstCliBackend()
@@ -261,7 +261,7 @@ def compile_typst_file(
             path, format="pdf", font_paths=font_paths, timeout=timeout,
             pdf_standards=pdf_standards,
         )
-    except FormforgeError as exc:
+    except TrustRenderError as exc:
         if exc.template_path is None:
             exc.template_path = str(path)
         raise
@@ -305,7 +305,7 @@ def compile_typst(
     resolved_fonts = [str(p) for p in font_paths] if font_paths else None
 
     # Write source to a temp file next to the template
-    fd, tmp_path = tempfile.mkstemp(suffix=".typ", dir=template_dir, prefix="_formforge_")
+    fd, tmp_path = tempfile.mkstemp(suffix=".typ", dir=template_dir, prefix="_trustrender_")
     try:
         with os.fdopen(fd, "w") as f:
             f.write(source)
@@ -318,7 +318,7 @@ def compile_typst(
                 timeout=timeout,
                 pdf_standards=pdf_standards,
             )
-        except FormforgeError as exc:
+        except TrustRenderError as exc:
             if exc.template_path is None and template_path:
                 exc.template_path = str(template_path)
             # Timeout cleanup policy: don't accumulate orphan artifacts in
@@ -335,7 +335,7 @@ def compile_typst(
             os.unlink(tmp_path)
         return pdf_bytes
 
-    except FormforgeError:
+    except TrustRenderError:
         raise
     except Exception:
         # Clean up on unexpected errors

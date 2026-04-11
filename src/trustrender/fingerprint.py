@@ -11,7 +11,7 @@ describing exactly what is different.
 
 Usage::
 
-    from formforge.fingerprint import compute_fingerprint, compare
+    from trustrender.fingerprint import compute_fingerprint, compare
 
     fp = compute_fingerprint(template_path, data, font_paths=fonts)
     # Later, compare against a baseline:
@@ -70,7 +70,7 @@ class InputFingerprint:
     validate_enabled: bool
 
     # Environment
-    formforge_version: str
+    trustrender_version: str
     typst_version: str
 
     # Computed identity
@@ -89,7 +89,7 @@ class InputFingerprint:
             "zugferd_profile": self.zugferd_profile,
             "provenance_enabled": self.provenance_enabled,
             "validate_enabled": self.validate_enabled,
-            "formforge_version": self.formforge_version,
+            "trustrender_version": self.trustrender_version,
             "typst_version": self.typst_version,
             "fingerprint": self.fingerprint,
             "created_at": self.created_at,
@@ -108,7 +108,7 @@ class InputFingerprint:
             zugferd_profile=d.get("zugferd_profile"),
             provenance_enabled=d["provenance_enabled"],
             validate_enabled=d["validate_enabled"],
-            formforge_version=d["formforge_version"],
+            trustrender_version=d["trustrender_version"],
             typst_version=d["typst_version"],
             fingerprint=d["fingerprint"],
             created_at=d["created_at"],
@@ -353,7 +353,7 @@ def _get_typst_version() -> str:
 
 def _get_backend_name() -> str:
     """Detect which backend would be used."""
-    env_val = os.environ.get("FORMFORGE_BACKEND")
+    env_val = os.environ.get("TRUSTRENDER_BACKEND")
     if env_val:
         return env_val
 
@@ -459,7 +459,7 @@ def compute_fingerprint(
         "zugferd_profile": zugferd_profile,
         "provenance_enabled": provenance_enabled,
         "validate_enabled": validate_enabled,
-        "formforge_version": __version__,
+        "trustrender_version": __version__,
         "typst_version": typst_version,
     }
     fingerprint_hash = _compute_identity(identity_data)
@@ -474,7 +474,7 @@ def compute_fingerprint(
         zugferd_profile=zugferd_profile,
         provenance_enabled=provenance_enabled,
         validate_enabled=validate_enabled,
-        formforge_version=__version__,
+        trustrender_version=__version__,
         typst_version=typst_version,
         fingerprint=fingerprint_hash,
         created_at=created_at,
@@ -688,7 +688,7 @@ def compare(
 
     # Environment changes
     env_fields = [
-        ("formforge_version", baseline.formforge_version, current.formforge_version),
+        ("trustrender_version", baseline.trustrender_version, current.trustrender_version),
         ("typst_version", baseline.typst_version, current.typst_version),
     ]
     for key, old_val, new_val in env_fields:

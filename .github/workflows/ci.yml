@@ -37,7 +37,7 @@ jobs:
           pip install -e ".[dev]"
 
       - name: Doctor
-        run: formforge doctor --smoke
+        run: trustrender doctor --smoke
 
       - name: Tests
         run: python -m pytest tests/ -v

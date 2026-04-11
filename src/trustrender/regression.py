@@ -11,7 +11,7 @@ Baselines are stored as JSON files on disk. No database required.
 
 Usage::
 
-    from formforge.regression import save_baseline, check_drift
+    from trustrender.regression import save_baseline, check_drift
 
     # After a known-good render:
     save_baseline(baseline_dir, template_name, fingerprint, pdf_bytes)
@@ -55,7 +55,7 @@ class DriftBaseline:
     baseline_id: str
     created_at: str                          # ISO 8601
     template_file: str
-    formforge_version: str
+    trustrender_version: str
 
     # Input fingerprint (serialized)
     fingerprint_json: dict
@@ -82,7 +82,7 @@ class DriftBaseline:
             "baseline_id": self.baseline_id,
             "created_at": self.created_at,
             "template_file": self.template_file,
-            "formforge_version": self.formforge_version,
+            "trustrender_version": self.trustrender_version,
             "fingerprint_json": self.fingerprint_json,
             "pdf_size": self.pdf_size,
             "page_count": self.page_count,
@@ -101,7 +101,7 @@ class DriftBaseline:
             baseline_id=d["baseline_id"],
             created_at=d["created_at"],
             template_file=d["template_file"],
-            formforge_version=d.get("formforge_version", "unknown"),
+            trustrender_version=d.get("trustrender_version", "unknown"),
             fingerprint_json=d["fingerprint_json"],
             pdf_size=d["pdf_size"],
             page_count=d.get("page_count"),
@@ -471,7 +471,7 @@ def save_baseline(
         baseline_id=f"{template_name}:{now}",
         created_at=now,
         template_file=template_name,
-        formforge_version=fingerprint.formforge_version,
+        trustrender_version=fingerprint.trustrender_version,
         fingerprint_json=fingerprint.to_dict(),
         pdf_size=len(pdf_bytes),
         page_count=page_count,

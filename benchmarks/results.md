@@ -155,8 +155,8 @@ Typst is 2.3x faster, has simpler deployment (single self-contained package vs s
 
 ## Next best step
 
-Build the core `formforge` Python API:
-- `formforge.render(template_path, data_dict) -> bytes` (the main entry point)
+Build the core `trustrender` Python API:
+- `trustrender.render(template_path, data_dict) -> bytes` (the main entry point)
 - Jinja2 auto-escaping built in
 - Intermediate `.typ` file preserved on error for debugging
-- CLI command: `formforge render template.j2.typ data.json -o output.pdf`
+- CLI command: `trustrender render template.j2.typ data.json -o output.pdf`

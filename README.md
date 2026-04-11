@@ -1,12 +1,12 @@
-# Formforge
+# TrustRender
 
 Generate structured business PDFs from data + templates. No browser, no Chromium.
 
-Formforge renders invoices (including credit notes), statements, receipts, and similar structured documents using [Typst](https://typst.app/) as the layout engine and Jinja2 for data binding. It ships as a Python library, CLI, and HTTP server.
+TrustRender renders invoices (including credit notes), statements, receipts, and similar structured documents using [Typst](https://typst.app/) as the layout engine and Jinja2 for data binding. It ships as a Python library, CLI, and HTTP server.
 
 ## Non-goals
 
-Formforge is not:
+TrustRender is not:
 
 - arbitrary HTML-to-PDF conversion
 - a browser or headless renderer
@@ -21,8 +21,8 @@ It does one thing: structured business PDFs from code.
 ### Standard install (recommended)
 
 ```
-git clone https://github.com/verityengine/formforge.git
-cd formforge
+git clone https://github.com/verityengine/trustrender.git
+cd trustrender
 pip install .
 ```
 
@@ -34,7 +34,7 @@ This is the most reliable local path today.
 pip install -e ".[dev]"
 ```
 
-Editable install is intended for development workflows. Use the standard install above if you just want to run Formforge.
+Editable install is intended for development workflows. Use the standard install above if you just want to run TrustRender.
 
 ### Requirements
 
@@ -50,7 +50,7 @@ The `typst` Python package (used by the `typst-py` backend) is a pip dependency 
 ### Verify your install
 
 ```
-formforge doctor
+trustrender doctor
 ```
 
 This checks Python version, package imports, Typst backends, fonts, and environment variables. Run it first if anything seems broken.
@@ -58,7 +58,7 @@ This checks Python version, package imports, Typst backends, fonts, and environm
 With a render smoke test:
 
 ```
-formforge doctor --smoke
+trustrender doctor --smoke
 ```
 
 ## Quick start
@@ -66,7 +66,7 @@ formforge doctor --smoke
 **Python API:**
 
 ```python
-from formforge import render
+from trustrender import render
 
 pdf_bytes = render(
     "examples/invoice.j2.typ",
@@ -79,7 +79,7 @@ print(f"Rendered {len(pdf_bytes)} bytes")
 **CLI:**
 
 ```
-formforge render examples/invoice.j2.typ examples/invoice_data.json -o invoice.pdf
+trustrender render examples/invoice.j2.typ examples/invoice_data.json -o invoice.pdf
 ```
 
 Both produce `invoice.pdf` from the bundled example template and data. Template and data paths are resolved relative to the current working directory.
@@ -87,33 +87,33 @@ Both produce `invoice.pdf` from the bundled example template and data. Template 
 ## CLI usage
 
 ```
-formforge render <template> <data.json> -o <output.pdf> [--debug] [--no-validate] [--zugferd en16931] [--font-path <dir>]
-formforge check <template> [--data <data.json>]
-formforge serve --templates <dir> [--host 127.0.0.1] [--port 8190] [--debug] [--font-path <dir>] [--max-body-size <bytes>]
-formforge doctor [--smoke]
+trustrender render <template> <data.json> -o <output.pdf> [--debug] [--no-validate] [--zugferd en16931] [--font-path <dir>]
+trustrender check <template> [--data <data.json>]
+trustrender serve --templates <dir> [--host 127.0.0.1] [--port 8190] [--debug] [--font-path <dir>] [--max-body-size <bytes>]
+trustrender doctor [--smoke]
 ```
 
 Common examples:
 
 ```
 # Render a single PDF
-formforge render templates/invoice.j2.typ data.json -o out.pdf
+trustrender render templates/invoice.j2.typ data.json -o out.pdf
 
 # Render with custom fonts
-formforge render templates/invoice.j2.typ data.json -o out.pdf --font-path ./my-fonts
+trustrender render templates/invoice.j2.typ data.json -o out.pdf --font-path ./my-fonts
 
 # Start the HTTP server
-formforge serve --templates ./templates --port 8190
+trustrender serve --templates ./templates --port 8190
 
 # Start with debug mode (preserves intermediate files)
-formforge serve --templates ./templates --debug
+trustrender serve --templates ./templates --debug
 ```
 
-Full flag reference: `formforge render --help` / `formforge serve --help`.
+Full flag reference: `trustrender render --help` / `trustrender serve --help`.
 
 ## Data validation
 
-For Jinja2 Typst templates, Formforge validates data before rendering by default. Bad payloads are rejected with specific field-level errors before any Typst compilation starts.
+For Jinja2 Typst templates, TrustRender validates data before rendering by default. Bad payloads are rejected with specific field-level errors before any Typst compilation starts.
 
 ### Structural validation (default)
 
@@ -124,14 +124,14 @@ Every `render()` call on a `.j2.typ` template infers a minimum data contract fro
 - wrong structural types (passing a string where an object is expected, a dict where a list is expected)
 - requirements from `{% include %}` fragments (followed recursively with scope isolation)
 
-Bad data raises `FormforgeError(code=DATA_CONTRACT)` with paths pointing into the caller's JSON:
+Bad data raises `TrustRenderError(code=DATA_CONTRACT)` with paths pointing into the caller's JSON:
 
 ```python
 render("invoice.j2.typ", {"invoice_number": "X"})
 ```
 
 ```
-FormforgeError: Data validation failed: 11 field errors in invoice.j2.typ
+TrustRenderError: Data validation failed: 11 field errors in invoice.j2.typ
   sender: missing required field (expected: object)
   recipient: missing required field (expected: object)
   items: missing required field (expected: list[object])
@@ -148,14 +148,14 @@ render("invoice.j2.typ", data, validate=False)
 ```
 
 ```
-formforge render invoice.j2.typ data.json -o out.pdf --no-validate
+trustrender render invoice.j2.typ data.json -o out.pdf --no-validate
 ```
 
 `validate=False` is an escape hatch for callers who know their data shape and want to skip the check, not the normal path.
 
 ### Semantic validation (opt-in, hint-driven)
 
-Beyond structure, Formforge can check business-data correctness when the caller configures semantic hints. Semantic checks warn but do not block rendering.
+Beyond structure, TrustRender can check business-data correctness when the caller configures semantic hints. Semantic checks warn but do not block rendering.
 
 What semantic validation catches:
 
@@ -166,7 +166,7 @@ What semantic validation catches:
 - **Empty required fields**: business-critical fields that are blank strings or None
 
 ```python
-from formforge.semantic import validate_semantics, STATEMENT_HINTS
+from trustrender.semantic import validate_semantics, STATEMENT_HINTS
 
 report = validate_semantics(statement_data, STATEMENT_HINTS)
 # Issues found:
@@ -190,8 +190,8 @@ The CLI auto-detects the preset from the template filename. Unknown template typ
 `preflight()` combines structural validation, semantic checks, template parsing, environment checks, and compliance eligibility into a single pre-render verdict without rendering:
 
 ```python
-from formforge.readiness import preflight
-from formforge.semantic import INVOICE_HINTS
+from trustrender.readiness import preflight
+from trustrender.semantic import INVOICE_HINTS
 
 verdict = preflight("invoice.j2.typ", data, semantic_hints=INVOICE_HINTS)
 if not verdict.ready:
@@ -200,7 +200,7 @@ if not verdict.ready:
 ```
 
 ```
-formforge preflight invoice.j2.typ data.json --semantic
+trustrender preflight invoice.j2.typ data.json --semantic
 ```
 
 Preflight answers "can this data produce the right document?" without spending compute on Typst compilation. It includes a `text_safety` stage that scans all string values in the data dict for control characters and zero-width characters — no semantic hints required. Set `text_scan=False` to opt out.
@@ -212,19 +212,19 @@ verdict = preflight("template.j2.typ", data, strict=True)
 ```
 
 ```
-formforge preflight template.j2.typ data.json --strict
+trustrender preflight template.j2.typ data.json --strict
 ```
 
 ### Include behavior
 
 Contract inference follows `{% include %}` directives recursively. Static includes are resolved and their data requirements are merged into the parent contract. Variables set via `{% set %}` in the parent scope are correctly excluded from the contract.
 
-Dynamic includes (`{% include some_var %}`) and missing fragments cannot be resolved statically. They mark the contract as partial — visible via `infer_contract_with_metadata()` in the Python API and as a warning in `formforge check` and `preflight()` output.
+Dynamic includes (`{% include some_var %}`) and missing fragments cannot be resolved statically. They mark the contract as partial — visible via `infer_contract_with_metadata()` in the Python API and as a warning in `trustrender check` and `preflight()` output.
 
 ### Inspecting contracts
 
 ```
-formforge check examples/invoice.j2.typ
+trustrender check examples/invoice.j2.typ
 ```
 
 ```
@@ -239,7 +239,7 @@ Fields: 12 top-level (12 required)
 ```
 
 ```
-formforge check examples/invoice.j2.typ --data bad_data.json
+trustrender check examples/invoice.j2.typ --data bad_data.json
 ```
 
 ```
@@ -260,7 +260,7 @@ error[DATA_CONTRACT]: 3 validation error(s)
 
 ## ZUGFeRD / Factur-X e-invoicing
 
-Formforge generates EN 16931 e-invoices for German domestic B2B invoicing. Both XSD and Schematron validation run in the render pipeline when `facturx` is installed — invalid XML is rejected before embedding into the PDF. One profile is currently supported:
+TrustRender generates EN 16931 e-invoices for German domestic B2B invoicing. Both XSD and Schematron validation run in the render pipeline when `facturx` is installed — invalid XML is rejected before embedding into the PDF. One profile is currently supported:
 
 | Profile | Standard | Use case |
 |---------|----------|----------|
@@ -275,7 +275,7 @@ ZUGFeRD and Factur-X are the same specification — ZUGFeRD is the German name, 
 **CLI:**
 
 ```
-formforge render examples/einvoice.j2.typ examples/einvoice_data.json -o invoice.pdf --zugferd en16931
+trustrender render examples/einvoice.j2.typ examples/einvoice_data.json -o invoice.pdf --zugferd en16931
 ```
 
 **Python API:**
@@ -324,14 +324,14 @@ Unsupported shapes fail loudly at validation time, before any rendering or XML g
 
 ## Generation proof
 
-Formforge can embed a cryptographic generation proof in the PDF metadata, recording which template, which data, which engine version, and when the document was generated. This enables downstream verification that a document was produced from specific inputs without re-rendering.
+TrustRender can embed a cryptographic generation proof in the PDF metadata, recording which template, which data, which engine version, and when the document was generated. This enables downstream verification that a document was produced from specific inputs without re-rendering.
 
 This is not a digital signature (no PKI required). It is a generation proof: it answers "was this document produced from this data using this template?"
 
 **CLI:**
 
 ```
-formforge render invoice.j2.typ data.json -o out.pdf --provenance
+trustrender render invoice.j2.typ data.json -o out.pdf --provenance
 ```
 
 **Python API:**
@@ -343,7 +343,7 @@ pdf = render("invoice.j2.typ", data, output="out.pdf", provenance=True)
 **Verification:**
 
 ```python
-from formforge.provenance import verify_provenance
+from trustrender.provenance import verify_provenance
 
 result = verify_provenance(pdf_bytes, "invoice.j2.typ", original_data)
 print(result.verified)  # True if template + data hashes match
@@ -401,20 +401,20 @@ Returns `application/pdf` on success.
 
 **Backpressure:** The server limits concurrent renders (default 8, configurable via `--max-concurrent`). Requests that arrive while at capacity receive 503. This prevents runaway resource consumption under load.
 
-**Max request body:** 10 MB (default). Configurable via `--max-body-size` or `FORMFORGE_MAX_BODY_SIZE` env var.
+**Max request body:** 10 MB (default). Configurable via `--max-body-size` or `TRUSTRENDER_MAX_BODY_SIZE` env var.
 
 ## Docker
 
 **Build:**
 
 ```
-docker build -t formforge .
+docker build -t trustrender .
 ```
 
 **Run with bundled examples:**
 
 ```
-docker run -p 8190:8190 formforge
+docker run -p 8190:8190 trustrender
 ```
 
 **Run with custom templates:**
@@ -422,8 +422,8 @@ docker run -p 8190:8190 formforge
 ```
 docker run -p 8190:8190 \
   -v /path/to/templates:/templates \
-  -e FORMFORGE_TEMPLATES_DIR=/templates \
-  formforge
+  -e TRUSTRENDER_TEMPLATES_DIR=/templates \
+  trustrender
 ```
 
 **Mount custom fonts:**
@@ -431,11 +431,11 @@ docker run -p 8190:8190 \
 ```
 docker run -p 8190:8190 \
   -v /path/to/fonts:/custom-fonts \
-  -e FORMFORGE_FONT_PATH=/custom-fonts \
-  formforge
+  -e TRUSTRENDER_FONT_PATH=/custom-fonts \
+  trustrender
 ```
 
-The container sets `FORMFORGE_FONT_PATH=/app/fonts` and `FORMFORGE_TEMPLATES_DIR=/app/examples` by default. Override with your own paths via environment variables as shown above.
+The container sets `TRUSTRENDER_FONT_PATH=/app/fonts` and `TRUSTRENDER_TEMPLATES_DIR=/app/examples` by default. Override with your own paths via environment variables as shown above.
 
 ## Configuration
 
@@ -443,23 +443,23 @@ The container sets `FORMFORGE_FONT_PATH=/app/fonts` and `FORMFORGE_TEMPLATES_DIR
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `FORMFORGE_BACKEND` | Backend selection: `typst-py` or `typst-cli` | Auto-detect |
-| `FORMFORGE_FONT_PATH` | Font directory path | Bundled fonts dir |
-| `FORMFORGE_TEMPLATES_DIR` | Template directory for `serve` command | — |
-| `FORMFORGE_MAX_BODY_SIZE` | Max request body in bytes for `serve` | `10485760` (10 MB) |
+| `TRUSTRENDER_BACKEND` | Backend selection: `typst-py` or `typst-cli` | Auto-detect |
+| `TRUSTRENDER_FONT_PATH` | Font directory path | Bundled fonts dir |
+| `TRUSTRENDER_TEMPLATES_DIR` | Template directory for `serve` command | — |
+| `TRUSTRENDER_MAX_BODY_SIZE` | Max request body in bytes for `serve` | `10485760` (10 MB) |
 
 ### Backend selection
 
-Formforge supports two render backends behind a shared protocol:
+TrustRender supports two render backends behind a shared protocol:
 
 | Backend | How it works | Timeout behavior |
 |---------|-------------|-----------------|
 | `typst-py` | In-process Python binding | Not killable (blocks until done) |
 | `typst-cli` | Subprocess calling `typst` binary | Killable via `subprocess.run(timeout=...)` |
 
-**Library and CLI** support both backends. Auto-detect tries `typst-py` first, falls back to `typst-cli`. Override with `FORMFORGE_BACKEND`.
+**Library and CLI** support both backends. Auto-detect tries `typst-py` first, falls back to `typst-cli`. Override with `TRUSTRENDER_BACKEND`.
 
-**Server always uses `typst-cli`**, regardless of `FORMFORGE_BACKEND`. This is intentional: the subprocess boundary is what makes server timeout actually kill a stuck render. This is a deployment-level decision, not a per-request choice.
+**Server always uses `typst-cli`**, regardless of `TRUSTRENDER_BACKEND`. This is intentional: the subprocess boundary is what makes server timeout actually kill a stuck render. This is a deployment-level decision, not a per-request choice.
 
 ## Fonts
 
@@ -473,7 +473,7 @@ Fonts are trust infrastructure. Output determinism depends on controlling font a
 
 ### Bundled fonts
 
-Formforge ships Inter (Regular, Bold, Italic, BoldItalic) as TTF files. All example templates use Inter. Bundled fonts are the deterministic baseline.
+TrustRender ships Inter (Regular, Bold, Italic, BoldItalic) as TTF files. All example templates use Inter. Bundled fonts are the deterministic baseline.
 
 ### Silent fallback
 
@@ -489,8 +489,8 @@ Current observed fallback in our tested environment: Libertinus. Do not treat th
 |--------|-------|
 | Python API | `render(..., font_paths=["/path/to/fonts"])` |
 | CLI | `--font-path /path/to/fonts` (repeatable) |
-| Env var | `FORMFORGE_FONT_PATH=/path/to/fonts` |
-| Docker | Mount a volume and set `FORMFORGE_FONT_PATH` |
+| Env var | `TRUSTRENDER_FONT_PATH=/path/to/fonts` |
+| Docker | Mount a volume and set `TRUSTRENDER_FONT_PATH` |
 
 ## Templates
 
@@ -503,7 +503,7 @@ Templates are Jinja2-preprocessed Typst files (`.j2.typ`). Jinja2 handles data b
 {{ value | typst_money }}   Filter
 ```
 
-Raw Typst files (`.typ`) are also supported but receive no data binding or escaping. They are for template authors who want direct Typst control. Formforge's safety guarantees apply to Jinja-interpolated values in `.j2.typ` templates.
+Raw Typst files (`.typ`) are also supported but receive no data binding or escaping. They are for template authors who want direct Typst control. TrustRender's safety guarantees apply to Jinja-interpolated values in `.j2.typ` templates.
 
 ### Escaping
 
@@ -547,7 +547,7 @@ The server render timeout defaults to 30 seconds. Timeout is real: the CLI subpr
 
 Compile errors preserve the intermediate file even without debug mode because the generated Typst markup is often required to diagnose the failure. Timeout behavior is stricter: intermediates are cleaned to prevent accumulating orphan artifacts under repeated timeout failures, unless debug mode is explicitly enabled.
 
-Intermediate files are written next to the template as `_formforge_*.typ`. They contain the Jinja2-rendered Typst markup before compilation.
+Intermediate files are written next to the template as `_trustrender_*.typ`. They contain the Jinja2-rendered Typst markup before compilation.
 
 ## Error model
 
@@ -583,7 +583,7 @@ Server error responses include `error`, `message`, `stage`, and `request_id`. Wi
 
 ## What is working and tested
 
-- `formforge.render()` produces valid PDFs from dict/JSON + Jinja2 templates
+- `trustrender.render()` produces valid PDFs from dict/JSON + Jinja2 templates
 - CLI `render` and `serve` commands
 - HTTP server with request validation, structured errors, request ID tracking
 - Server timeout kills stuck renders (subprocess boundary)
@@ -596,16 +596,16 @@ Server error responses include `error`, `message`, `stage`, and `request_id`. Wi
 - Include-aware contract inference: follows `{% include %}` fragments recursively, marks dynamic includes as partial
 - Semantic validation: hint-driven arithmetic, date, completeness, numeric coercion, and balance reconciliation checks
 - Semantic presets: `INVOICE_HINTS`, `RECEIPT_HINTS`, `STATEMENT_HINTS`, `LETTER_HINTS`, `REPORT_HINTS` — auto-detected by template name in CLI
-- `formforge check` CLI for template introspection and data validation
+- `trustrender check` CLI for template introspection and data validation
 - ZUGFeRD / Factur-X: EN 16931 e-invoice generation for DE domestic B2B (PDF/A-3b + embedded CII XML, XSD + Schematron validated in render pipeline)
 - Generation proof: cryptographic provenance embedded in PDF metadata, verifiable without re-rendering
 - Output fingerprinting: SHA-256 of final PDF bytes stored in render trace (input + output hash chain)
 - Safe-by-default text scanning: `preflight()` scans all string values for control/zero-width characters without requiring semantic hints
 - Dynamic font resolution: `preflight()` resolves `font: "{{ field }}"` variable references from data and validates font availability
-- Bundled playground: `formforge serve` serves interactive dev sandbox at `/` — edit data, edit templates, preflight, render, inspect traces
+- Bundled playground: `trustrender serve` serves interactive dev sandbox at `/` — edit data, edit templates, preflight, render, inspect traces
 - Ops dashboard: production monitoring UI at `/dashboard` — two-tier stat hierarchy, trace detail with commanding header, color-coded pipeline stages, elevated identity chain, auto-refresh with manual override
 - Ephemeral template editing: browser-based template editor sends source for preflight/render without saving to disk
-- `formforge doctor --smoke`: environment diagnostics + render/server smoke test in one command
+- `trustrender doctor --smoke`: environment diagnostics + render/server smoke test in one command
 - Benchmarked: 1,000-row invoice renders in 211ms (33 pages, 0.21ms/row), 53.8 RPS server throughput, 69.5 MB peak RSS
 - 837 tests passing (unit, integration, contract, include inference, semantic, ZUGFeRD, credit note, provenance, audit, ugly-data pressure, font verification, text safety, Schematron, diagnostics)
 
@@ -629,8 +629,8 @@ pip install -e ".[dev]"
 ### Verify environment
 
 ```
-formforge doctor           # check everything
-formforge doctor --smoke   # include render + server health smoke test
+trustrender doctor           # check everything
+trustrender doctor --smoke   # include render + server health smoke test
 ```
 
 ### Common tasks

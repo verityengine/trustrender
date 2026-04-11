@@ -8,9 +8,9 @@ from pathlib import Path
 
 import pytest
 
-from formforge import render
-from formforge.fingerprint import compute_fingerprint
-from formforge.regression import (
+from trustrender import render
+from trustrender.fingerprint import compute_fingerprint
+from trustrender.regression import (
     DriftBaseline,
     DriftResult,
     _SCHEMA_VERSION,

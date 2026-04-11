@@ -1,4 +1,4 @@
-"""Concurrent load test for the Formforge HTTP server.
+"""Concurrent load test for the TrustRender HTTP server.
 
 Measures: p50/p95/p99 latency, peak RSS, 503 rate, error rate.
 Runs against an in-process Starlette test client (no network).
@@ -16,12 +16,12 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-# Ensure formforge is importable
+# Ensure trustrender is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from starlette.testclient import TestClient
 
-from formforge.server import create_app
+from trustrender.server import create_app
 
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
 INVOICE_DATA = json.loads((EXAMPLES / "invoice_data.json").read_text())
@@ -150,7 +150,7 @@ def _write_table(f, label, results):
 
 
 def main():
-    print("Formforge Load Test")
+    print("TrustRender Load Test")
     print("=" * 60)
     print(f"Platform: {sys.platform}, Python {sys.version.split()[0]}")
     print(f"Server max_concurrent_renders: 8")

@@ -1,4 +1,4 @@
-"""Formforge: fast, code-first PDF generation from structured data."""
+"""TrustRender: fast, code-first PDF generation from structured data."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .engine import CompileBackend, compile_typst, compile_typst_file
-from .errors import ErrorCode, FormforgeError
+from .errors import ErrorCode, TrustRenderError
 
 
 @dataclass
@@ -26,22 +26,22 @@ __version__ = "0.1.0"
 
 __all__ = [
     "render", "audit", "AuditResult",
-    "FormforgeError", "ErrorCode", "__version__", "bundled_font_dir",
+    "TrustRenderError", "ErrorCode", "__version__", "bundled_font_dir",
 ]
 
 
 # Resolved once at import time — deterministic across local, test, and container.
-# Check multiple locations: dev layout (src/formforge -> fonts/) and env var.
+# Check multiple locations: dev layout (src/trustrender -> fonts/) and env var.
 def _find_bundled_fonts() -> Path | None:
     """Find bundled font directory. Checked once at import time."""
     # 1. Environment variable (explicit override, used in containers)
-    env_path = os.environ.get("FORMFORGE_FONT_PATH")
+    env_path = os.environ.get("TRUSTRENDER_FONT_PATH")
     if env_path:
         p = Path(env_path)
         if p.is_dir():
             return p.resolve()
 
-    # 2. Development layout: src/formforge/__init__.py -> ../../fonts/
+    # 2. Development layout: src/trustrender/__init__.py -> ../../fonts/
     dev_path = Path(__file__).resolve().parent.parent.parent / "fonts"
     if dev_path.is_dir():
         return dev_path
@@ -109,7 +109,7 @@ def _render_document_pipeline(
     The ordering of stages 4 and 5 is load-bearing: provenance uses
     clone_from to preserve ZUGFeRD metadata and embedded files.
 
-    If ``FORMFORGE_HISTORY`` is set, a stage-by-stage RenderTrace is
+    If ``TRUSTRENDER_HISTORY`` is set, a stage-by-stage RenderTrace is
     recorded to the trace store after each render (success or failure).
     """
     import hashlib
@@ -128,7 +128,7 @@ def _render_document_pipeline(
     )
     pipeline_start = time.monotonic()
 
-    def _record_trace(outcome: str, pdf_size: int = 0, error: FormforgeError | None = None) -> None:
+    def _record_trace(outcome: str, pdf_size: int = 0, error: TrustRenderError | None = None) -> None:
         trace.outcome = outcome
         trace.pdf_size = pdf_size
         trace.total_ms = int((time.monotonic() - pipeline_start) * 1000)
@@ -163,7 +163,7 @@ def _render_document_pipeline(
             trace.stages.append(stage)
             if errors:
                 detail = "\n".join(f"  {e.path}: {e.message}" for e in errors)
-                exc = FormforgeError(
+                exc = TrustRenderError(
                     f"Invoice data does not satisfy EN 16931: {len(errors)} error(s)",
                     code=ErrorCode.ZUGFERD_ERROR,
                     stage="zugferd_validation",
@@ -197,7 +197,7 @@ def _render_document_pipeline(
             )
             trace.stages.append(stage)
             if validation_errors:
-                exc = FormforgeError(
+                exc = TrustRenderError(
                     format_contract_errors(validation_errors, template_path.name),
                     code=ErrorCode.DATA_CONTRACT,
                     stage="data_validation",
@@ -254,7 +254,7 @@ def _render_document_pipeline(
 
                 xml_errors = validate_zugferd_xml(xml_bytes)
                 if xml_errors:
-                    raise FormforgeError(
+                    raise TrustRenderError(
                         f"Generated XML failed validation: {xml_errors[0]}",
                         code=ErrorCode.ZUGFERD_ERROR,
                         stage="zugferd",
@@ -269,10 +269,10 @@ def _render_document_pipeline(
                     duration_ms=int((time.monotonic() - t0) * 1000),
                     metadata={"xml_size": len(xml_bytes), "profile": zugferd},
                 ))
-            except FormforgeError:
+            except TrustRenderError:
                 raise
             except Exception as exc:
-                raise FormforgeError(
+                raise TrustRenderError(
                     f"ZUGFeRD generation failed: {exc}",
                     code=ErrorCode.ZUGFERD_ERROR,
                     stage="zugferd",
@@ -301,7 +301,7 @@ def _render_document_pipeline(
         _record_trace("success", pdf_size=len(pdf_bytes))
         return RenderResult(pdf_bytes=pdf_bytes, trace_id=trace.id)
 
-    except FormforgeError as exc:
+    except TrustRenderError as exc:
         if not trace.outcome:  # Not already recorded by a stage
             _record_trace("error", error=exc)
         raise
@@ -331,7 +331,7 @@ def render(
         font_paths: Additional font directories.  These are prepended to the
             bundled font directory.
         validate: If True, validate data against the template's inferred
-            structural contract before rendering.  Raises ``FormforgeError``
+            structural contract before rendering.  Raises ``TrustRenderError``
             with code ``DATA_CONTRACT`` if validation fails.
         zugferd: If set to ``"en16931"``, generate a ZUGFeRD-compliant
             PDF/A-3b with embedded CII XML.  Validates invoice data against
@@ -344,13 +344,13 @@ def render(
         PDF file contents as bytes.
 
     Raises:
-        FormforgeError: If rendering fails. Check ``code`` for the error category,
+        TrustRenderError: If rendering fails. Check ``code`` for the error category,
             ``stage`` for where it failed, and ``detail`` for the full diagnostic.
         FileNotFoundError: If the template or data file does not exist.
     """
     _SUPPORTED_ZUGFERD = {"en16931"}
     if zugferd is not None and zugferd not in _SUPPORTED_ZUGFERD:
-        raise FormforgeError(
+        raise TrustRenderError(
             f"Unsupported zugferd profile: '{zugferd}'. Supported: {sorted(_SUPPORTED_ZUGFERD)}",
             code=ErrorCode.INVALID_DATA,
             stage="data_resolution",
@@ -358,7 +358,7 @@ def render(
 
     template_path = Path(template)
     if not template_path.exists():
-        raise FormforgeError(
+        raise TrustRenderError(
             f"Template not found: {template_path}",
             code=ErrorCode.TEMPLATE_NOT_FOUND,
             stage="data_resolution",
@@ -450,7 +450,7 @@ def audit(
 
     _SUPPORTED_ZUGFERD = {"en16931"}
     if zugferd is not None and zugferd not in _SUPPORTED_ZUGFERD:
-        raise FormforgeError(
+        raise TrustRenderError(
             f"Unsupported zugferd profile: '{zugferd}'. Supported: {sorted(_SUPPORTED_ZUGFERD)}",
             code=ErrorCode.INVALID_DATA,
             stage="data_resolution",
@@ -458,7 +458,7 @@ def audit(
 
     template_path = Path(template)
     if not template_path.exists():
-        raise FormforgeError(
+        raise TrustRenderError(
             f"Template not found: {template_path}",
             code=ErrorCode.TEMPLATE_NOT_FOUND,
             stage="data_resolution",
@@ -558,7 +558,7 @@ def _resolve_data(data: dict | str | os.PathLike) -> dict:
         return data
 
     if not isinstance(data, (str, os.PathLike)):
-        raise FormforgeError(
+        raise TrustRenderError(
             f"Data must be a dict, JSON string, or path to a .json file, "
             f"got {type(data).__name__}",
             code=ErrorCode.INVALID_DATA,
@@ -583,19 +583,19 @@ def _resolve_data(data: dict | str | os.PathLike) -> dict:
             result = json.loads(data)
             if isinstance(result, dict):
                 return result
-            raise FormforgeError(
+            raise TrustRenderError(
                 f"Data JSON must be an object, got {type(result).__name__}",
                 code=ErrorCode.INVALID_DATA,
                 stage="data_resolution",
             )
         except json.JSONDecodeError as exc:
-            raise FormforgeError(
+            raise TrustRenderError(
                 f"Invalid data: not a valid file path or JSON string: {exc}",
                 code=ErrorCode.INVALID_DATA,
                 stage="data_resolution",
             ) from exc
 
-    raise FormforgeError(
+    raise TrustRenderError(
         f"Data must be a dict, JSON string, or path to a .json file, got {type(data).__name__}",
         code=ErrorCode.INVALID_DATA,
         stage="data_resolution",

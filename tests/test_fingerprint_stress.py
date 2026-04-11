@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from formforge.fingerprint import (
+from trustrender.fingerprint import (
     ChangeSet,
     FieldChange,
     FileChange,

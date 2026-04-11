@@ -1,6 +1,6 @@
 # Table Pagination Proof
 
-Formforge handles multi-page structured business tables cleanly without browser rendering.
+TrustRender handles multi-page structured business tables cleanly without browser rendering.
 
 ## What was rendered
 
@@ -23,24 +23,24 @@ Two fixtures using the existing bundled templates with extended data:
 
 ```
 # 50-row invoice (3 pages)
-formforge render examples/invoice.j2.typ examples/invoice_long_data.json -o invoice_long.pdf
+trustrender render examples/invoice.j2.typ examples/invoice_long_data.json -o invoice_long.pdf
 
 # 200-row statement (7 pages)
-formforge render examples/statement.j2.typ examples/statement_long_data.json -o statement_long.pdf
+trustrender render examples/statement.j2.typ examples/statement_long_data.json -o statement_long.pdf
 ```
 
 Docker:
 
 ```
-docker build -t formforge .
+docker build -t trustrender .
 docker run --rm -v $(pwd)/examples:/app/examples \
-  formforge render /app/examples/invoice.j2.typ /app/examples/invoice_long_data.json \
+  trustrender render /app/examples/invoice.j2.typ /app/examples/invoice_long_data.json \
   -o /app/examples/invoice_long.pdf
 ```
 
 ## Why this matters
 
-Backend teams generating invoices and statements need tables that paginate correctly without manual page-break logic. Formforge delegates pagination to Typst's layout engine, which handles:
+Backend teams generating invoices and statements need tables that paginate correctly without manual page-break logic. TrustRender delegates pagination to Typst's layout engine, which handles:
 
 - Automatic page breaks when table content exceeds the page
 - Repeating table headers on continuation pages
@@ -80,6 +80,6 @@ Peak RSS: 60.5 MB after all 80 renders. Full results: `benchmarks/pagination_soa
 
 ## Limitations
 
-- Pagination is handled by Typst's layout engine. Formforge does not add custom pagination logic.
+- Pagination is handled by Typst's layout engine. TrustRender does not add custom pagination logic.
 - Row height is determined by content — very tall rows may split awkwardly at page boundaries (standard Typst behavior).
 - No explicit "page break before total" control in the current templates. Totals render wherever they fall after the last row.

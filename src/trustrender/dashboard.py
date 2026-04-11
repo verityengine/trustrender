@@ -80,7 +80,7 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Formforge</title>
+<title>TrustRender</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -212,7 +212,7 @@ header button:hover{border-color:var(--accent-border);color:var(--ink);backgroun
 <body>
 <div class="shell">
   <header>
-    <h1>Formforge</h1>
+    <h1>TrustRender</h1>
     <div class="meta">
       <span id="instance-info"></span>
       <span id="last-updated"></span>
@@ -285,7 +285,7 @@ async function loadData(){
 
 function renderEvents(traces){
   const el=document.getElementById('events');
-  if(!traces.length){el.innerHTML='<div class="empty-state"><p>No renders recorded</p><p>Set FORMFORGE_HISTORY to enable</p></div>';return}
+  if(!traces.length){el.innerHTML='<div class="empty-state"><p>No renders recorded</p><p>Set TRUSTRENDER_HISTORY to enable</p></div>';return}
   el.innerHTML=traces.map(t=>{
     const time=t.timestamp.substring(11,19);
     const sel=(t.id===selectedId?' selected':'')+(t.outcome==='error'?' event-fail':'');
@@ -342,7 +342,7 @@ function showDetail(t){
       return '<div class="stage'+stageCls+'"><div class="icon '+cls+'">'+icon+'</div><div class="body"><div class="name">'+s.stage+'</div><div class="row"><span>'+s.status+'</span><span>'+s.duration_ms+'ms</span>'+(meta.length?'<span>'+meta.join(' \\u00b7 ')+'</span>':'')+'</div>'+errs+'</div></div>';
     }).join('');
   }
-  p.innerHTML='<div class="detail"><div class="detail-header"><h2>'+t.template_name+'</h2><div class="header-meta">'+otag+'<span>'+t.total_ms+'ms</span><span>'+t.timestamp.replace('T',' ').substring(0,19)+'</span></div></div><div class="fields"><div class="field"><div class="label">Outcome</div>'+outcome+'</div><div class="field"><div class="label">Duration</div><div class="val">'+t.total_ms+'ms</div></div>'+(t.pdf_size?'<div class="field"><div class="label">PDF Size</div><div class="val">'+Math.round(t.pdf_size/1024)+'KB</div></div>':'')+'<div class="field"><div class="label">Time</div><div class="val">'+t.timestamp.replace('T',' ').substring(0,19)+'</div></div>'+(t.zugferd_profile?'<div class="field"><div class="label">Compliance</div><div class="val">'+t.zugferd_profile+'</div></div>':'')+(t.provenance_hash?'<div class="field"><div class="label">Provenance</div><div class="val">'+t.provenance_hash.substring(0,24)+'...</div></div>':'')+(t.error_code?'<div class="field"><div class="label">Error</div><div class="val fail">'+t.error_code+'</div></div><div class="field"><div class="label">Stage</div><div class="val fail">'+t.error_stage+'</div></div>':'')+'</div><div class="pipeline"><h3>Pipeline Stages</h3>'+stagesHtml+'</div><div class="hashes"><h3>Identity</h3><div class="row"><span class="k">Trace ID</span><span class="v">'+t.id+'</span></div><div class="row"><span class="k">Template</span><span class="v">'+t.template_hash+'</span></div><div class="row"><span class="k">Data</span><span class="v">'+t.data_hash+'</span></div>'+(t.output_hash?'<div class="row"><span class="k">Output</span><span class="v">'+t.output_hash+'</span></div>':'')+'<div class="row"><span class="k">Engine</span><span class="v">formforge '+t.engine_version+'</span></div></div></div>';
+  p.innerHTML='<div class="detail"><div class="detail-header"><h2>'+t.template_name+'</h2><div class="header-meta">'+otag+'<span>'+t.total_ms+'ms</span><span>'+t.timestamp.replace('T',' ').substring(0,19)+'</span></div></div><div class="fields"><div class="field"><div class="label">Outcome</div>'+outcome+'</div><div class="field"><div class="label">Duration</div><div class="val">'+t.total_ms+'ms</div></div>'+(t.pdf_size?'<div class="field"><div class="label">PDF Size</div><div class="val">'+Math.round(t.pdf_size/1024)+'KB</div></div>':'')+'<div class="field"><div class="label">Time</div><div class="val">'+t.timestamp.replace('T',' ').substring(0,19)+'</div></div>'+(t.zugferd_profile?'<div class="field"><div class="label">Compliance</div><div class="val">'+t.zugferd_profile+'</div></div>':'')+(t.provenance_hash?'<div class="field"><div class="label">Provenance</div><div class="val">'+t.provenance_hash.substring(0,24)+'...</div></div>':'')+(t.error_code?'<div class="field"><div class="label">Error</div><div class="val fail">'+t.error_code+'</div></div><div class="field"><div class="label">Stage</div><div class="val fail">'+t.error_stage+'</div></div>':'')+'</div><div class="pipeline"><h3>Pipeline Stages</h3>'+stagesHtml+'</div><div class="hashes"><h3>Identity</h3><div class="row"><span class="k">Trace ID</span><span class="v">'+t.id+'</span></div><div class="row"><span class="k">Template</span><span class="v">'+t.template_hash+'</span></div><div class="row"><span class="k">Data</span><span class="v">'+t.data_hash+'</span></div>'+(t.output_hash?'<div class="row"><span class="k">Output</span><span class="v">'+t.output_hash+'</span></div>':'')+'<div class="row"><span class="k">Engine</span><span class="v">trustrender '+t.engine_version+'</span></div></div></div>';
 }
 
 loadData();

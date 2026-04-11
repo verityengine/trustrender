@@ -13,7 +13,7 @@ from unittest import mock
 
 import pytest
 
-from formforge.engine import (
+from trustrender.engine import (
     CompileBackend,
     TypstCliBackend,
     TypstPyBackend,
@@ -21,7 +21,7 @@ from formforge.engine import (
     compile_typst_file,
     get_backend,
 )
-from formforge.errors import ErrorCode, FormforgeError
+from trustrender.errors import ErrorCode, TrustRenderError
 
 FIXTURES = Path(__file__).parent / "fixtures"
 HAS_TYPST_CLI = shutil.which("typst") is not None
@@ -59,37 +59,37 @@ class TestGetBackend:
             get_backend(force="weasyprint")
 
     def test_env_var_typst_cli(self, monkeypatch):
-        monkeypatch.setenv("FORMFORGE_BACKEND", "typst-cli")
+        monkeypatch.setenv("TRUSTRENDER_BACKEND", "typst-cli")
         b = get_backend()
         assert isinstance(b, TypstCliBackend)
 
     def test_env_var_typst_py(self, monkeypatch):
-        monkeypatch.setenv("FORMFORGE_BACKEND", "typst-py")
+        monkeypatch.setenv("TRUSTRENDER_BACKEND", "typst-py")
         b = get_backend()
         assert isinstance(b, TypstPyBackend)
 
     def test_auto_detect_prefers_typst_py(self, monkeypatch):
-        monkeypatch.delenv("FORMFORGE_BACKEND", raising=False)
+        monkeypatch.delenv("TRUSTRENDER_BACKEND", raising=False)
         b = get_backend()
         # typst-py is installed in test env, so should get TypstPyBackend
         assert isinstance(b, TypstPyBackend)
 
     def test_auto_detect_falls_back_to_cli(self, monkeypatch):
-        monkeypatch.delenv("FORMFORGE_BACKEND", raising=False)
+        monkeypatch.delenv("TRUSTRENDER_BACKEND", raising=False)
         # Block the typst import so auto-detect falls back
         with mock.patch.dict("sys.modules", {"typst": None}):
             b = get_backend()
             assert isinstance(b, TypstCliBackend)
 
     def test_force_beats_env_var(self, monkeypatch):
-        """force parameter takes precedence over FORMFORGE_BACKEND env var."""
-        monkeypatch.setenv("FORMFORGE_BACKEND", "typst-cli")
+        """force parameter takes precedence over TRUSTRENDER_BACKEND env var."""
+        monkeypatch.setenv("TRUSTRENDER_BACKEND", "typst-cli")
         b = get_backend(force="typst-py")
         assert isinstance(b, TypstPyBackend)
 
     def test_env_var_beats_auto_detect(self, monkeypatch):
         """Env var takes precedence over auto-detect."""
-        monkeypatch.setenv("FORMFORGE_BACKEND", "typst-cli")
+        monkeypatch.setenv("TRUSTRENDER_BACKEND", "typst-cli")
         b = get_backend()
         assert isinstance(b, TypstCliBackend)
 
@@ -114,14 +114,14 @@ class TestTypstPyBackend:
 
     def test_compile_bad_syntax(self):
         backend = TypstPyBackend()
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             backend.compile(FIXTURES / "bad_syntax.typ")
         assert exc_info.value.code == ErrorCode.COMPILE_ERROR
         assert exc_info.value.stage == "compilation"
 
     def test_compile_missing_asset(self):
         backend = TypstPyBackend()
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             backend.compile(FIXTURES / "missing_image_static.typ")
         assert exc_info.value.code == ErrorCode.MISSING_ASSET
 
@@ -148,7 +148,7 @@ class TestTypstCliBackend:
 
     def test_compile_bad_syntax(self):
         backend = TypstCliBackend()
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             backend.compile(FIXTURES / "bad_syntax.typ")
         assert exc_info.value.code == ErrorCode.COMPILE_ERROR
         assert exc_info.value.stage == "compilation"
@@ -156,7 +156,7 @@ class TestTypstCliBackend:
 
     def test_compile_missing_asset(self):
         backend = TypstCliBackend()
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             backend.compile(FIXTURES / "missing_image_static.typ")
         assert exc_info.value.code == ErrorCode.MISSING_ASSET
 
@@ -169,22 +169,22 @@ class TestTypstCliBackend:
 
     def test_timeout_raises_render_timeout(self):
         backend = TypstCliBackend(compile_timeout=0.001)
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             backend.compile(FIXTURES / "simple.typ")
         assert exc_info.value.code == ErrorCode.RENDER_TIMEOUT
 
     def test_missing_binary_raises_backend_error(self):
         backend = TypstCliBackend(typst_bin="/nonexistent/typst")
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             backend.compile(FIXTURES / "simple.typ")
         exc = exc_info.value
         assert exc.code == ErrorCode.BACKEND_ERROR
         assert "not found" in str(exc).lower()
-        assert "FORMFORGE_BACKEND=typst-py" in str(exc)
+        assert "TRUSTRENDER_BACKEND=typst-py" in str(exc)
 
     def test_missing_binary_message_includes_install_guidance(self):
         backend = TypstCliBackend(typst_bin="/nonexistent/typst")
-        with pytest.raises(FormforgeError, match="Install Typst"):
+        with pytest.raises(TrustRenderError, match="Install Typst"):
             backend.compile(FIXTURES / "simple.typ")
 
 
@@ -221,7 +221,7 @@ class TestCrossBackendParity:
     def test_bad_syntax_classifies_as_compile_error(self, backend_name):
         """Real Typst syntax error (not synthetic) produces COMPILE_ERROR."""
         backend = _make_backend(backend_name)
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             backend.compile(FIXTURES / "bad_syntax.typ")
         assert exc_info.value.code == ErrorCode.COMPILE_ERROR
         assert exc_info.value.stage == "compilation"
@@ -230,7 +230,7 @@ class TestCrossBackendParity:
     def test_missing_asset_classifies_as_missing_asset(self, backend_name):
         """Real missing-image error produces MISSING_ASSET under both."""
         backend = _make_backend(backend_name)
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             backend.compile(FIXTURES / "missing_image_static.typ")
         assert exc_info.value.code == ErrorCode.MISSING_ASSET
 
@@ -247,7 +247,7 @@ class TestCrossBackendParity:
     def test_error_has_source_path(self, backend_name):
         """Both backends set source_path on compile errors."""
         backend = _make_backend(backend_name)
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             backend.compile(FIXTURES / "bad_syntax.typ")
         assert exc_info.value.source_path is not None
         assert "bad_syntax.typ" in exc_info.value.source_path
@@ -264,13 +264,13 @@ class TestCompileTypstFile:
         assert pdf[:5] == b"%PDF-"
 
     def test_error_carries_template_path(self):
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             compile_typst_file(FIXTURES / "bad_syntax.typ")
         assert exc_info.value.template_path is not None
         assert "bad_syntax.typ" in exc_info.value.template_path
 
     def test_missing_asset_error(self):
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             compile_typst_file(FIXTURES / "missing_image_static.typ")
         assert exc_info.value.code == ErrorCode.MISSING_ASSET
 
@@ -293,7 +293,7 @@ class TestTimeoutThreading:
     def test_compile_typst_file_timeout_kills(self):
         """CLI backend subprocess is killed on timeout."""
         backend = TypstCliBackend()
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             compile_typst_file(
                 FIXTURES / "simple.typ",
                 backend=backend,
@@ -312,7 +312,7 @@ class TestTimeoutThreading:
         """CLI backend subprocess is killed on timeout through compile_typst."""
         source = '#set page(paper: "us-letter")\n= Hello\n'
         backend = TypstCliBackend()
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             compile_typst(source, tmp_path, backend=backend, timeout=0.001)
         assert exc_info.value.code == ErrorCode.RENDER_TIMEOUT
 
@@ -320,22 +320,22 @@ class TestTimeoutThreading:
         """On timeout without debug, temp file is cleaned up (no accumulation)."""
         source = '#set page(paper: "us-letter")\n= Hello\n'
         backend = TypstCliBackend()
-        before = set(tmp_path.glob("_formforge_*"))
-        with pytest.raises(FormforgeError) as exc_info:
+        before = set(tmp_path.glob("_trustrender_*"))
+        with pytest.raises(TrustRenderError) as exc_info:
             compile_typst(source, tmp_path, backend=backend, timeout=0.001, debug=False)
         assert exc_info.value.code == ErrorCode.RENDER_TIMEOUT
-        after = set(tmp_path.glob("_formforge_*"))
+        after = set(tmp_path.glob("_trustrender_*"))
         assert after == before, "Temp file should be cleaned up on timeout (non-debug)"
 
     def test_timeout_cleanup_policy_debug(self, tmp_path):
         """On timeout with debug=True, temp file is preserved."""
         source = '#set page(paper: "us-letter")\n= Hello\n'
         backend = TypstCliBackend()
-        before = set(tmp_path.glob("_formforge_*"))
-        with pytest.raises(FormforgeError) as exc_info:
+        before = set(tmp_path.glob("_trustrender_*"))
+        with pytest.raises(TrustRenderError) as exc_info:
             compile_typst(source, tmp_path, backend=backend, timeout=0.001, debug=True)
         assert exc_info.value.code == ErrorCode.RENDER_TIMEOUT
-        after = set(tmp_path.glob("_formforge_*"))
+        after = set(tmp_path.glob("_trustrender_*"))
         new_files = after - before
         assert len(new_files) == 1, "Temp file should be preserved on timeout with debug"
         # Cleanup
@@ -346,6 +346,6 @@ class TestTimeoutThreading:
         """timeout= on compile() overrides TypstCliBackend's compile_timeout."""
         # Backend has generous default (60s), but per-call is tiny
         backend = TypstCliBackend(compile_timeout=60)
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             backend.compile(FIXTURES / "simple.typ", timeout=0.001)
         assert exc_info.value.code == ErrorCode.RENDER_TIMEOUT

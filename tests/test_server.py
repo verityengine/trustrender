@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from starlette.testclient import TestClient
 
-from formforge.server import create_app
+from trustrender.server import create_app
 
 EXAMPLES = Path("examples")
 FIXTURES = Path("tests/fixtures")
@@ -336,7 +336,7 @@ class TestServerTimeout:
 
     def test_repeated_timeouts_no_temp_file_leak(self, fast_timeout_fixtures_client):
         """Repeated timeouts do not accumulate orphan temp files."""
-        before = set(FIXTURES.glob("_formforge_*"))
+        before = set(FIXTURES.glob("_trustrender_*"))
         for _ in range(3):
             fast_timeout_fixtures_client.post(
                 "/render",
@@ -345,7 +345,7 @@ class TestServerTimeout:
                     "data": json.load(open(FIXTURES / "simple.json")),
                 },
             )
-        after = set(FIXTURES.glob("_formforge_*"))
+        after = set(FIXTURES.glob("_trustrender_*"))
         new_files = after - before
         assert len(new_files) == 0, f"Orphan temp files: {new_files}"
 
@@ -367,7 +367,7 @@ class TestServerTimeout:
         """In debug mode, timeout preserves intermediate file for inspection."""
         app = create_app(FIXTURES, render_timeout=0.001, debug=True)
         client = TestClient(app, raise_server_exceptions=False)
-        before = set(FIXTURES.glob("_formforge_*"))
+        before = set(FIXTURES.glob("_trustrender_*"))
         resp = client.post(
             "/render",
             json={
@@ -376,7 +376,7 @@ class TestServerTimeout:
             },
         )
         assert resp.status_code == 504
-        after = set(FIXTURES.glob("_formforge_*"))
+        after = set(FIXTURES.glob("_trustrender_*"))
         new_files = after - before
         assert len(new_files) == 1, "Debug mode should preserve artifact on timeout"
         # Cleanup test artifact
@@ -385,7 +385,7 @@ class TestServerTimeout:
 
     def test_no_artifact_leak_in_examples(self):
         """Normal server operation does not leave artifacts in examples/."""
-        before = set(EXAMPLES.glob("_formforge_*"))
+        before = set(EXAMPLES.glob("_trustrender_*"))
         app = create_app(EXAMPLES, render_timeout=30)
         client = TestClient(app)
         # Successful render
@@ -397,7 +397,7 @@ class TestServerTimeout:
             },
         )
         assert resp.status_code == 200
-        after = set(EXAMPLES.glob("_formforge_*"))
+        after = set(EXAMPLES.glob("_trustrender_*"))
         assert after == before, f"Artifacts leaked: {after - before}"
 
 

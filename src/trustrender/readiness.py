@@ -9,7 +9,7 @@ existing validators and adds template/environment checks.
 
 Usage::
 
-    from formforge.readiness import preflight
+    from trustrender.readiness import preflight
 
     verdict = preflight("invoice.j2.typ", data, zugferd="en16931")
     if not verdict.ready:
@@ -27,7 +27,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError
 
-from .errors import ErrorCode, FormforgeError
+from .errors import ErrorCode, TrustRenderError
 
 
 # ---------------------------------------------------------------------------
@@ -98,7 +98,7 @@ def _check_payload(
                     path=inc,
                     message=f"Contract is partial: include '{inc}' could not be resolved statically",
                 ))
-    except FormforgeError:
+    except TrustRenderError:
         # Template parse error — will be caught in template stage
         pass
 
@@ -165,7 +165,7 @@ def _check_template_assets(
 # Font verification helpers
 # ---------------------------------------------------------------------------
 
-# Known bundled font families — these ship with Formforge and are expected
+# Known bundled font families — these ship with TrustRender and are expected
 # to be available when using bundled templates.
 _BUNDLED_FONT_FAMILIES = frozenset({"inter"})
 
@@ -266,7 +266,7 @@ def _is_bundled_template(template_path: Path) -> bool:
     try:
         resolved = template_path.resolve()
         # Walk up from the package dir to find examples/
-        pkg_dir = Path(__file__).resolve().parent  # src/formforge/
+        pkg_dir = Path(__file__).resolve().parent  # src/trustrender/
         examples_dir = pkg_dir.parent.parent / "examples"
         if examples_dir.is_dir():
             return str(resolved).startswith(str(examples_dir.resolve()))
@@ -382,7 +382,7 @@ def _check_environment(
 
     try:
         get_backend()
-    except FormforgeError:
+    except TrustRenderError:
         issues.append(ReadinessIssue(
             stage="environment",
             check="no_backend",

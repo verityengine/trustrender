@@ -1,6 +1,6 @@
 """Font truth tests — precedence, fallback, and embedding verification.
 
-These tests document and verify Formforge's font behavior so that operators
+These tests document and verify TrustRender's font behavior so that operators
 can predict when output is deterministic, when it is best-effort, and what
 they must do to guarantee the intended font.
 
@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from formforge import bundled_font_dir, render
+from trustrender import bundled_font_dir, render
 
 FIXTURES = Path(__file__).parent / "fixtures"
 EXAMPLES = Path(__file__).parent.parent / "examples"
@@ -71,13 +71,13 @@ class TestBundledFontAvailability:
         assert actual == expected
 
     def test_env_var_overrides_dev_layout(self, tmp_path, monkeypatch):
-        """FORMFORGE_FONT_PATH env var overrides the dev layout path."""
+        """TRUSTRENDER_FONT_PATH env var overrides the dev layout path."""
         # Create a temp dir to act as font path
         (tmp_path / "Inter").mkdir()
         (tmp_path / "Inter" / "Inter-Regular.ttf").write_bytes(b"fake")
-        monkeypatch.setenv("FORMFORGE_FONT_PATH", str(tmp_path))
+        monkeypatch.setenv("TRUSTRENDER_FONT_PATH", str(tmp_path))
         # Re-run the finder with env var set
-        from formforge import _find_bundled_fonts
+        from trustrender import _find_bundled_fonts
 
         result = _find_bundled_fonts()
         assert result == tmp_path.resolve()
@@ -137,7 +137,7 @@ class TestFontEmbedding:
 class TestFontPrecedence:
     def test_explicit_paths_extend_bundled(self):
         """Explicit font_paths extend bundled fonts, not replace them."""
-        from formforge import _build_font_paths
+        from trustrender import _build_font_paths
 
         bundled = bundled_font_dir()
         assert bundled is not None
@@ -159,7 +159,7 @@ class TestFontPrecedence:
         )
 
     def test_env_var_font_path_changes_behavior(self, tmp_path, monkeypatch):
-        """FORMFORGE_FONT_PATH env var actually changes font resolution behavior.
+        """TRUSTRENDER_FONT_PATH env var actually changes font resolution behavior.
 
         This is an operator contract: the env var must affect the render,
         not just the path resolution.
@@ -168,14 +168,14 @@ class TestFontPrecedence:
         pdf_with_bundled = render(EXAMPLES / "invoice.j2.typ", INVOICE_DATA)
         assert _pdf_contains_font(pdf_with_bundled, "Inter")
 
-        # Now set FORMFORGE_FONT_PATH to an empty directory (no Inter)
+        # Now set TRUSTRENDER_FONT_PATH to an empty directory (no Inter)
         empty_fonts = tmp_path / "empty_fonts"
         empty_fonts.mkdir()
-        monkeypatch.setenv("FORMFORGE_FONT_PATH", str(empty_fonts))
+        monkeypatch.setenv("TRUSTRENDER_FONT_PATH", str(empty_fonts))
         # Re-import to pick up the env var change
         import importlib
 
-        import formforge as ff
+        import trustrender as ff
 
         importlib.reload(ff)
 
@@ -187,14 +187,14 @@ class TestFontPrecedence:
             # Inter might still be available as a system font, so we can't
             # assert it's gone — but we can verify the env var was honored
             # by checking the resolved font path changed
-            from formforge import bundled_font_dir as bfd
+            from trustrender import bundled_font_dir as bfd
 
             resolved = bfd()
             # The resolved path should be our empty dir, not the original
             assert resolved == empty_fonts.resolve() or resolved is None
         finally:
             # Restore original state
-            monkeypatch.delenv("FORMFORGE_FONT_PATH")
+            monkeypatch.delenv("TRUSTRENDER_FONT_PATH")
             importlib.reload(ff)
 
 
@@ -219,7 +219,7 @@ class TestCrossBackendFontParity:
     @pytest.mark.parametrize("backend_name", BOTH_BACKENDS)
     def test_invoice_embeds_inter(self, backend_name, monkeypatch):
         """Both backends embed Inter for invoice template."""
-        monkeypatch.setenv("FORMFORGE_BACKEND", backend_name)
+        monkeypatch.setenv("TRUSTRENDER_BACKEND", backend_name)
         pdf = render(EXAMPLES / "invoice.j2.typ", INVOICE_DATA)
         assert _pdf_contains_font(pdf, "Inter"), (
             f"Invoice should embed Inter under {backend_name} backend"
@@ -228,7 +228,7 @@ class TestCrossBackendFontParity:
     @pytest.mark.parametrize("backend_name", BOTH_BACKENDS)
     def test_missing_font_falls_back_silently(self, backend_name, monkeypatch):
         """Both backends fall back silently on missing fonts."""
-        monkeypatch.setenv("FORMFORGE_BACKEND", backend_name)
+        monkeypatch.setenv("TRUSTRENDER_BACKEND", backend_name)
         # Should not raise — Typst silently falls back
         pdf = render(FIXTURES / "bad_font.j2.typ", {"title": "Test"})
         assert pdf[:5] == b"%PDF-"
@@ -237,7 +237,7 @@ class TestCrossBackendFontParity:
     @pytest.mark.parametrize("backend_name", BOTH_BACKENDS)
     def test_bundled_fonts_available(self, backend_name, monkeypatch):
         """Both backends can access bundled fonts."""
-        monkeypatch.setenv("FORMFORGE_BACKEND", backend_name)
+        monkeypatch.setenv("TRUSTRENDER_BACKEND", backend_name)
         pdf = render(EXAMPLES / "invoice.j2.typ", INVOICE_DATA)
         assert pdf[:5] == b"%PDF-"
         assert len(pdf) > 1000
@@ -252,7 +252,7 @@ class TestDoctorFontInventory:
     """Tests for enhanced doctor font inventory."""
 
     def test_inventory_reports_inter(self):
-        from formforge.doctor import check_template_fonts
+        from trustrender.doctor import check_template_fonts
 
         status, msg = check_template_fonts()
         # Inter should always be found; status depends on whether other
@@ -264,7 +264,7 @@ class TestDoctorFontInventory:
         """Templates in a dir referencing unavailable fonts → warning."""
         import tempfile
 
-        from formforge.doctor import check_template_fonts
+        from trustrender.doctor import check_template_fonts
 
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create a template with a font not in bundled
@@ -279,7 +279,7 @@ class TestDoctorFontInventory:
         """No templates → ok, no declarations found."""
         import tempfile
 
-        from formforge.doctor import check_template_fonts
+        from trustrender.doctor import check_template_fonts
 
         with tempfile.TemporaryDirectory() as tmpdir:
             status, msg = check_template_fonts(templates_dir=Path(tmpdir))
@@ -291,7 +291,7 @@ class TestSilentFallback:
     """Typst silently falls back when a requested font is missing.
 
     This is by design in Typst — it prioritizes "produce output" over
-    "fail on missing font."  Formforge documents this behavior clearly
+    "fail on missing font."  TrustRender documents this behavior clearly
     so operators know:
     - Output is always produced (no font-related errors in most cases)
     - The PDF may use a fallback font (currently observed: Libertinus)
@@ -306,7 +306,7 @@ class TestSilentFallback:
 
     def test_missing_font_does_not_raise(self):
         """No exception for missing fonts — silent fallback."""
-        # This should NOT raise FormforgeError
+        # This should NOT raise TrustRenderError
         render(FIXTURES / "bad_font.j2.typ", {"title": "No Error"})
 
     def test_observed_fallback_font(self):

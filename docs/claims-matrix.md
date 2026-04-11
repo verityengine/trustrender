@@ -1,4 +1,4 @@
-# Formforge Claims Matrix
+# TrustRender Claims Matrix
 
 Conducted: 2026-04-10
 
@@ -49,7 +49,7 @@ Every public or semi-public claim, checked against code.
 | 5 real templates | Website | TRUE | Actually 6 (invoice, einvoice, statement, receipt, letter, report) | Update to 6 |
 | Pre-render contract validation | README, website | TRUE | 39 tests, CLI + server integration, opt-in | None |
 | Contract catches data errors before rendering | Outreach | TRUE | Validation runs at `data_validation` stage, before Typst | None |
-| Table headers repeat on page breaks | Outreach, benchmarks | NARROW | Typst `table.header()` behavior, not Formforge code. No test validates it. | Clarify attribution or add test |
+| Table headers repeat on page breaks | Outreach, benchmarks | NARROW | Typst `table.header()` behavior, not TrustRender code. No test validates it. | Clarify attribution or add test |
 | Structured business PDFs from code | README | TRUE | 6 working templates covering invoices, statements, receipts, letters, reports | None |
 | Clean templates (Jinja2 + Typst) | CLAUDE.md | TRUE | Subjective but supported by template readability | None |
 | Predictable layout | CLAUDE.md | NARROW | True for table/page flow. Escaping boundaries in code/math mode. | Document escaping scope |
@@ -80,7 +80,7 @@ Every public or semi-public claim, checked against code.
 | Timeout artifacts cleaned | CLAUDE.md | TRUE | `test_server.py::test_repeated_timeouts_no_temp_file_leak` | None |
 | Docker works | CLAUDE.md | NARROW | Builds and serves. Unicode untested. No locale config. | Add locale + Unicode test |
 | CI green | CLAUDE.md | TRUE | GitHub Actions runs Python 3.11/3.12, doctor + tests + lint | None |
-| formforge doctor works | CLAUDE.md | TRUE | 20 tests in `test_doctor.py` | None |
+| trustrender doctor works | CLAUDE.md | TRUE | 20 tests in `test_doctor.py` | None |
 
 ---
 

@@ -3,6 +3,6 @@
 
 = Hello Typst
 
-This is a minimal smoke test for the Formforge project.
+This is a minimal smoke test for the TrustRender project.
 
 Rendered by Typst via Python.

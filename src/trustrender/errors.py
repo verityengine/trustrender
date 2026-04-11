@@ -1,4 +1,4 @@
-"""Error types for Formforge.
+"""Error types for TrustRender.
 
 Error classification
 --------------------
@@ -39,7 +39,7 @@ from enum import Enum
 
 
 class ErrorCode(str, Enum):
-    """Stable error codes for Formforge failures."""
+    """Stable error codes for TrustRender failures."""
 
     INVALID_DATA = "INVALID_DATA"
     DATA_CONTRACT = "DATA_CONTRACT"
@@ -55,8 +55,8 @@ class ErrorCode(str, Enum):
     SEMANTIC_VALIDATION = "SEMANTIC_VALIDATION"
 
 
-class FormforgeError(Exception):
-    """Raised when a Formforge render fails.
+class TrustRenderError(Exception):
+    """Raised when a TrustRender render fails.
 
     Attributes:
         code: Stable error code identifying the failure category.

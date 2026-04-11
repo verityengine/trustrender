@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from formforge.semantic import (
+from trustrender.semantic import (
     INVOICE_HINTS,
     LETTER_HINTS,
     RECEIPT_HINTS,
@@ -278,7 +278,7 @@ class TestReceiptHints:
         """Receipt fixture passes RECEIPT_HINTS without issues."""
         import json
         from pathlib import Path
-        from formforge.semantic import RECEIPT_HINTS
+        from trustrender.semantic import RECEIPT_HINTS
 
         examples = Path(__file__).parent.parent / "examples"
         data = json.loads((examples / "receipt_data.json").read_text())
@@ -287,7 +287,7 @@ class TestReceiptHints:
 
     def test_receipt_bad_total_warns(self):
         """Receipt with wrong total triggers arithmetic warning."""
-        from formforge.semantic import RECEIPT_HINTS
+        from trustrender.semantic import RECEIPT_HINTS
 
         data = {
             "company": {"name": "Test"},
@@ -310,7 +310,7 @@ class TestReceiptHints:
 
     def test_receipt_non_numeric_amount_warns(self):
         """Receipt item with non-numeric amount triggers warning."""
-        from formforge.semantic import RECEIPT_HINTS
+        from trustrender.semantic import RECEIPT_HINTS
 
         data = {
             "company": {"name": "Test"},
@@ -334,7 +334,7 @@ class TestStatementHints:
         """Statement fixture passes STATEMENT_HINTS without issues."""
         import json
         from pathlib import Path
-        from formforge.semantic import STATEMENT_HINTS
+        from trustrender.semantic import STATEMENT_HINTS
 
         examples = Path(__file__).parent.parent / "examples"
         data = json.loads((examples / "statement_data.json").read_text())
@@ -343,7 +343,7 @@ class TestStatementHints:
 
     def test_statement_aging_mismatch_warns(self):
         """Aging totals that don't sum to aging.total trigger warning."""
-        from formforge.semantic import STATEMENT_HINTS
+        from trustrender.semantic import STATEMENT_HINTS
 
         data = {
             "customer": {"name": "Test", "account_number": "A-001"},
@@ -366,7 +366,7 @@ class TestStatementHints:
 
     def test_statement_balance_mismatch_warns(self):
         """opening + charges + payments != closing triggers warning."""
-        from formforge.semantic import STATEMENT_HINTS
+        from trustrender.semantic import STATEMENT_HINTS
 
         data = {
             "customer": {"name": "Test", "account_number": "A-001"},
@@ -456,42 +456,42 @@ class TestReconciliation:
 
 class TestHintAutoDetection:
     def test_invoice_detected(self):
-        from formforge.cli import _resolve_hints
+        from trustrender.cli import _resolve_hints
         hints = _resolve_hints("invoice.j2.typ")
         assert hints is not None
         assert hints.line_items_path == "items"
 
     def test_einvoice_detected(self):
-        from formforge.cli import _resolve_hints
+        from trustrender.cli import _resolve_hints
         hints = _resolve_hints("einvoice.j2.typ")
         assert hints is not None
 
     def test_receipt_detected(self):
-        from formforge.cli import _resolve_hints
+        from trustrender.cli import _resolve_hints
         hints = _resolve_hints("receipt.j2.typ")
         assert hints is not None
         assert hints.line_total_field == "amount"
 
     def test_statement_detected(self):
-        from formforge.cli import _resolve_hints
+        from trustrender.cli import _resolve_hints
         hints = _resolve_hints("statement.j2.typ")
         assert hints is not None
         assert hints.reconciliations is not None
 
     def test_letter_detected(self):
-        from formforge.cli import _resolve_hints
+        from trustrender.cli import _resolve_hints
         hints = _resolve_hints("letter.j2.typ")
         assert hints is not None
         assert "sender.name" in hints.nonempty_fields
 
     def test_report_detected(self):
-        from formforge.cli import _resolve_hints
+        from trustrender.cli import _resolve_hints
         hints = _resolve_hints("report.j2.typ")
         assert hints is not None
         assert "title" in hints.nonempty_fields
 
     def test_unknown_returns_none(self):
-        from formforge.cli import _resolve_hints
+        from trustrender.cli import _resolve_hints
         hints = _resolve_hints("custom_widget.j2.typ")
         assert hints is None
 
@@ -734,7 +734,7 @@ class TestStrictPartialContracts:
         """strict=True promotes partial-contract warnings to errors."""
         import tempfile
         from pathlib import Path
-        from formforge.readiness import preflight
+        from trustrender.readiness import preflight
 
         # Create a template with a dynamic include
         with tempfile.NamedTemporaryFile(suffix=".j2.typ", mode="w", delete=False) as f:
@@ -756,7 +756,7 @@ class TestStrictPartialContracts:
         """Default (strict=False) keeps partial contracts as warnings."""
         import tempfile
         from pathlib import Path
-        from formforge.readiness import preflight
+        from trustrender.readiness import preflight
 
         with tempfile.NamedTemporaryFile(suffix=".j2.typ", mode="w", delete=False) as f:
             f.write('{% include some_var %}\n{{ title }}')
@@ -776,7 +776,7 @@ class TestStrictPartialContracts:
     def test_strict_no_effect_on_complete_contract(self):
         """strict=True on a complete contract still returns ready=True."""
         from pathlib import Path
-        from formforge.readiness import preflight
+        from trustrender.readiness import preflight
 
         examples = Path(__file__).parent.parent / "examples"
         import json
@@ -813,7 +813,7 @@ class TestCollectStringPaths:
     """Tests for collect_string_paths — auto-discovery of string fields."""
 
     def test_flat_dict(self):
-        from formforge.semantic import collect_string_paths
+        from trustrender.semantic import collect_string_paths
 
         data = {"name": "Acme", "city": "Berlin", "count": 42}
         paths = collect_string_paths(data)
@@ -822,7 +822,7 @@ class TestCollectStringPaths:
         assert "count" not in paths  # int, not string
 
     def test_nested_dict(self):
-        from formforge.semantic import collect_string_paths
+        from trustrender.semantic import collect_string_paths
 
         data = {"sender": {"name": "Acme", "address": {"city": "Berlin"}}}
         paths = collect_string_paths(data)
@@ -830,7 +830,7 @@ class TestCollectStringPaths:
         assert "sender.address.city" in paths
 
     def test_arrays(self):
-        from formforge.semantic import collect_string_paths
+        from trustrender.semantic import collect_string_paths
 
         data = {"items": [{"desc": "Widget"}, {"desc": "Gadget"}]}
         paths = collect_string_paths(data)

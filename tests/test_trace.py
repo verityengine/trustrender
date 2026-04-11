@@ -9,9 +9,9 @@ from pathlib import Path
 
 import pytest
 
-from formforge import render
-from formforge.errors import ErrorCode, FormforgeError
-from formforge.trace import RenderTrace, StageTrace, TraceStore, init_store
+from trustrender import render
+from trustrender.errors import ErrorCode, TrustRenderError
+from trustrender.trace import RenderTrace, StageTrace, TraceStore, init_store
 
 EXAMPLES = Path(__file__).parent.parent / "examples"
 
@@ -25,11 +25,11 @@ def store(tmp_path):
 
 @pytest.fixture
 def _history_env(tmp_path, monkeypatch):
-    """Set FORMFORGE_HISTORY for render() to pick up."""
-    import formforge.trace as trace_mod
+    """Set TRUSTRENDER_HISTORY for render() to pick up."""
+    import trustrender.trace as trace_mod
 
     db_path = tmp_path / "test_history.db"
-    monkeypatch.setenv("FORMFORGE_HISTORY", str(db_path))
+    monkeypatch.setenv("TRUSTRENDER_HISTORY", str(db_path))
     # Reset global store so get_store() re-initializes from env
     trace_mod._store = None
     yield db_path
@@ -96,7 +96,7 @@ class TestTraceStore:
 
 class TestRenderWithTrace:
     def test_successful_render_traced(self, _history_env):
-        from formforge.trace import get_store
+        from trustrender.trace import get_store
 
         pdf = render("examples/invoice.j2.typ", "examples/invoice_data.json")
         assert pdf[:5] == b"%PDF-"
@@ -112,9 +112,9 @@ class TestRenderWithTrace:
         assert any(s.stage == "compilation" for s in traces[0].stages)
 
     def test_failed_render_traced(self, _history_env):
-        from formforge.trace import get_store
+        from trustrender.trace import get_store
 
-        with pytest.raises(FormforgeError):
+        with pytest.raises(TrustRenderError):
             render("examples/invoice.j2.typ", {}, validate=True)
 
         store = get_store()
@@ -124,7 +124,7 @@ class TestRenderWithTrace:
         assert traces[0].error_code == "DATA_CONTRACT"
 
     def test_zugferd_stages_traced(self, _history_env):
-        from formforge.trace import get_store
+        from trustrender.trace import get_store
 
         pdf = render(
             "examples/einvoice.j2.typ",
@@ -140,7 +140,7 @@ class TestRenderWithTrace:
         assert "zugferd_postprocess" in stages
 
     def test_provenance_traced(self, _history_env):
-        from formforge.trace import get_store
+        from trustrender.trace import get_store
 
         pdf = render(
             "examples/invoice.j2.typ",
@@ -154,16 +154,16 @@ class TestRenderWithTrace:
         assert any(s.stage == "provenance" for s in traces[0].stages)
 
     def test_no_history_env_no_trace(self):
-        """Without FORMFORGE_HISTORY, nothing is stored."""
+        """Without TRUSTRENDER_HISTORY, nothing is stored."""
         # Ensure env var is not set
-        os.environ.pop("FORMFORGE_HISTORY", None)
+        os.environ.pop("TRUSTRENDER_HISTORY", None)
         pdf = render("examples/invoice.j2.typ", "examples/invoice_data.json")
         assert pdf[:5] == b"%PDF-"
         # No store, no crash, no problem
 
     def test_output_hash_recorded(self, _history_env):
         """Successful render records a non-empty output SHA-256."""
-        from formforge.trace import get_store
+        from trustrender.trace import get_store
 
         render("examples/invoice.j2.typ", "examples/invoice_data.json")
         store = get_store()
@@ -174,7 +174,7 @@ class TestRenderWithTrace:
 
     def test_output_hash_stable(self, _history_env):
         """Same inputs produce the same output hash (deterministic render)."""
-        from formforge.trace import get_store
+        from trustrender.trace import get_store
 
         render("examples/invoice.j2.typ", "examples/invoice_data.json")
         render("examples/invoice.j2.typ", "examples/invoice_data.json")
@@ -186,7 +186,7 @@ class TestRenderWithTrace:
 
     def test_output_hash_changes_with_data(self, _history_env):
         """Different data produces a different output hash."""
-        from formforge.trace import get_store
+        from trustrender.trace import get_store
 
         render("examples/invoice.j2.typ", "examples/invoice_data.json")
         render("examples/receipt.j2.typ", "examples/receipt_data.json")

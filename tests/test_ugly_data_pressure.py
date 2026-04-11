@@ -31,9 +31,9 @@ from pathlib import Path
 
 import pytest
 
-from formforge import render
-from formforge.readiness import preflight
-from formforge.semantic import (
+from trustrender import render
+from trustrender.readiness import preflight
+from trustrender.semantic import (
     INVOICE_HINTS,
     RECEIPT_HINTS,
     STATEMENT_HINTS,
@@ -587,14 +587,14 @@ class TestInconsistentItemSchemas:
         description is required (used directly in template, not guarded).
         Verdict: should block — and does. Contract catches it.
         """
-        from formforge.errors import FormforgeError
+        from trustrender.errors import TrustRenderError
 
         data = _invoice_data()
         data["items"] = [
             {"num": 1, "description": "Item 1", "qty": 1, "unit_price": "$10.00", "amount": "$10.00"},
             {"num": 2, "description": None, "qty": 1, "unit_price": "$20.00", "amount": "$20.00"},
         ]
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             render(INVOICE_TEMPLATE, data)
         # Error message mentions field count; detail attribute has path info
         assert "1 field error" in str(exc_info.value)
@@ -764,11 +764,11 @@ class TestTypeConfusion:
         contract validation error. This is correct behavior.
         Verdict: should block — and does.
         """
-        from formforge.errors import FormforgeError
+        from trustrender.errors import TrustRenderError
 
         data = _invoice_data()
         data["notes"] = None
-        with pytest.raises(FormforgeError):
+        with pytest.raises(TrustRenderError):
             render(INVOICE_TEMPLATE, data)
 
     def test_empty_dict_as_sender(self):

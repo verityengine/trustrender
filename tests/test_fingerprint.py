@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from formforge.fingerprint import (
+from trustrender.fingerprint import (
     ChangeSet,
     FieldChange,
     FileChange,
@@ -33,7 +33,7 @@ class TestComputeFingerprint:
         assert fp.template_hash.sha256.startswith("sha256:")
         assert fp.data_hash.startswith("sha256:")
         assert fp.fingerprint.startswith("sha256:")
-        assert fp.formforge_version == "0.1.0"
+        assert fp.trustrender_version == "0.1.0"
         assert fp.created_at  # ISO timestamp present
 
     def test_deterministic(self):

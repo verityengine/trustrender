@@ -20,9 +20,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import os  # noqa: E402
-os.environ["FORMFORGE_BACKEND"] = "typst-cli"  # production backend
+os.environ["TRUSTRENDER_BACKEND"] = "typst-cli"  # production backend
 
-import formforge  # noqa: E402
+import trustrender  # noqa: E402
 from pypdf import PdfReader  # noqa: E402
 
 EXAMPLES = Path(__file__).parent.parent / "examples"
@@ -68,7 +68,7 @@ def run_fixture(label: str, template: str, data_file: str, row_count: int, itera
 
     for i in range(iterations):
         start = time.perf_counter()
-        pdf_bytes = formforge.render(template_path, data, validate=False)
+        pdf_bytes = trustrender.render(template_path, data, validate=False)
         elapsed = time.perf_counter() - start
         timings.append(elapsed * 1000)  # ms
 

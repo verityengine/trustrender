@@ -11,10 +11,10 @@ from pathlib import Path
 import pytest
 from starlette.testclient import TestClient
 
-from formforge import FormforgeError, render
-from formforge.cli import _format_error, main
-from formforge.errors import ErrorCode
-from formforge.server import create_app
+from trustrender import TrustRenderError, render
+from trustrender.cli import _format_error, main
+from trustrender.errors import ErrorCode
+from trustrender.server import create_app
 
 FIXTURES = Path("tests/fixtures")
 EXAMPLES = Path("examples")
@@ -27,15 +27,15 @@ EXAMPLES = Path("examples")
 
 class TestErrorModel:
     def test_error_has_code(self):
-        exc = FormforgeError("test", code=ErrorCode.COMPILE_ERROR, stage="compilation")
+        exc = TrustRenderError("test", code=ErrorCode.COMPILE_ERROR, stage="compilation")
         assert exc.code == ErrorCode.COMPILE_ERROR
 
     def test_error_has_stage(self):
-        exc = FormforgeError("test", code=ErrorCode.COMPILE_ERROR, stage="compilation")
+        exc = TrustRenderError("test", code=ErrorCode.COMPILE_ERROR, stage="compilation")
         assert exc.stage == "compilation"
 
     def test_error_has_detail(self):
-        exc = FormforgeError(
+        exc = TrustRenderError(
             "summary",
             code=ErrorCode.COMPILE_ERROR,
             stage="compilation",
@@ -44,11 +44,11 @@ class TestErrorModel:
         assert exc.detail == "line 1\nline 2\nline 3"
 
     def test_detail_defaults_to_message(self):
-        exc = FormforgeError("summary", code=ErrorCode.COMPILE_ERROR, stage="compilation")
+        exc = TrustRenderError("summary", code=ErrorCode.COMPILE_ERROR, stage="compilation")
         assert exc.detail == "summary"
 
     def test_to_dict_basic(self):
-        exc = FormforgeError(
+        exc = TrustRenderError(
             "something broke",
             code=ErrorCode.COMPILE_ERROR,
             stage="compilation",
@@ -60,7 +60,7 @@ class TestErrorModel:
         assert "detail" not in d  # not in non-debug
 
     def test_to_dict_debug(self):
-        exc = FormforgeError(
+        exc = TrustRenderError(
             "summary",
             code=ErrorCode.MISSING_ASSET,
             stage="compilation",
@@ -75,7 +75,7 @@ class TestErrorModel:
         assert d["template_path"] == "invoice.j2.typ"
 
     def test_to_dict_without_debug_excludes_paths(self):
-        exc = FormforgeError(
+        exc = TrustRenderError(
             "summary",
             code=ErrorCode.COMPILE_ERROR,
             stage="compilation",
@@ -86,16 +86,16 @@ class TestErrorModel:
         assert "detail" not in d
 
     def test_str_includes_intermediate_path(self):
-        exc = FormforgeError(
+        exc = TrustRenderError(
             "compile failed",
             code=ErrorCode.COMPILE_ERROR,
             stage="compilation",
-            source_path="/tmp/_formforge_abc.typ",
+            source_path="/tmp/_trustrender_abc.typ",
         )
-        assert "Intermediate source: /tmp/_formforge_abc.typ" in str(exc)
+        assert "Intermediate source: /tmp/_trustrender_abc.typ" in str(exc)
 
     def test_str_includes_template_path(self):
-        exc = FormforgeError(
+        exc = TrustRenderError(
             "variable error",
             code=ErrorCode.TEMPLATE_VARIABLE,
             stage="template_preprocess",
@@ -111,18 +111,18 @@ class TestErrorModel:
 
 class TestInvalidData:
     def test_bad_json_string(self):
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             render(FIXTURES / "simple.j2.typ", "not json {{{")
         assert exc_info.value.code == ErrorCode.INVALID_DATA
         assert exc_info.value.stage == "data_resolution"
 
     def test_json_array_not_object(self):
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             render(FIXTURES / "simple.j2.typ", "[1, 2, 3]")
         assert exc_info.value.code == ErrorCode.INVALID_DATA
 
     def test_wrong_data_type(self):
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             render(FIXTURES / "simple.j2.typ", 42)  # type: ignore
         assert exc_info.value.code == ErrorCode.INVALID_DATA
 
@@ -134,13 +134,13 @@ class TestInvalidData:
 
 class TestTemplateNotFound:
     def test_missing_template_raises(self):
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             render("nonexistent.j2.typ", {})
         assert exc_info.value.code == ErrorCode.TEMPLATE_NOT_FOUND
         assert exc_info.value.stage == "data_resolution"
 
     def test_missing_template_includes_path(self):
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             render("nonexistent.j2.typ", {})
         assert "nonexistent.j2.typ" in str(exc_info.value)
 
@@ -152,13 +152,13 @@ class TestTemplateNotFound:
 
 class TestTemplateSyntax:
     def test_bad_jinja_raises_syntax_error(self):
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             render(FIXTURES / "bad_jinja_syntax.j2.typ", {"title": "T"})
         assert exc_info.value.code == ErrorCode.TEMPLATE_SYNTAX
         assert exc_info.value.stage == "template_preprocess"
 
     def test_syntax_error_includes_template_path(self):
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             render(FIXTURES / "bad_jinja_syntax.j2.typ", {"title": "T"})
         assert exc_info.value.template_path is not None
         assert "bad_jinja_syntax" in exc_info.value.template_path
@@ -172,18 +172,18 @@ class TestTemplateSyntax:
 class TestTemplateVariable:
     def test_undefined_variable_raises(self):
         # validate=False to bypass contract check and reach Jinja2 error path
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             render(FIXTURES / "undefined_var.j2.typ", {"title": "T"}, validate=False)
         assert exc_info.value.code == ErrorCode.TEMPLATE_VARIABLE
         assert exc_info.value.stage == "template_preprocess"
 
     def test_undefined_variable_names_the_variable(self):
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             render(FIXTURES / "undefined_var.j2.typ", {"title": "T"}, validate=False)
         assert "sender" in str(exc_info.value)
 
     def test_undefined_variable_includes_template_path(self):
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             render(FIXTURES / "undefined_var.j2.typ", {"title": "T"}, validate=False)
         assert exc_info.value.template_path is not None
 
@@ -195,7 +195,7 @@ class TestTemplateVariable:
 
 class TestMissingAsset:
     def test_missing_image_raises(self):
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             render(FIXTURES / "missing_image.j2.typ", {"title": "T"})
         exc = exc_info.value
         assert exc.code == ErrorCode.MISSING_ASSET
@@ -205,7 +205,7 @@ class TestMissingAsset:
             Path(exc.source_path).unlink(missing_ok=True)
 
     def test_missing_image_preserves_source(self):
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             render(FIXTURES / "missing_image.j2.typ", {"title": "T"})
         exc = exc_info.value
         assert exc.source_path is not None
@@ -213,7 +213,7 @@ class TestMissingAsset:
         Path(exc.source_path).unlink()
 
     def test_missing_image_has_full_diagnostic(self):
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             render(FIXTURES / "missing_image.j2.typ", {"title": "T"})
         exc = exc_info.value
         assert "nonexistent.png" in exc.detail
@@ -237,7 +237,7 @@ class TestMissingFont:
 
     def test_classifier_recognizes_font_error_string(self):
         # Directly test the classifier with a hypothetical Typst font error
-        from formforge.engine import _classify_typst_error
+        from trustrender.engine import _classify_typst_error
 
         assert _classify_typst_error("unknown font family") == ErrorCode.MISSING_FONT
         assert _classify_typst_error("font xyz not found") == ErrorCode.MISSING_FONT
@@ -247,13 +247,13 @@ class TestMissingFont:
 
 class TestCompileError:
     def test_bad_typst_syntax_raises(self):
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             render(FIXTURES / "bad_syntax.typ", {})
         assert exc_info.value.code == ErrorCode.COMPILE_ERROR
         assert exc_info.value.stage == "compilation"
 
     def test_compile_error_has_detail(self):
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             render(FIXTURES / "bad_syntax.typ", {})
         assert exc_info.value.detail is not None
         assert len(exc_info.value.detail) > 0
@@ -387,7 +387,7 @@ class TestServerErrorResponses:
 
 class TestCLIErrorFormat:
     def test_format_includes_code(self):
-        exc = FormforgeError(
+        exc = TrustRenderError(
             "file not found",
             code=ErrorCode.MISSING_ASSET,
             stage="compilation",
@@ -397,7 +397,7 @@ class TestCLIErrorFormat:
         assert "compilation" in output
 
     def test_format_includes_template_path(self):
-        exc = FormforgeError(
+        exc = TrustRenderError(
             "undefined var",
             code=ErrorCode.TEMPLATE_VARIABLE,
             stage="template_preprocess",
@@ -407,7 +407,7 @@ class TestCLIErrorFormat:
         assert "invoice.j2.typ" in output
 
     def test_format_includes_full_diagnostic(self):
-        exc = FormforgeError(
+        exc = TrustRenderError(
             "summary line",
             code=ErrorCode.COMPILE_ERROR,
             stage="compilation",
@@ -430,7 +430,7 @@ class TestCLIErrorFormat:
         )
         assert code == 1
         # Clean up intermediate files
-        for f in FIXTURES.glob("_formforge_*.typ"):
+        for f in FIXTURES.glob("_trustrender_*.typ"):
             f.unlink()
 
     def test_cli_template_not_found_exit_code(self, tmp_path):

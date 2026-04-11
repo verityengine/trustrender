@@ -1,7 +1,7 @@
 """Jinja2 filters for Typst template authoring.
 
 These filters are registered automatically on the Jinja2 environment used
-by :func:`formforge.templates.render_template`.
+by :func:`trustrender.templates.render_template`.
 """
 
 from __future__ import annotations

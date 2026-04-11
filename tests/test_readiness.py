@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from formforge.readiness import preflight
+from trustrender.readiness import preflight
 
 EXAMPLES = Path(__file__).parent.parent / "examples"
 
@@ -118,7 +118,7 @@ class TestPreflightFonts:
 
     def test_bundled_template_with_fonts_passes(self):
         """Bundled templates pass font check when bundled fonts are available."""
-        from formforge import _build_font_paths
+        from trustrender import _build_font_paths
 
         verdict = preflight(
             EXAMPLES / "invoice.j2.typ",
@@ -191,7 +191,7 @@ class TestPreflightFonts:
 
     def test_all_bundled_templates_pass_with_bundled_fonts(self):
         """All bundled templates pass font check with default font resolution."""
-        from formforge import _build_font_paths
+        from trustrender import _build_font_paths
 
         font_paths = _build_font_paths(None)
         for name in ("invoice", "receipt", "statement", "letter", "report"):
@@ -206,25 +206,25 @@ class TestPreflightFontParsing:
     """Unit tests for font declaration parsing."""
 
     def test_parse_single_font(self):
-        from formforge.readiness import _parse_declared_fonts
+        from trustrender.readiness import _parse_declared_fonts
 
         stacks = _parse_declared_fonts('#set text(font: "Inter")')
         assert stacks == [["Inter"]]
 
     def test_parse_font_stack(self):
-        from formforge.readiness import _parse_declared_fonts
+        from trustrender.readiness import _parse_declared_fonts
 
         stacks = _parse_declared_fonts('#set text(font: ("Inter", "Noto Sans"))')
         assert stacks == [["Inter", "Noto Sans"]]
 
     def test_parse_skips_jinja2_variable(self):
-        from formforge.readiness import _parse_declared_fonts
+        from trustrender.readiness import _parse_declared_fonts
 
         stacks = _parse_declared_fonts('#set text(font: "{{ custom_font }}")')
         assert stacks == []
 
     def test_parse_multiple_declarations(self):
-        from formforge.readiness import _parse_declared_fonts
+        from trustrender.readiness import _parse_declared_fonts
 
         source = '''
 #set text(font: "Inter")
@@ -235,13 +235,13 @@ class TestPreflightFontParsing:
         assert all(s == ["Inter"] for s in stacks)
 
     def test_parse_empty_source(self):
-        from formforge.readiness import _parse_declared_fonts
+        from trustrender.readiness import _parse_declared_fonts
 
         assert _parse_declared_fonts("") == []
 
     def test_enumerate_font_families(self):
-        from formforge import bundled_font_dir
-        from formforge.readiness import _enumerate_font_families
+        from trustrender import bundled_font_dir
+        from trustrender.readiness import _enumerate_font_families
 
         fonts_dir = bundled_font_dir()
         if fonts_dir:
@@ -285,21 +285,21 @@ class TestDynamicFontResolution:
     """Tests for resolving {{ variable }} font references in preflight."""
 
     def test_resolve_simple(self):
-        from formforge.readiness import _resolve_dynamic_fonts
+        from trustrender.readiness import _resolve_dynamic_fonts
 
         source = '#set text(font: "{{ brand_font }}")'
         data = {"brand_font": "Roboto"}
         assert _resolve_dynamic_fonts(source, data) == ["Roboto"]
 
     def test_resolve_nested(self):
-        from formforge.readiness import _resolve_dynamic_fonts
+        from trustrender.readiness import _resolve_dynamic_fonts
 
         source = '#set text(font: "{{ theme.font }}")'
         data = {"theme": {"font": "Arial"}}
         assert _resolve_dynamic_fonts(source, data) == ["Arial"]
 
     def test_missing_from_data(self):
-        from formforge.readiness import _resolve_dynamic_fonts
+        from trustrender.readiness import _resolve_dynamic_fonts
 
         source = '#set text(font: "{{ missing_font }}")'
         data = {"other": "value"}
@@ -334,7 +334,7 @@ class TestSchematronInPreflight:
 
     def test_schematron_in_render_pipeline(self):
         """Render with zugferd succeeds — Schematron implicitly passes."""
-        from formforge import render
+        from trustrender import render
 
         data = _load_data("einvoice")
         pdf = render(str(EXAMPLES / "einvoice.j2.typ"), data, zugferd="en16931")

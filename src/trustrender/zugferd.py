@@ -1,6 +1,6 @@
 """ZUGFeRD EN 16931 e-invoice generation.
 
-Converts Formforge invoice data to CII XML, renders the visual PDF via Typst,
+Converts TrustRender invoice data to CII XML, renders the visual PDF via Typst,
 and combines them into a ZUGFeRD-compliant PDF/A-3b document.
 
 Supported scope (v1):
@@ -34,7 +34,7 @@ try:
 except ImportError:
     raise ImportError(
         "ZUGFeRD support requires the 'drafthorse' package. "
-        "Install with: pip install formforge[zugferd]"
+        "Install with: pip install trustrender[zugferd]"
     )
 
 from .contract import ContractError
@@ -294,7 +294,7 @@ _GUIDELINE_IDS = {
 
 
 def build_invoice_xml(data: dict, *, profile: str = "en16931") -> bytes:
-    """Convert Formforge invoice data dict to CII XML bytes.
+    """Convert TrustRender invoice data dict to CII XML bytes.
 
     Uses ``drafthorse`` to build a UN/CEFACT Cross Industry Invoice
     document conforming to EN 16931.

@@ -1,6 +1,6 @@
 # Soak Test Results
 
-Formforge runtime stability verified under sustained repeated rendering with mixed success and failure conditions.
+TrustRender runtime stability verified under sustained repeated rendering with mixed success and failure conditions.
 
 ## Test Environment
 
@@ -58,12 +58,12 @@ For definitive leak detection, a Linux environment with `/proc/self/status` VmRS
 
 ## Temp File Cleanup
 
-All three tests started and ended with 0 temp files in the examples/ directory. Temp files (`_formforge_*.typ`) are created during Jinja2 preprocessing and cleaned up on success. Error-path cleanup was verified in the mixed test (85 contract failures + 28 template errors, all cleaned up).
+All three tests started and ended with 0 temp files in the examples/ directory. Temp files (`_trustrender_*.typ`) are created during Jinja2 preprocessing and cleaned up on success. Error-path cleanup was verified in the mixed test (85 contract failures + 28 template errors, all cleaned up).
 
 ## What This Proves
 
-- Formforge does not obviously leak temp artifacts under repeated use
-- Formforge does not obviously ratchet memory upward after warmup
+- TrustRender does not obviously leak temp artifacts under repeated use
+- TrustRender does not obviously ratchet memory upward after warmup
 - Error paths (contract validation, template errors) stay classified and contained
 - The server handles sustained concurrent load without errors
 - Cleanup behavior is correct for both success and failure paths
@@ -82,6 +82,6 @@ All three tests started and ended with 0 temp files in the examples/ directory. 
 python benchmarks/soak_test.py --library --mixed
 
 # Server soak (start server first)
-formforge serve --templates examples --port 8192
+trustrender serve --templates examples --port 8192
 python benchmarks/soak_test.py --server
 ```

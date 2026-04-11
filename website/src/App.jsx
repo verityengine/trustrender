@@ -5,7 +5,7 @@ import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   FORMFORGE — Product site
+   TRUSTRENDER — Product site
    Art direction: editorial charcoal meets document precision
    Display: DM Serif Display / Body: Inter / Code: JetBrains Mono
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
@@ -114,46 +114,52 @@ function DocumentField() {
 
 /* ── Animated Logo ────────────────────────────────────────────────── */
 function AnimatedLogo({ size = 'default', animate = false }) {
-  const outerRef = useRef(null)
-  const innerRef = useRef(null)
+  const checkRef = useRef(null)
+  const lineRefs = [useRef(null), useRef(null), useRef(null)]
 
   useEffect(() => {
     if (!animate) return
-    // Draw-on animation for the outer hexagonal frame
-    ;[outerRef, innerRef].forEach((ref, i) => {
+    // Animate data lines drawing in
+    lineRefs.forEach((ref, i) => {
       const el = ref.current
       if (!el) return
       const len = el.getTotalLength()
       el.style.strokeDasharray = len
       el.style.strokeDashoffset = len
       el.getBoundingClientRect()
-      el.style.transition = `stroke-dashoffset ${0.8 + i * 0.4}s ease-out ${0.1 + i * 0.3}s`
+      el.style.transition = `stroke-dashoffset ${0.3}s ease-out ${0.3 + i * 0.15}s`
       el.style.strokeDashoffset = '0'
     })
+    // Animate check mark
+    if (checkRef.current) {
+      const el = checkRef.current
+      const len = el.getTotalLength()
+      el.style.strokeDasharray = len
+      el.style.strokeDashoffset = len
+      el.getBoundingClientRect()
+      el.style.transition = `stroke-dashoffset 0.35s ease-out 0.85s`
+      el.style.strokeDashoffset = '0'
+    }
   }, [animate])
 
   const s = size === 'small' ? 'h-7' : 'h-9'
   return (
-    <div className="flex items-center gap-3">
-      <svg className={`${s} aspect-square`} viewBox="0 0 40 40" fill="none">
-        {/* Outer circle — seal */}
-        <circle ref={outerRef} cx="20" cy="20" r="18" stroke="currentColor" strokeWidth="1.8" opacity="0.6" />
-        {/* Inner structured block */}
-        <rect x="12" y="11" width="16" height="18" rx="2" stroke="currentColor" strokeWidth="1.2" opacity="0.3" />
+    <div className="flex items-center gap-2.5">
+      <svg className={`${s} aspect-square`} viewBox="0 0 36 36" fill="none">
+        {/* Document body */}
+        <rect x="4" y="2" width="22" height="28" rx="2.5" stroke="currentColor" strokeWidth="1.8" opacity="0.5" />
+        {/* Dog ear fold */}
+        <path d="M20 2v6h6" stroke="currentColor" strokeWidth="1.5" opacity="0.3" strokeLinecap="round" strokeLinejoin="round" />
         {/* Data lines */}
-        <line x1="15" y1="16" x2="25" y2="16" stroke="currentColor" strokeWidth="1.5" opacity="0.5" strokeLinecap="round">
-          {animate && <animate attributeName="x2" from="15" to="25" dur="0.4s" fill="freeze" begin="0.5s" />}
-        </line>
-        <line x1="15" y1="20" x2="22" y2="20" stroke="currentColor" strokeWidth="1.2" opacity="0.3" strokeLinecap="round">
-          {animate && <animate attributeName="x2" from="15" to="22" dur="0.3s" fill="freeze" begin="0.7s" />}
-        </line>
-        <line x1="15" y1="24" x2="23" y2="24" stroke="currentColor" strokeWidth="1.2" opacity="0.3" strokeLinecap="round">
-          {animate && <animate attributeName="x2" from="15" to="23" dur="0.3s" fill="freeze" begin="0.85s" />}
-        </line>
-        {/* Validation strike — brand accent */}
-        <path ref={innerRef} d="M21 26l2.5 2.5L30 22" stroke="#c4622a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
+        <line ref={lineRefs[0]} x1="9" y1="13" x2="21" y2="13" stroke="currentColor" strokeWidth="1.8" opacity="0.6" strokeLinecap="round" />
+        <line ref={lineRefs[1]} x1="9" y1="17.5" x2="18" y2="17.5" stroke="currentColor" strokeWidth="1.5" opacity="0.35" strokeLinecap="round" />
+        <line ref={lineRefs[2]} x1="9" y1="22" x2="19.5" y2="22" stroke="currentColor" strokeWidth="1.5" opacity="0.35" strokeLinecap="round" />
+        {/* Verification badge circle */}
+        <circle cx="26" cy="26" r="8.5" fill="#c4622a" opacity="0.95" />
+        {/* Check mark */}
+        <path ref={checkRef} d="M22.5 26l2.5 2.5L29.5 24" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
       </svg>
-      <span className={`font-display tracking-[-0.02em] ${size === 'small' ? 'text-[18px]' : 'text-[24px]'}`}>Formforge</span>
+      <span className={`font-display tracking-[-0.02em] ${size === 'small' ? 'text-[18px]' : 'text-[24px]'}`}>TrustRender</span>
     </div>
   )
 }
@@ -611,7 +617,7 @@ function Logo({ size = 'default' }) {
         <path d="M20 22.5l2.5 2.5L27 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.8" />
       </svg>
       <span className={`font-display tracking-tight ${size === 'small' ? 'text-[18px]' : 'text-[22px]'}`}>
-        Formforge
+        TrustRender
       </span>
     </div>
   )
@@ -812,7 +818,7 @@ function Invoice({ data }) {
         </div>
       </div>
       <div className="px-8 py-2.5 bg-surface/40 border-t border-ink/[0.04] flex justify-between text-[8px] text-muted">
-        <span>Generated by Formforge</span>
+        <span>Generated by TrustRender</span>
         <span className="tabular-nums">Page 1 of 1</span>
       </div>
     </div>
@@ -878,14 +884,14 @@ function HeroReveal() {
         <div className="text-panel"><AnimatedLogo animate /></div>
         <div className="flex items-center gap-4">
           <a href="#app" className="text-[14px] font-semibold px-5 py-2.5 rounded-lg bg-rust hover:bg-rust-light text-white transition-colors hidden md:inline-block nav-pulse">Try the playground</a>
-          <a href="https://github.com/verityengine/formforge" className="text-[14px] font-medium px-5 py-2.5 rounded-lg bg-panel/10 hover:bg-panel/15 text-panel transition-colors">GitHub</a>
+          <a href="https://github.com/verityengine/trustrender" className="text-[14px] font-medium px-5 py-2.5 rounded-lg bg-panel/10 hover:bg-panel/15 text-panel transition-colors">GitHub</a>
         </div>
       </nav>
 
       {/* Hero content */}
       <div className="max-w-[1280px] mx-auto px-6 md:px-10 pt-16 md:pt-24 pb-12 md:pb-16 relative z-10">
         <div className="text-center max-w-4xl mx-auto mb-8 hero-stagger">
-          <h1 className="font-display text-[44px] md:text-[72px] lg:text-[88px] leading-[0.98] tracking-tight gradient-text pb-2">
+          <h1 className="font-display font-extrabold text-[44px] md:text-[72px] lg:text-[88px] leading-[0.95] tracking-[-0.04em] gradient-text pb-2">
             Bad payloads never become broken documents.
           </h1>
           <p className="text-[16px] md:text-[18px] text-panel/45 max-w-xl mx-auto mt-6 leading-relaxed">
@@ -1047,7 +1053,7 @@ function TrustLayers() {
       <div className="max-w-[1280px] mx-auto px-6 md:px-10">
         <FadeUp>
           <p className="text-[11px] tracking-[0.22em] uppercase text-rust mb-4 font-semibold">Trust layers</p>
-          <h2 className="font-display text-[28px] md:text-[40px] tracking-tight leading-[1.1] mb-16 max-w-lg">
+          <h2 className="font-display font-extrabold text-[28px] md:text-[40px] tracking-[-0.03em] leading-[1.08] mb-16 max-w-lg">
             Three layers between your data and a broken document.
           </h2>
         </FadeUp>
@@ -1272,7 +1278,7 @@ function ReadyDemo() {
       })
       setVerdict(await res.json()); setChecking(false)
     } catch {
-      setVerdict({ ready: false, errors: [{ stage: 'network', check: 'unreachable', severity: 'error', path: 'server', message: 'Server unreachable. Is formforge serve running on port 8190?' }], warnings: [], stages_checked: [] })
+      setVerdict({ ready: false, errors: [{ stage: 'network', check: 'unreachable', severity: 'error', path: 'server', message: 'Server unreachable. Is trustrender serve running on port 8190?' }], warnings: [], stages_checked: [] })
       setChecking(false)
     }
   }
@@ -1282,11 +1288,11 @@ function ReadyDemo() {
       <div className="max-w-[1280px] mx-auto px-6 md:px-10">
         <FadeUp>
           <p className="text-[11px] tracking-[0.22em] uppercase text-rust mb-4 font-semibold">Try it</p>
-          <h2 className="font-display text-[28px] md:text-[40px] tracking-tight leading-[1.1] mb-3">
+          <h2 className="font-display font-extrabold text-[28px] md:text-[40px] tracking-[-0.03em] leading-[1.08] mb-3">
             Check readiness before render.
           </h2>
           <p className="text-[15px] text-mid max-w-md leading-relaxed mb-10">
-            Toggle to an invalid payload and see what Formforge catches before the renderer is ever invoked.
+            Toggle to an invalid payload and see what TrustRender catches before the renderer is ever invoked.
           </p>
         </FadeUp>
 
@@ -1890,7 +1896,7 @@ function AppWorkspace() {
                       {traceId && <span className="text-[10px] font-mono text-muted">trace: {traceId.slice(0, 8)}</span>}
                       {renderStatus === 'done' && <span className="text-[11px] text-sage font-medium">rendered</span>}
                       {renderStatus === 'error' && <span className="text-[11px] text-wine font-mono font-medium">{renderError?.error}</span>}
-                      {pdfData?.downloadUrl && <a href={pdfData.downloadUrl} download="formforge-demo.pdf" className="text-[12px] text-rust hover:text-wine font-medium">Download</a>}
+                      {pdfData?.downloadUrl && <a href={pdfData.downloadUrl} download="trustrender-demo.pdf" className="text-[12px] text-rust hover:text-wine font-medium">Download</a>}
                     </div>
                   </div>
                   <div className="flex-1 flex items-center justify-center p-4">
@@ -1969,7 +1975,7 @@ function AppWorkspace() {
                       </div>
                       <p className="text-[14px] font-semibold text-ink mb-2">History not enabled</p>
                       <p className="text-[12px] text-muted max-w-xs mx-auto leading-relaxed">
-                        Start the server with <code className="font-mono text-[11px] bg-surface px-1 py-0.5 rounded">--history ~/.formforge/history.db</code> to enable render trace storage.
+                        Start the server with <code className="font-mono text-[11px] bg-surface px-1 py-0.5 rounded">--history ~/.trustrender/history.db</code> to enable render trace storage.
                       </p>
                     </div>
                   </div>
@@ -2089,7 +2095,7 @@ function AppWorkspace() {
                           {selectedTrace.template_hash && <div>template: {selectedTrace.template_hash}</div>}
                           {selectedTrace.data_hash && <div>data: {selectedTrace.data_hash}</div>}
                           {selectedTrace.output_hash ? <div>output: {selectedTrace.output_hash}</div> : <div className="text-muted/40">output hash: not recorded</div>}
-                          {selectedTrace.engine_version && <div>engine: formforge {selectedTrace.engine_version}</div>}
+                          {selectedTrace.engine_version && <div>engine: trustrender {selectedTrace.engine_version}</div>}
                         </div>
                       </div>
                     </div>
@@ -2115,11 +2121,11 @@ function ComplianceWedge() {
           <div className="flex flex-col md:flex-row gap-12 md:gap-20">
             <div className="md:w-2/5">
               <p className="text-[11px] tracking-[0.22em] uppercase text-rust mb-4 font-semibold">Compliance</p>
-              <h2 className="font-display text-[28px] md:text-[36px] tracking-tight leading-[1.1] mb-4">
+              <h2 className="font-display font-extrabold text-[28px] md:text-[36px] tracking-[-0.03em] leading-[1.08] mb-4">
                 Validated e&#8209;invoicing for the supported German B2B path.
               </h2>
               <p className="text-[15px] text-mid leading-relaxed mb-6">
-                Formforge runs XSD validation and semantic checks before the PDF is created. Structurally invalid data is rejected before a document is produced. Output is PDF/A-3b with embedded CII XML for the supported EN 16931 invoice flow.
+                TrustRender runs XSD validation and semantic checks before the PDF is created. Structurally invalid data is rejected before a document is produced. Output is PDF/A-3b with embedded CII XML for the supported EN 16931 invoice flow.
               </p>
               <p className="text-[13px] text-mid/70 leading-relaxed">
                 Scoped to German domestic B2B invoicing: DE, EUR, mixed VAT rates, standard invoices and credit notes. No Java, no iText, no browser.
@@ -2181,7 +2187,7 @@ function PerformanceProof() {
       <div className="max-w-[1280px] mx-auto px-6 md:px-10">
         <FadeUp>
           <p className="text-[11px] tracking-[0.22em] uppercase text-rust mb-4 font-semibold">Measured, not claimed</p>
-          <h2 className="font-display text-[28px] md:text-[40px] tracking-tight leading-[1.1] mb-6 max-w-lg">
+          <h2 className="font-display font-extrabold text-[28px] md:text-[40px] tracking-[-0.03em] leading-[1.08] mb-6 max-w-lg">
             1,000 line items. 33 pages. 211ms.
           </h2>
           <p className="text-[15px] text-panel/60 max-w-lg mb-12 leading-relaxed">
@@ -2222,7 +2228,7 @@ function PerformanceProof() {
                   { k: 'template', v: 'sha256:3d947997ca81c63c' },
                   { k: 'data', v: 'sha256:ee4cae030af90e5d' },
                   { k: 'output', v: 'sha256:f0a78d0d127974e6' },
-                  { k: 'engine', v: 'formforge 0.1.0' },
+                  { k: 'engine', v: 'trustrender 0.1.0' },
                   { k: 'duration', v: '71ms' },
                   { k: 'outcome', v: 'success' },
                 ].map(r => (
@@ -2271,7 +2277,7 @@ function DeveloperSetup() {
           <div className="flex flex-col md:flex-row gap-12 md:gap-20 items-center">
             <div className="md:w-2/5">
               <p className="text-[11px] tracking-[0.22em] uppercase text-rust mb-4 font-semibold">Setup</p>
-              <h2 className="font-display text-[28px] md:text-[36px] tracking-tight leading-[1.1] mb-4">
+              <h2 className="font-display font-extrabold text-[28px] md:text-[36px] tracking-[-0.03em] leading-[1.08] mb-4">
                 Verifiable setup in 5 seconds.
               </h2>
               <p className="text-[15px] text-mid leading-relaxed mb-4">
@@ -2292,11 +2298,11 @@ function DeveloperSetup() {
                   <span className="text-[10px] font-mono text-panel/30 ml-2">terminal</span>
                 </div>
                 <div className="p-5 font-mono text-[11px] leading-[1.9]">
-                  <div className="text-panel/50">$ pip install formforge</div>
-                  <div className="text-panel/50">$ formforge doctor --smoke</div>
+                  <div className="text-panel/50">$ pip install trustrender</div>
+                  <div className="text-panel/50">$ trustrender doctor --smoke</div>
                   <div className="text-panel/30 mt-3">Environment</div>
                   <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  Python 3.12.13 ({'>='}3.11 required)</span></div>
-                  <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  formforge 0.1.0 importable</span></div>
+                  <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  trustrender 0.1.0 importable</span></div>
                   <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  typst-py 0.14.8 (Python binding)</span></div>
                   <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  typst CLI: typst 0.14.2</span></div>
                   <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  Both backends available</span></div>
@@ -2324,21 +2330,21 @@ function FinalCTA() {
     <section className="py-20 md:py-28 bg-ink text-panel">
       <div className="max-w-[1280px] mx-auto px-6 md:px-10">
         <FadeUp>
-          <h2 className="font-display text-[32px] md:text-[48px] tracking-tight leading-[1.08] mb-4 max-w-lg">
+          <h2 className="font-display font-extrabold text-[32px] md:text-[48px] tracking-[-0.03em] leading-[1.05] mb-4 max-w-lg">
             Stop shipping documents you cannot trust.
           </h2>
           <p className="text-[15px] text-panel/55 max-w-md mb-8">
             Readiness. Compliance. Provenance. Validated by default for Jinja2 templates.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 items-start">
-            <a href="https://github.com/verityengine/formforge" className="px-7 py-3.5 bg-rust hover:bg-rust-light text-white text-[14px] font-semibold rounded transition-colors inline-block">
+            <a href="https://github.com/verityengine/trustrender" className="px-7 py-3.5 bg-rust hover:bg-rust-light text-white text-[14px] font-semibold rounded transition-colors inline-block">
               View on GitHub
             </a>
             <a href="#app" className="px-7 py-3.5 bg-panel text-ink text-[14px] font-semibold rounded transition-colors hover:bg-panel/90 inline-block">
               Try the playground
             </a>
             <div className="px-7 py-3.5 border border-panel/20 rounded inline-block">
-              <code className="font-mono text-[13px] text-panel/60">pip install formforge</code>
+              <code className="font-mono text-[13px] text-panel/60">pip install trustrender</code>
             </div>
           </div>
         </FadeUp>
@@ -2376,7 +2382,7 @@ export default function App() {
       <footer className="py-5 bg-ink border-t border-panel/10">
         <div className="max-w-[1280px] mx-auto px-6 md:px-10 flex items-center justify-between">
           <div className="text-panel/50"><AnimatedLogo size="small" /></div>
-          <p className="text-panel/40 text-[10px] font-mono">formforge v0.1</p>
+          <p className="text-panel/40 text-[10px] font-mono">trustrender v0.1</p>
         </div>
       </footer>
     </div>

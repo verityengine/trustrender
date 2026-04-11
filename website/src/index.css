@@ -20,7 +20,7 @@
   --color-sage: #2d6e56;
   --color-sage-light: #388b6b;
 
-  --font-display: 'DM Serif Display', Georgia, serif;
+  --font-display: 'Inter', system-ui, sans-serif;
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 }

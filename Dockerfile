@@ -33,13 +33,13 @@ COPY examples/ examples/
 # Install the package
 RUN pip install --no-cache-dir .
 
-# Tell Formforge where bundled fonts are
-ENV FORMFORGE_FONT_PATH=/app/fonts
-ENV FORMFORGE_TEMPLATES_DIR=/app/examples
+# Tell TrustRender where bundled fonts are
+ENV TRUSTRENDER_FONT_PATH=/app/fonts
+ENV TRUSTRENDER_TEMPLATES_DIR=/app/examples
 
 # Default: run the server with bundled examples
-# Override templates: docker run -e FORMFORGE_TEMPLATES_DIR=/templates ...
+# Override templates: docker run -e TRUSTRENDER_TEMPLATES_DIR=/templates ...
 EXPOSE 8190
 
-ENTRYPOINT ["formforge"]
+ENTRYPOINT ["trustrender"]
 CMD ["serve", "--host", "0.0.0.0", "--port", "8190"]

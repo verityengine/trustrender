@@ -1,4 +1,4 @@
-"""Soak test for Formforge — long-running repetition under mixed conditions.
+"""Soak test for TrustRender — long-running repetition under mixed conditions.
 
 Tests runtime stability over many iterations:
 - Sequential library renders (no server)
@@ -11,7 +11,7 @@ Run library soak (no server needed):
     python benchmarks/soak_test.py --library
 
 Run server soak (start server first):
-    formforge serve --templates examples --port 8192
+    trustrender serve --templates examples --port 8192
     python benchmarks/soak_test.py --server
 
 Run mixed success/failure:
@@ -48,7 +48,7 @@ def get_rss_mb() -> float:
 
 
 def count_temp_files() -> int:
-    return len(glob.glob(str(TEMPLATE_DIR / "_formforge_*.typ")))
+    return len(glob.glob(str(TEMPLATE_DIR / "_trustrender_*.typ")))
 
 
 def load_data(name: str) -> dict:
@@ -62,7 +62,7 @@ def load_data(name: str) -> dict:
 
 def run_library_soak(iterations: int = 500) -> dict:
     """Render repeatedly via library API, track memory and timing."""
-    from formforge import render
+    from trustrender import render
 
     templates = [
         ("invoice.j2.typ", "invoice"),
@@ -240,8 +240,8 @@ def _server_render(client, template: str, data: dict) -> tuple[bool, float]:
 
 def run_mixed_soak(iterations: int = 200) -> dict:
     """Interleave valid renders, contract failures, and template errors."""
-    from formforge import render
-    from formforge.errors import ErrorCode, FormforgeError
+    from trustrender import render
+    from trustrender.errors import ErrorCode, TrustRenderError
 
     invoice_data = load_data("invoice")
     statement_data = load_data("statement")
@@ -285,7 +285,7 @@ def run_mixed_soak(iterations: int = 200) -> dict:
             else:
                 counts["unexpected"] += 1
                 print(f"  [{i}] Expected {expected}, got success")
-        except FormforgeError as exc:
+        except TrustRenderError as exc:
             lat = (time.perf_counter() - t0) * 1000
             latencies.append(lat)
             code = exc.code.value
@@ -361,7 +361,7 @@ def _print_results(results: dict) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Formforge soak test")
+    parser = argparse.ArgumentParser(description="TrustRender soak test")
     parser.add_argument("--library", action="store_true", help="Library render soak (no server)")
     parser.add_argument("--server", action="store_true", help="Server concurrent soak")
     parser.add_argument("--mixed", action="store_true", help="Mixed success/failure soak")

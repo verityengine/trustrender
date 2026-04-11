@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from formforge import render
-from formforge.provenance import (
+from trustrender import render
+from trustrender.provenance import (
     create_provenance,
     embed_provenance,
     extract_provenance,
@@ -25,7 +25,7 @@ def _load_invoice_data() -> dict:
 class TestCreateProvenance:
     def test_creates_record(self):
         record = create_provenance(EXAMPLES / "invoice.j2.typ", _load_invoice_data())
-        assert record.engine == "formforge"
+        assert record.engine == "trustrender"
         assert record.engine_version == "0.1.0"
         assert record.template_name == "invoice.j2.typ"
         assert record.template_hash.startswith("sha256:")

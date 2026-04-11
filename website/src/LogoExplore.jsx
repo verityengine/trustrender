@@ -1,4 +1,4 @@
-/* Logo exploration — 4 concepts for Formforge */
+/* Logo exploration — 4 concepts for TrustRender */
 
 export function LogoA({ size = 40 }) {
   // Concept A: Monogram "F" with validation strike
@@ -94,11 +94,11 @@ export default function LogoExplore() {
               <Logo size={64} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <Logo size={36} />
-                <span style={{ fontFamily: 'DM Serif Display, serif', fontSize: 22, letterSpacing: '-0.02em' }}>Formforge</span>
+                <span style={{ fontFamily: 'DM Serif Display, serif', fontSize: 22, letterSpacing: '-0.02em' }}>TrustRender</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Logo size={20} />
-                <span style={{ fontFamily: 'DM Serif Display, serif', fontSize: 14 }}>Formforge</span>
+                <span style={{ fontFamily: 'DM Serif Display, serif', fontSize: 14 }}>TrustRender</span>
               </div>
             </div>
             {/* On light */}
@@ -106,7 +106,7 @@ export default function LogoExplore() {
               <Logo size={64} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <Logo size={36} />
-                <span style={{ fontFamily: 'DM Serif Display, serif', fontSize: 22, letterSpacing: '-0.02em' }}>Formforge</span>
+                <span style={{ fontFamily: 'DM Serif Display, serif', fontSize: 22, letterSpacing: '-0.02em' }}>TrustRender</span>
               </div>
             </div>
             {/* Favicon size */}

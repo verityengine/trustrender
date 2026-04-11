@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from unittest.mock import patch
 
-from formforge.cli import main
+from trustrender.cli import main
 
 FIXTURES = Path("tests/fixtures")
 
@@ -73,32 +73,32 @@ class TestCLIRender:
         )
         assert code == 0
         # Clean up intermediate files
-        for f in FIXTURES.glob("_formforge_*.typ"):
+        for f in FIXTURES.glob("_trustrender_*.typ"):
             f.unlink()
 
 
 class TestCLIServeTemplatesEnv:
-    """Test FORMFORGE_TEMPLATES_DIR env var support."""
+    """Test TRUSTRENDER_TEMPLATES_DIR env var support."""
 
     def test_missing_templates_errors(self, capsys):
         """Serve without --templates or env var prints clear error."""
         with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("FORMFORGE_TEMPLATES_DIR", None)
+            os.environ.pop("TRUSTRENDER_TEMPLATES_DIR", None)
             code = main(["serve"])
         assert code == 1
         captured = capsys.readouterr()
-        assert "FORMFORGE_TEMPLATES_DIR" in captured.err
+        assert "TRUSTRENDER_TEMPLATES_DIR" in captured.err
 
     def test_env_var_is_used(self):
-        """FORMFORGE_TEMPLATES_DIR is accepted when --templates is absent."""
-        with patch.dict(os.environ, {"FORMFORGE_TEMPLATES_DIR": str(FIXTURES)}):
+        """TRUSTRENDER_TEMPLATES_DIR is accepted when --templates is absent."""
+        with patch.dict(os.environ, {"TRUSTRENDER_TEMPLATES_DIR": str(FIXTURES)}):
             with patch("uvicorn.run"):
                 code = main(["serve"])
         assert code == 0
 
     def test_cli_arg_overrides_env(self):
         """--templates CLI arg takes precedence over env var."""
-        with patch.dict(os.environ, {"FORMFORGE_TEMPLATES_DIR": "/wrong/path"}):
+        with patch.dict(os.environ, {"TRUSTRENDER_TEMPLATES_DIR": "/wrong/path"}):
             with patch("uvicorn.run"):
                 code = main(["serve", "--templates", str(FIXTURES)])
         assert code == 0

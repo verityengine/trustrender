@@ -9,10 +9,10 @@ from pathlib import Path
 
 import pytest
 
-from formforge import AuditResult, FormforgeError, audit, render
-from formforge.fingerprint import InputFingerprint, compare
-from formforge.regression import DriftResult, load_baseline, save_baseline
-from formforge.semantic import INVOICE_HINTS, SemanticHints
+from trustrender import AuditResult, TrustRenderError, audit, render
+from trustrender.fingerprint import InputFingerprint, compare
+from trustrender.regression import DriftResult, load_baseline, save_baseline
+from trustrender.semantic import INVOICE_HINTS, SemanticHints
 
 EXAMPLES = Path(__file__).parent.parent / "examples"
 
@@ -165,7 +165,7 @@ class TestAuditAllOptions:
         )
         assert result.fingerprint.provenance_enabled is True
         # PDF should have provenance metadata
-        from formforge.provenance import extract_provenance
+        from trustrender.provenance import extract_provenance
         prov = extract_provenance(result.pdf_bytes)
         assert prov is not None
 
@@ -204,20 +204,20 @@ class TestAuditAllOptions:
 
 class TestAuditErrors:
     def test_missing_template(self):
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             audit("nonexistent.j2.typ", {})
         assert exc_info.value.code.value == "TEMPLATE_NOT_FOUND"
 
     def test_invalid_data_type(self):
-        with pytest.raises(FormforgeError):
+        with pytest.raises(TrustRenderError):
             audit(EXAMPLES / "invoice.j2.typ", 42)  # type: ignore
 
     def test_bad_json_string(self):
-        with pytest.raises(FormforgeError):
+        with pytest.raises(TrustRenderError):
             audit(EXAMPLES / "invoice.j2.typ", "not json {{{")
 
     def test_invalid_zugferd_profile(self):
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             audit(EXAMPLES / "invoice.j2.typ", _load_data(), zugferd="invalid")
         assert exc_info.value.code.value == "INVALID_DATA"
 
@@ -268,7 +268,7 @@ class TestAuditAllExamples:
 class TestCLI:
     def _run_cli(self, *args: str) -> subprocess.CompletedProcess:
         return subprocess.run(
-            [sys.executable, "-m", "formforge.cli", *args],
+            [sys.executable, "-m", "trustrender.cli", *args],
             capture_output=True,
             text=True,
             timeout=30,

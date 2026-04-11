@@ -1,8 +1,8 @@
-# Formforge Known Limitations
+# TrustRender Known Limitations
 
 Updated: 2026-04-11 (post trust-gap closure: letter/report presets, text anomaly detection, strict preflight)
 
-Honest documentation of what Formforge does not do, does partially, or does with caveats.
+Honest documentation of what TrustRender does not do, does partially, or does with caveats.
 
 ---
 
@@ -57,7 +57,7 @@ Limitations:
 - Currently observed default fallback: Libertinus (not guaranteed by upstream Typst)
 - Not a visual diff — only checks font names, not rendering fidelity
 
-Mitigation: Use `preflight()` or `formforge preflight` before rendering to catch missing fonts. Use bundled fonts (Inter) or explicitly supplied fonts via `font_paths`. Run `formforge doctor` for a full font inventory with fix commands. Save baselines in CI to catch font drift across environments.
+Mitigation: Use `preflight()` or `trustrender preflight` before rendering to catch missing fonts. Use bundled fonts (Inter) or explicitly supplied fonts via `font_paths`. Run `trustrender doctor` for a full font inventory with fix commands. Save baselines in CI to catch font drift across environments.
 
 ### Template escaping has boundaries
 
@@ -125,7 +125,7 @@ WeasyPrint comparison (2.3x faster) was measured on the same hardware for a simp
 
 ### No rate limiting (but has backpressure)
 
-Formforge's HTTP server has no built-in rate limiting or IP throttling. It does have:
+TrustRender's HTTP server has no built-in rate limiting or IP throttling. It does have:
 - Render concurrency limit: ``--max-concurrent`` (default 8), returns 503 when at capacity
 - 10MB request body size limit (configurable via ``--max-body-size``)
 - Configurable render timeout: ``--render-timeout`` (default 30s, subprocess kill)
@@ -141,18 +141,18 @@ On timeout (debug): temp file preserved for inspection.
 On compile error: temp file preserved for inspection.
 On unexpected error: temp file deleted in finally block.
 
-Temp files are named `_formforge_<random>.typ` (unpredictable via `tempfile.mkstemp`) and placed in the template's directory.
+Temp files are named `_trustrender_<random>.typ` (unpredictable via `tempfile.mkstemp`) and placed in the template's directory.
 
 Failed renders can accumulate temp files over time. No automatic cleanup facility exists. Operators should monitor and clean the template directory if running many renders that fail at the compile stage.
 
 ### Font fallback
 
-Typst can silently substitute missing fonts. Formforge detects this at two levels:
+Typst can silently substitute missing fonts. TrustRender detects this at two levels:
 
 1. **Preflight** (pre-render): parses font declarations from template source, verifies against configured font paths. Bundled templates with missing bundled fonts produce errors; custom templates produce warnings. This is a gate for callers who use `preflight()` — the render path itself is unchanged.
 2. **Drift detection** (post-render): records embedded-font drift in baselines and raises a warning when the font set changes.
 
-Neither is a full visual-diff guarantee. For deterministic output, rely on bundled or explicitly supplied fonts. Run `formforge doctor` for a full font inventory with actionable fix commands.
+Neither is a full visual-diff guarantee. For deterministic output, rely on bundled or explicitly supplied fonts. Run `trustrender doctor` for a full font inventory with actionable fix commands.
 
 ### typst-py backend cannot kill timeouts
 
@@ -168,7 +168,7 @@ Docker Unicode rendering has not been tested. The claim "Docker output matches l
 
 ### Server uses CLI backend exclusively
 
-The HTTP server always uses `TypstCliBackend` (subprocess) regardless of the `FORMFORGE_BACKEND` environment variable. This is intentional: subprocess isolation enables real timeout kill and prevents a runaway render from affecting other requests.
+The HTTP server always uses `TypstCliBackend` (subprocess) regardless of the `TRUSTRENDER_BACKEND` environment variable. This is intentional: subprocess isolation enables real timeout kill and prevents a runaway render from affecting other requests.
 
 Operators cannot use typst-py with the server. This is the correct behavior.
 
@@ -178,7 +178,7 @@ Operators cannot use typst-py with the server. This is the correct behavior.
 
 ### Code mode and math mode are not auto-escaped
 
-Formforge auto-escapes user data for text content contexts. But if you place user data inside Typst code expressions (`#let x = {{ value }}`) or math mode (`$ {{ value }} $`), the escaping does not apply to those contexts.
+TrustRender auto-escapes user data for text content contexts. But if you place user data inside Typst code expressions (`#let x = {{ value }}`) or math mode (`$ {{ value }} $`), the escaping does not apply to those contexts.
 
 Safe:
 ```
@@ -202,7 +202,7 @@ The `color` parameter in `{{ value | typst_color("#27ae60") }}` is not escaped o
 
 ### Text anomaly detection
 
-Formforge detects control characters (U+0000-U+001F except tab, newline, carriage return) and zero-width characters (U+200B, U+200C, U+200D, U+FEFF, U+2060) in text fields. Warnings name the exact character: null byte, form feed, zero-width space, BOM, word joiner.
+TrustRender detects control characters (U+0000-U+001F except tab, newline, carriage return) and zero-width characters (U+200B, U+200C, U+200D, U+FEFF, U+2060) in text fields. Warnings name the exact character: null byte, form feed, zero-width space, BOM, word joiner.
 
 **Safe-by-default:** `preflight()` scans ALL string values in the data dict automatically (the ``text_safety`` stage). This runs without semantic hints. Set ``text_scan=False`` to opt out. Auto-detected issues are marked ``(auto-detected)`` in the warning message.
 
@@ -217,10 +217,10 @@ What it does not detect:
 
 The `required` vs `optional` distinction is based on whether a field appears inside a direct `{% if field %}` guard. More complex conditional patterns (nested ifs, boolean combinations, filter-based checks) may not be detected correctly.
 
-If contract accuracy matters for your use case, review the inferred contract with `formforge check <template>` and validate against your data schema manually.
+If contract accuracy matters for your use case, review the inferred contract with `trustrender check <template>` and validate against your data schema manually.
 
 ### Dynamic includes produce partial contracts
 
 Static includes (`{% include "fragment.j2.typ" %}`) are followed recursively — fields from included fragments are merged into the contract. But dynamic includes (`{% include some_var %}`) cannot be resolved statically.
 
-When a contract is partial, `preflight()` warns by default. Use `preflight(strict=True)` or `formforge preflight --strict` to promote partial-contract warnings to errors — readiness fails if the contract is provably incomplete.
+When a contract is partial, `preflight()` warns by default. Use `preflight(strict=True)` or `trustrender preflight --strict` to promote partial-contract warnings to errors — readiness fails if the contract is provably incomplete.

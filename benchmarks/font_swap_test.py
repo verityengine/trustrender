@@ -14,8 +14,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from formforge import render, bundled_font_dir
-from formforge.doctor import check_template_fonts
+from trustrender import render, bundled_font_dir
+from trustrender.doctor import check_template_fonts
 
 
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"

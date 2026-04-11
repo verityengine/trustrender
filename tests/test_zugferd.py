@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from formforge import render
-from formforge.errors import ErrorCode, FormforgeError
-from formforge.zugferd import (
+from trustrender import render
+from trustrender.errors import ErrorCode, TrustRenderError
+from trustrender.zugferd import (
     apply_zugferd,
     build_invoice_xml,
     validate_zugferd_invoice_data,
@@ -225,7 +225,7 @@ class TestRenderWithZugferd:
 
     def test_bad_data_raises_zugferd_error(self):
         """render() with bad invoice data raises ZUGFERD_ERROR."""
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             render(
                 "examples/einvoice.j2.typ",
                 {"invoice_number": "X"},
@@ -236,7 +236,7 @@ class TestRenderWithZugferd:
 
     def test_unsupported_profile_raises(self):
         """render() with unsupported profile raises INVALID_DATA."""
-        with pytest.raises(FormforgeError) as exc_info:
+        with pytest.raises(TrustRenderError) as exc_info:
             render(
                 "examples/einvoice.j2.typ",
                 "examples/einvoice_data.json",
@@ -579,7 +579,7 @@ class TestCreditNotes:
 
     def test_credit_note_preflight_passes(self):
         """Credit note passes readiness preflight."""
-        from formforge.readiness import preflight
+        from trustrender.readiness import preflight
         data = _load_creditnote_data()
         verdict = preflight(
             "examples/einvoice.j2.typ",
@@ -590,7 +590,7 @@ class TestCreditNotes:
 
     def test_credit_note_preflight_fails_without_ref(self):
         """Credit note without referenced_invoice fails preflight."""
-        from formforge.readiness import preflight
+        from trustrender.readiness import preflight
         data = _load_creditnote_data()
         del data["referenced_invoice"]
         verdict = preflight(

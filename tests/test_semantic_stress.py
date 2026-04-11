@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from formforge.semantic import (
+from trustrender.semantic import (
     INVOICE_HINTS,
     SemanticHints,
     SemanticReport,

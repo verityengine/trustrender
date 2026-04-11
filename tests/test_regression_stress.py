@@ -8,9 +8,9 @@ from pathlib import Path
 
 import pytest
 
-from formforge import render
-from formforge.fingerprint import InputFingerprint, compute_fingerprint
-from formforge.regression import (
+from trustrender import render
+from trustrender.fingerprint import InputFingerprint, compute_fingerprint
+from trustrender.regression import (
     DriftBaseline,
     DriftFinding,
     DriftResult,
@@ -56,7 +56,7 @@ class TestFileSizeThresholds:
             baseline_id="test",
             created_at="2026-04-10T00:00:00Z",
             template_file="test.j2.typ",
-            formforge_version="0.1.0",
+            trustrender_version="0.1.0",
             fingerprint_json={},
             pdf_size=pdf_size,
             page_count=1,
@@ -128,7 +128,7 @@ class TestPageCountThresholds:
             baseline_id="test",
             created_at="2026-04-10T00:00:00Z",
             template_file="test.j2.typ",
-            formforge_version="0.1.0",
+            trustrender_version="0.1.0",
             fingerprint_json={},
             pdf_size=1000,
             page_count=page_count,
@@ -197,7 +197,7 @@ class TestRenderSuccessTransitions:
             baseline_id="test",
             created_at="2026-04-10T00:00:00Z",
             template_file="test.j2.typ",
-            formforge_version="0.1.0",
+            trustrender_version="0.1.0",
             fingerprint_json={},
             pdf_size=1000,
             page_count=1,
@@ -426,4 +426,4 @@ class TestSchemaEvolution:
         loaded = load_baseline(tmp_path, "test.j2.typ")
         assert loaded is not None
         assert loaded.schema_version == 1  # Default
-        assert loaded.formforge_version == "unknown"
+        assert loaded.trustrender_version == "unknown"
