@@ -1034,7 +1034,7 @@ function TrustLayers() {
     {
       title: 'Readiness',
       desc: 'Structural contract inferred from your template. Missing fields, wrong types, null values — intercepted at the data layer before render.',
-      stats: ['837 automated tests', '500 soak renders, 0 errors', '~60ms avg latency'],
+      stats: ['854 automated tests', '500 soak renders, 0 errors', '~60ms avg latency (Apple Silicon)'],
       flourish: <ReadinessFlourish />,
     },
     {
@@ -2353,7 +2353,7 @@ function PerformanceProof() {
                   { label: '1,000-row invoice', value: '211ms', detail: '33 pages, 0.21ms/row' },
                   { label: '1,000-row statement', value: '260ms', detail: '29 pages, 0.26ms/row' },
                   { label: 'Simple invoice (warm)', value: '41ms', detail: '1 page, single render' },
-                  { label: 'Server throughput', value: '53.8 RPS', detail: '5 concurrent, zero errors' },
+                  { label: 'Server throughput', value: '53.8 RPS', detail: '5 concurrent, Apple Silicon' },
                 ].map(s => (
                   <div key={s.label} className="flex items-baseline justify-between">
                     <div>
@@ -2419,14 +2419,18 @@ function PerformanceProof() {
           </FadeUp>
         </div>
 
+        <p className="text-[11px] text-panel/30 font-mono mb-8 text-center">
+          Benchmarks: macOS, Apple Silicon, Python 3.12, Typst 0.14. Results vary by platform.
+        </p>
+
         {/* Memory + reliability row */}
         <FadeUp delay={300}>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { n: '69.5 MB', d: 'Peak RSS under load' },
               { n: '500+', d: 'Soak renders, zero errors' },
-              { n: '837', d: 'Automated tests' },
-              { n: '98', d: 'Ugly-data edge cases' },
+              { n: '854', d: 'Automated tests' },
+              { n: '102', d: 'Ugly-data edge cases' },
             ].map(s => (
               <div key={s.d} className="text-center py-4">
                 <div className="text-[24px] md:text-[28px] font-bold text-rust font-mono">{s.n}</div>

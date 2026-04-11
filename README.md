@@ -100,7 +100,7 @@ TrustRenderError: Data validation failed: 11 field errors in invoice.j2.typ
 
 No Chromium, no Puppeteer, no headless browser. Typst compiles directly to PDF. The server runs renders as killable subprocesses with real timeout enforcement.
 
-Measured: 1,000-row invoice renders in 211ms (33 pages). Server throughput: 53.8 RPS. Peak RSS: 69.5 MB.
+Measured on Apple Silicon (macOS, Python 3.12, Typst 0.14): 1,000-row invoice renders in 211ms (33 pages). Server throughput: 53.8 RPS. Peak RSS: 69.5 MB.
 
 ### EN 16931 e-invoicing (narrow scope)
 
@@ -205,7 +205,7 @@ make docker                 # build image
 make help                   # all targets
 ```
 
-837 tests (unit, integration, contract, semantic, ZUGFeRD, provenance, ugly-data, font, pagination, text safety, Schematron).
+854 tests (unit, integration, contract, semantic, ZUGFeRD, provenance, ugly-data, font, pagination, text safety, Schematron).
 
 ## Documentation
 
@@ -225,4 +225,3 @@ make help                   # all targets
 - Source mapping from generated Typst back to Jinja2 source is limited
 - `typst_markup()` intentionally bypasses escaping — template author's responsibility
 - Code/math mode contexts are not auto-escaped (text-interpolation only)
-- Not yet published to PyPI — install from source
