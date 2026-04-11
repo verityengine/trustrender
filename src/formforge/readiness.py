@@ -173,6 +173,39 @@ _BUNDLED_FONT_FAMILIES = frozenset({"inter"})
 _FONT_SINGLE_RE = re.compile(r'font:\s*"([^"]+)"')
 _FONT_STACK_RE = re.compile(r'font:\s*\(([^)]+)\)')
 _FONT_NAME_RE = re.compile(r'"([^"]+)"')
+# Captures Jinja2 variable references in font declarations: font: "{{ field_name }}"
+_FONT_DYNAMIC_RE = re.compile(r'font:\s*"\{\{\s*([\w.]+)\s*\}\}"')
+
+
+def _resolve_dotted(data: dict, path: str) -> str | None:
+    """Resolve a dot-notation path from a data dict, returning the string value or None."""
+    current: object = data
+    for part in path.split("."):
+        if isinstance(current, dict) and part in current:
+            current = current[part]
+        else:
+            return None
+    return current if isinstance(current, str) else None
+
+
+def _resolve_dynamic_fonts(source: str, data: dict) -> list[str]:
+    """Resolve Jinja2 variable references in font declarations.
+
+    Finds patterns like ``font: "{{ field_name }}"`` and resolves
+    ``field_name`` from the data dict.  Returns list of resolved font
+    family names.  Unresolvable variables are silently skipped.
+
+    Only handles simple variable references (``{{ field }}``,
+    ``{{ obj.field }}``).  Filter expressions and conditionals are not
+    supported.
+    """
+    resolved: list[str] = []
+    for m in _FONT_DYNAMIC_RE.finditer(source):
+        field_path = m.group(1)
+        value = _resolve_dotted(data, field_path)
+        if value:
+            resolved.append(value)
+    return resolved
 
 
 def _enumerate_font_families(font_dirs: list[str] | None) -> set[str]:
@@ -404,6 +437,28 @@ def _check_compliance(
                     path="xml",
                     message=f"XSD validation failed: {exc}",
                 ))
+            else:
+                # Schematron business-rule validation (only if XSD passed)
+                try:
+                    from facturx.facturx import xml_check_schematron
+
+                    xml_check_schematron(xml_bytes)
+                except ImportError:
+                    issues.append(ReadinessIssue(
+                        stage="compliance",
+                        check="schematron_validation",
+                        severity="warning",
+                        path="facturx",
+                        message="facturx not installed — Schematron validation skipped",
+                    ))
+                except Exception as sch_exc:
+                    issues.append(ReadinessIssue(
+                        stage="compliance",
+                        check="schematron_validation",
+                        severity="error",
+                        path="xml",
+                        message=f"Schematron validation failed: {sch_exc}",
+                    ))
         except Exception as exc:
             issues.append(ReadinessIssue(
                 stage="compliance",
