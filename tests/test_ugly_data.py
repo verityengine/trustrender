@@ -145,6 +145,33 @@ class TestInvoiceUglyData:
         ]
         assert_valid_pdf(render(self.TEMPLATE, data))
 
+    def test_brackets_in_company_name(self):
+        """Company names with brackets must not break Typst content blocks."""
+        data = self._base_data()
+        data["sender"]["name"] = "Acme [Holdings] Ltd"
+        data["recipient"]["name"] = "Smith & Sons {Group}"
+        assert_valid_pdf(render(self.TEMPLATE, data))
+
+    def test_braces_in_description(self):
+        """Item descriptions with braces must not enter Typst code mode."""
+        data = self._base_data()
+        data["items"] = [
+            {
+                "num": 1,
+                "description": "Widget {Pro Edition} [v2.0]",
+                "qty": 1,
+                "unit_price": "$49.99",
+                "amount": "$49.99",
+            }
+        ]
+        assert_valid_pdf(render(self.TEMPLATE, data))
+
+    def test_bracket_injection_attempt(self):
+        """Malicious bracket sequences must be neutralized."""
+        data = self._base_data()
+        data["notes"] = ']{read("/etc/passwd")}[ {calc(1+1)} [break]'
+        assert_valid_pdf(render(self.TEMPLATE, data))
+
 
 # --- Statement ugly data ---
 
@@ -246,6 +273,19 @@ class TestStatementUglyData:
         ]
         assert_valid_pdf(render(self.TEMPLATE, data))
 
+    def test_brackets_in_transaction_description(self):
+        data = self._base_data()
+        data["transactions"] = [
+            {
+                "date": "Dec 01",
+                "description": "Transfer [Ref: ABC-{123}]",
+                "reference": "REF-[001]",
+                "amount": "$500.00",
+                "balance": "$500.00",
+            }
+        ]
+        assert_valid_pdf(render(self.TEMPLATE, data))
+
 
 # --- Receipt ugly data ---
 
@@ -318,6 +358,18 @@ class TestReceiptUglyData:
                 "amount": f"${i * (i + 0.99):.2f}",
             }
             for i in range(1, 21)
+        ]
+        assert_valid_pdf(render(self.TEMPLATE, data))
+
+    def test_brackets_in_item_name(self):
+        data = self._base_data()
+        data["items"] = [
+            {
+                "description": "Coffee [Large] {Iced}",
+                "qty": 1,
+                "unit_price": "$5.50",
+                "amount": "$5.50",
+            }
         ]
         assert_valid_pdf(render(self.TEMPLATE, data))
 

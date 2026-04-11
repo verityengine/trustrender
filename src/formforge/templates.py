@@ -7,14 +7,23 @@ user data safe for insertion into Typst content/text contexts.  It is NOT
 universal Typst escaping.  It does not cover code mode, math mode, or other
 context-sensitive syntax.
 
+This matters because every template interpolates user data inside Typst
+content blocks (``[...]``).  Unescaped ``]`` breaks out of the block, and
+unescaped ``{`` enters code mode — both bypass the surrounding template
+structure.
+
 Escaped characters:
     \\  →  \\\\       (escape character itself)
     $   →  \\$        (math mode delimiter)
     #   →  \\#        (code prefix)
     @   →  \\@        (reference/citation)
+    {   →  \\u{007b}  (code block start — no backslash escape available)
+    }   →  \\u{007d}  (code block end — no backslash escape available)
     <   →  \\u{003c}  (label start — no backslash escape available)
     `   →  \\u{0060}  (raw text delimiter — no backslash escape available)
     ~   →  \\~        (non-breaking space)
+    [   →  \\u{005b}  (content block start — no backslash escape available)
+    ]   →  \\u{005d}  (content block end — no backslash escape available)
 
 Intentionally NOT escaped:
     _   Only triggers emphasis at word boundaries; escaping everywhere
@@ -31,6 +40,19 @@ from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError, Undefined
 from markupsafe import Markup
 
 from .errors import ErrorCode, FormforgeError
+
+# Single-pass translation table for bracket/brace characters.
+# These MUST be replaced in one pass (via str.translate) because their
+# Unicode escape sequences contain each other: \u{007b} contains "}" and
+# \u{007d} contains "{".  Chained .replace() calls would corrupt output.
+# str.translate acts only on the original string's literal characters and
+# does NOT recursively reprocess inserted replacement sequences.
+_BRACKET_TABLE = str.maketrans({
+    "{": "\\u{007b}",
+    "}": "\\u{007d}",
+    "[": "\\u{005b}",
+    "]": "\\u{005d}",
+})
 
 
 def typst_escape(value: object) -> object:
@@ -49,6 +71,7 @@ def typst_escape(value: object) -> object:
     s = s.replace("$", "\\$")
     s = s.replace("#", "\\#")
     s = s.replace("@", "\\@")
+    s = s.translate(_BRACKET_TABLE)  # {, }, [, ] — must precede < and ` escapes
     s = s.replace("<", "\\u{003c}")
     s = s.replace("`", "\\u{0060}")
     s = s.replace("~", "\\~")

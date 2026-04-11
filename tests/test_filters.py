@@ -48,6 +48,17 @@ class TestTypstColor:
     def test_returns_markup(self):
         assert isinstance(typst_color("test", "#000"), Markup)
 
+    def test_brackets_in_value_cannot_break_content_block(self):
+        """Brackets/braces in filter input must not break the [...] wrapper."""
+        result = typst_color(']}{read("x")}[', "#27ae60")
+        s = str(result)
+        # The ] must be escaped so it cannot close the #text(...)[...] block
+        assert "\\u{005d}" in s
+        assert "\\u{007b}" in s
+        # The wrapping content block must be intact (starts with [ and ends with ])
+        assert s.startswith('#text(fill: rgb("#27ae60"))[')
+        assert s.endswith("]")
+
 
 class TestTypstMarkup:
     def test_returns_markup(self):

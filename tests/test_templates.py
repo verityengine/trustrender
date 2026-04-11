@@ -27,8 +27,34 @@ class TestTypstEscape:
     def test_escapes_tilde(self):
         assert typst_escape("a~b") == "a\\~b"
 
+    def test_escapes_open_brace(self):
+        assert typst_escape("{code}") == "\\u{007b}code\\u{007d}"
+
+    def test_escapes_close_brace(self):
+        assert typst_escape("a}b") == "a\\u{007d}b"
+
+    def test_escapes_open_bracket(self):
+        assert typst_escape("[content]") == "\\u{005b}content\\u{005d}"
+
+    def test_escapes_close_bracket(self):
+        assert typst_escape("a]b") == "a\\u{005d}b"
+
+    def test_escapes_code_injection_via_braces(self):
+        """Curly braces must not allow code mode entry."""
+        assert typst_escape('{read("/etc/passwd")}') == '\\u{007b}read("/etc/passwd")\\u{007d}'
+
+    def test_escapes_content_block_breakout(self):
+        """Close bracket must not break out of content blocks."""
+        assert typst_escape(']{evil}[') == '\\u{005d}\\u{007b}evil\\u{007d}\\u{005b}'
+
+    def test_escapes_all_brackets_and_braces(self):
+        """All four bracket/brace characters escaped in one string."""
+        assert typst_escape("[{x}]") == "\\u{005b}\\u{007b}x\\u{007d}\\u{005d}"
+
     def test_escapes_all_together(self):
-        assert typst_escape("$100 #tag @ref a\\b") == "\\$100 \\#tag \\@ref a\\\\b"
+        assert typst_escape("$100 #tag @ref a\\b {x} [y]") == (
+            "\\$100 \\#tag \\@ref a\\\\b \\u{007b}x\\u{007d} \\u{005b}y\\u{005d}"
+        )
 
     def test_passthrough_non_string(self):
         assert typst_escape(42) == 42
