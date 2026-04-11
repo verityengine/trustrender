@@ -1,117 +1,205 @@
 // ZUGFeRD EN 16931 Invoice Template
 // Data: einvoice_data.json (numeric amounts, structured tax, VAT IDs)
 
-#let accent = rgb("#1a1a1a")
-#let muted = luma(110)
-#let rule-color = luma(210)
+#let primary = rgb("#1B2838")
+#let accent = rgb("#C4622A")
+#let muted = rgb("#7A7670")
+#let light-bg = rgb("#F8F7F5")
+#let rule-light = rgb("#E5E2DD")
 
 #set page(
   paper: "a4",
-  margin: (top: 1.4in, bottom: 1.2in, left: 1in, right: 1in),
-  header: align(right, text(size: 8pt, fill: muted)[{{ seller.name }} · USt-IdNr. {{ seller.vat_id }}]),
-  footer: context align(center, text(size: 8pt, fill: muted)[
-    Seite #counter(page).display("1 von 1", both: true)
-  ]),
+  margin: (top: 0.8in, bottom: 1in, left: 0.9in, right: 0.9in),
+  header: [],
+  footer: context {
+    let pg = counter(page)
+    align(center, text(size: 7.5pt, fill: muted, font: "Inter")[
+      {{ seller.name }} · {{ seller.address }}, {{ seller.postal_code }} {{ seller.city }} · {{ seller.email }}
+      #v(2pt)
+      Seite #pg.display("1") von #pg.final().at(0)
+    ])
+  },
 )
 
-#set text(size: 9.5pt, font: "Inter", lang: "de")
+#set text(size: 9.5pt, font: "Inter", fill: primary, lang: "de")
 
-// --- Header: Logo + Title ---
-#grid(
-  columns: (1fr, 1fr),
-  align(left, image("assets/logo.png", width: 1.2in)),
-  align(right)[
-    #text(size: 22pt, weight: "bold", fill: accent)[{% if invoice_type|default("380") == "381" %}GUTSCHRIFT{% else %}RECHNUNG{% endif %}]
-    #v(6pt)
-    #text(size: 9pt, fill: muted)[Nr. {{ invoice_number }}]
-    #v(2pt)
-    #text(size: 9pt, fill: muted)[Datum: {{ invoice_date }} · Fällig: {{ due_date }}]
+// ══════════════════════════════════════════════════════════════
+// HEADER BAND
+// ══════════════════════════════════════════════════════════════
+
+#block(width: 100%, inset: (bottom: 16pt))[
+  #grid(
+    columns: (1fr, 1fr),
+    [
+      #image("assets/logo.png", width: 1.1in)
+      #v(6pt)
+      #text(size: 7.5pt, fill: muted)[{{ seller.name }} · USt-IdNr. {{ seller.vat_id }}]
+    ],
+    align(right)[
+      #text(size: 28pt, weight: "bold", fill: primary, tracking: 0.5pt)[{% if invoice_type|default("380") == "381" %}GUTSCHRIFT{% else %}RECHNUNG{% endif %}]
+      #v(4pt)
+      #block(width: 100%, fill: accent, radius: 2pt, inset: (x: 10pt, y: 5pt))[
+        #text(size: 9pt, fill: white, weight: "bold")[Nr. {{ invoice_number }}]
+        #h(1fr)
+        #text(size: 9pt, fill: white)[{{ invoice_date }}]
+      ]
 {% if referenced_invoice %}
-    #v(2pt)
-    #text(size: 9pt, fill: muted)[Bezug: {{ referenced_invoice }}]
+      #v(3pt)
+      #text(size: 8pt, fill: muted)[Bezug: {{ referenced_invoice }}]
 {% endif %}
+    ],
+  )
+]
+
+#line(length: 100%, stroke: 1.5pt + accent)
+#v(16pt)
+
+// ══════════════════════════════════════════════════════════════
+// META ROW — dates + payment terms
+// ══════════════════════════════════════════════════════════════
+
+#grid(
+  columns: (1fr, 1fr, 1fr),
+  gutter: 12pt,
+  [
+    #text(size: 7pt, weight: "bold", fill: muted, tracking: 0.8pt)[RECHNUNGSDATUM]
+    #v(3pt)
+    #text(size: 10pt, weight: "bold")[{{ invoice_date }}]
+  ],
+  [
+    #text(size: 7pt, weight: "bold", fill: muted, tracking: 0.8pt)[FÄLLIG]
+    #v(3pt)
+    #text(size: 10pt, weight: "bold")[{{ due_date }}]
+  ],
+  [
+    #text(size: 7pt, weight: "bold", fill: muted, tracking: 0.8pt)[WÄHRUNG]
+    #v(3pt)
+    #text(size: 10pt, weight: "bold")[{{ currency }}]
   ],
 )
 
-#v(0.4in)
+#v(20pt)
 
-// --- Seller / Buyer ---
+// ══════════════════════════════════════════════════════════════
+// ADDRESSES
+// ══════════════════════════════════════════════════════════════
+
 #grid(
   columns: (1fr, 1fr),
-  gutter: 0.6in,
+  gutter: 0.5in,
   [
-    #text(size: 8pt, weight: "bold", fill: muted)[ABSENDER]
-    #v(6pt)
-    #text(weight: "bold")[{{ seller.name }}] \
-    {{ seller.address }} \
-    {{ seller.postal_code }} {{ seller.city }} \
-    #v(4pt)
-    #text(size: 8.5pt, fill: muted)[USt-IdNr.: {{ seller.vat_id }}] \
-    #text(size: 8.5pt, fill: muted)[{{ seller.email }}{% if seller.phone %} · {{ seller.phone }}{% endif %}]
+    #block(width: 100%, stroke: (left: 3pt + accent), inset: (left: 12pt, y: 4pt))[
+      #text(size: 7pt, weight: "bold", fill: muted, tracking: 0.8pt)[ABSENDER]
+      #v(6pt)
+      #text(size: 10pt, weight: "bold")[{{ seller.name }}]
+      #v(3pt)
+      {{ seller.address }} \
+      {{ seller.postal_code }} {{ seller.city }}
+      #v(6pt)
+      #text(size: 8pt, fill: muted)[
+        USt-IdNr.: {{ seller.vat_id }} \
+        {{ seller.email }}{% if seller.phone %} · {{ seller.phone }}{% endif %}
+      ]
+    ]
   ],
   [
-    #text(size: 8pt, weight: "bold", fill: muted)[EMPFÄNGER]
-    #v(6pt)
-    #text(weight: "bold")[{{ buyer.name }}] \
-    {{ buyer.address }} \
-    {{ buyer.postal_code }} {{ buyer.city }} \
-    #v(4pt)
-    #text(size: 8.5pt, fill: muted)[USt-IdNr.: {{ buyer.vat_id }}]
+    #block(width: 100%, stroke: (left: 3pt + rule-light), inset: (left: 12pt, y: 4pt))[
+      #text(size: 7pt, weight: "bold", fill: muted, tracking: 0.8pt)[EMPFÄNGER]
+      #v(6pt)
+      #text(size: 10pt, weight: "bold")[{{ buyer.name }}]
+      #v(3pt)
+      {{ buyer.address }} \
+      {{ buyer.postal_code }} {{ buyer.city }}
+      #v(6pt)
+      #text(size: 8pt, fill: muted)[
+        USt-IdNr.: {{ buyer.vat_id }}
+      ]
+    ]
   ],
 )
 
-#v(0.4in)
+#v(24pt)
 
-// --- Line Items ---
+// ══════════════════════════════════════════════════════════════
+// LINE ITEMS
+// ══════════════════════════════════════════════════════════════
+
+#text(size: 7pt, weight: "bold", fill: muted, tracking: 0.8pt)[POSITIONEN]
+#v(8pt)
+
 #table(
-  columns: (40pt, 1fr, 60pt, 80pt, 80pt),
+  columns: (36pt, 1fr, 50pt, 80pt, 80pt),
   stroke: none,
-  inset: (x: 8pt, y: 7pt),
+  inset: (x: 8pt, y: 8pt),
+  fill: (_, row) => if row == 0 { primary } else if calc.odd(row) { light-bg } else { none },
 
-  table.header(
-    table.cell(fill: luma(245))[#text(size: 8pt, weight: "bold")[Pos.]],
-    table.cell(fill: luma(245))[#text(size: 8pt, weight: "bold")[Beschreibung]],
-    table.cell(fill: luma(245), align(right)[#text(size: 8pt, weight: "bold")[Menge]]),
-    table.cell(fill: luma(245), align(right)[#text(size: 8pt, weight: "bold")[Einzelpreis]]),
-    table.cell(fill: luma(245), align(right)[#text(size: 8pt, weight: "bold")[Betrag]]),
-  ),
-  table.hline(stroke: 0.6pt + rule-color),
+  // Header row
+  text(size: 7.5pt, weight: "bold", fill: white, tracking: 0.5pt)[POS.],
+  text(size: 7.5pt, weight: "bold", fill: white, tracking: 0.5pt)[BESCHREIBUNG],
+  align(right, text(size: 7.5pt, weight: "bold", fill: white, tracking: 0.5pt)[MENGE]),
+  align(right, text(size: 7.5pt, weight: "bold", fill: white, tracking: 0.5pt)[EINZELPREIS]),
+  align(right, text(size: 7.5pt, weight: "bold", fill: white, tracking: 0.5pt)[BETRAG]),
+
 {% for item in items %}
   [{{ loop.index }}],
   [{{ item.description }}],
   align(right)[{{ item.quantity }}],
   align(right)[{{ "%.2f" | format(item.unit_price) }} €],
   align(right)[{{ "%.2f" | format(item.line_total) }} €],
-  table.hline(stroke: 0.3pt + luma(230)),
 {% endfor %}
 )
 
-#v(0.3in)
+#v(16pt)
 
-// --- Totals ---
+// ══════════════════════════════════════════════════════════════
+// TOTALS
+// ══════════════════════════════════════════════════════════════
+
 #align(right)[
-  #grid(
-    columns: (auto, 100pt),
-    row-gutter: 8pt,
-    align(right, text(fill: muted)[Nettobetrag:]),
-    align(right)[{{ "%.2f" | format(subtotal) }} €],
+  #block(width: 260pt)[
+    #grid(
+      columns: (1fr, 100pt),
+      row-gutter: 8pt,
+      align(right, text(fill: muted)[Nettobetrag]),
+      align(right)[{{ "%.2f" | format(subtotal) }} €],
 {% for entry in tax_entries %}
-    align(right, text(fill: muted)[USt. {{ entry.rate }}%:]),
-    align(right)[{{ "%.2f" | format(entry.amount) }} €],
+      align(right, text(fill: muted)[USt. {{ entry.rate }}%]),
+      align(right)[{{ "%.2f" | format(entry.amount) }} €],
 {% endfor %}
-    grid.hline(stroke: 0.8pt + accent),
-    align(right)[#text(weight: "bold", size: 12pt)[Gesamtbetrag:]],
-    align(right)[#text(weight: "bold", size: 12pt)[{{ "%.2f" | format(total) }} €]],
-  )
+    )
+    #v(4pt)
+    #line(length: 100%, stroke: 1pt + primary)
+    #v(4pt)
+    #grid(
+      columns: (1fr, 100pt),
+      align(right, text(size: 13pt, weight: "bold")[Gesamtbetrag]),
+      align(right, text(size: 13pt, weight: "bold", fill: accent)[{{ "%.2f" | format(total) }} €]),
+    )
+  ]
 ]
 
-#v(0.5in)
+#v(28pt)
 
-// --- Payment & Notes ---
-#line(length: 100%, stroke: 0.4pt + rule-color)
-#v(8pt)
-#text(size: 8.5pt, fill: muted)[
-  #text(weight: "bold")[Bankverbindung:] {{ payment.bank_name }} · IBAN: {{ payment.iban }} · BIC: {{ payment.bic }} \
-  #v(4pt)
-  {{ notes }}
+// ══════════════════════════════════════════════════════════════
+// PAYMENT
+// ══════════════════════════════════════════════════════════════
+
+#block(width: 100%, fill: light-bg, radius: 4pt, inset: (x: 14pt, y: 12pt))[
+  #grid(
+    columns: (1fr, 1fr),
+    gutter: 16pt,
+    [
+      #text(size: 7pt, weight: "bold", fill: muted, tracking: 0.8pt)[BANKVERBINDUNG]
+      #v(5pt)
+      #text(weight: "bold")[{{ payment.bank_name }}]
+      #v(3pt)
+      #text(size: 8.5pt)[IBAN: {{ payment.iban }}] \
+      #text(size: 8.5pt)[BIC: {{ payment.bic }}]
+    ],
+    [
+      #text(size: 7pt, weight: "bold", fill: muted, tracking: 0.8pt)[HINWEISE]
+      #v(5pt)
+      #text(size: 8.5pt)[{{ notes }}]
+    ],
+  )
 ]
