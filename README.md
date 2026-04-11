@@ -256,7 +256,7 @@ error[DATA_CONTRACT]: 3 validation error(s)
 - Semantic checks require explicit hints — no automatic business-logic inference
 - Dynamic `{% include %}` produces a partial contract (warning by default; use `strict=True` to block)
 - Text anomaly detection covers control characters and zero-width characters on hinted fields only — no garbage-string scoring or Unicode normalization
-- Currency parsing limited to `€$£¥` symbols — other currency formats silently pass numeric checks
+- Numeric coercion is intentionally narrow — locale-specific money formats should be normalized upstream before validation
 
 ## ZUGFeRD / Factur-X e-invoicing
 
