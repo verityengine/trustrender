@@ -78,6 +78,16 @@ def main(argv: list[str] | None = None) -> int:
         help="Check compliance eligibility for this profile",
     )
 
+    history_cmd = sub.add_parser("history", help="View render history and lineage")
+    history_cmd.add_argument("--template", help="Filter by template name")
+    history_cmd.add_argument("--failures", action="store_true", help="Show only failures")
+    history_cmd.add_argument("--stats", action="store_true", help="Show aggregate statistics")
+    history_cmd.add_argument("--json", action="store_true", dest="as_json", help="Output as JSON")
+    history_cmd.add_argument("-n", "--limit", type=int, default=20, help="Number of records")
+
+    trace_cmd = sub.add_parser("trace", help="Show detailed trace for a render")
+    trace_cmd.add_argument("trace_id", help="Render trace ID")
+
     doctor_cmd = sub.add_parser("doctor", help="Check environment and diagnose issues")
     doctor_cmd.add_argument(
         "--smoke",
@@ -100,6 +110,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "preflight":
         return _run_preflight(args)
 
+    if args.command == "history":
+        return _run_history(args)
+
+    if args.command == "trace":
+        return _run_trace(args)
+
     if args.command == "serve":
         return _run_serve(args)
 
@@ -109,6 +125,105 @@ def main(argv: list[str] | None = None) -> int:
         return run_doctor(smoke=args.smoke)
 
     return 1
+
+
+def _run_history(args: argparse.Namespace) -> int:
+    from .trace import get_store
+
+    store = get_store()
+    if not store:
+        print(
+            "error: History not enabled. Set FORMFORGE_HISTORY=~/.formforge/history.db",
+            file=sys.stderr,
+        )
+        return 1
+
+    if args.stats:
+        stats = store.stats()
+        print(f"Total renders:      {stats['total']}")
+        print(f"Successes:          {stats['successes']}")
+        print(f"Failures:           {stats['failures']}")
+        print(f"Success rate:       {stats['success_rate']}%")
+        print(f"Avg render time:    {stats['avg_ms']}ms")
+        print(f"Unique templates:   {stats['unique_templates']}")
+        return 0
+
+    outcome = "error" if args.failures else None
+    traces = store.query(template=args.template, outcome=outcome, limit=args.limit)
+
+    if not traces:
+        print("No render history found.")
+        return 0
+
+    if args.as_json:
+        import json
+
+        print(json.dumps([t.to_dict() for t in traces], indent=2))
+        return 0
+
+    # Table output
+    print(f"{'TIME':<22} {'TEMPLATE':<28} {'RESULT':<8} {'SIZE':<10} {'DURATION'}")
+    print("-" * 80)
+    for t in traces:
+        time_str = t.timestamp[:19].replace("T", " ")
+        result = "OK" if t.outcome == "success" else "FAIL"
+        size = f"{t.pdf_size // 1024}KB" if t.pdf_size else "--"
+        duration = f"{t.total_ms}ms"
+        print(f"{time_str:<22} {t.template_name:<28} {result:<8} {size:<10} {duration}")
+        if t.outcome == "error":
+            print(f"  > {t.error_code} at {t.error_stage}: {t.error_message[:60]}")
+
+    return 0
+
+
+def _run_trace(args: argparse.Namespace) -> int:
+    from .trace import get_store
+
+    store = get_store()
+    if not store:
+        print(
+            "error: History not enabled. Set FORMFORGE_HISTORY=~/.formforge/history.db",
+            file=sys.stderr,
+        )
+        return 1
+
+    trace = store.get(args.trace_id)
+    if not trace:
+        print(f"error: Trace not found: {args.trace_id}", file=sys.stderr)
+        return 1
+
+    print(f"Trace:     {trace.id}")
+    print(f"Time:      {trace.timestamp}")
+    print(f"Template:  {trace.template_name}")
+    print(f"Outcome:   {trace.outcome.upper()}")
+    if trace.error_code:
+        print(f"Error:     {trace.error_code} at {trace.error_stage}")
+        print(f"Message:   {trace.error_message}")
+    print(f"Duration:  {trace.total_ms}ms")
+    if trace.pdf_size:
+        print(f"PDF size:  {trace.pdf_size // 1024}KB")
+    if trace.zugferd_profile:
+        print(f"ZUGFeRD:   {trace.zugferd_profile}")
+    if trace.provenance_hash:
+        print(f"Provenance: {trace.provenance_hash[:40]}...")
+    print()
+
+    print("STAGES:")
+    for s in trace.stages:
+        marker = "✓" if s.status == "pass" else "✗" if s.status in ("fail", "error") else "○"
+        meta = ""
+        if s.metadata:
+            if "pdf_size" in s.metadata:
+                meta = f" ({s.metadata['pdf_size'] // 1024}KB)"
+            elif "xml_size" in s.metadata:
+                meta = f" ({s.metadata['xml_size']} bytes XML)"
+            elif "profile" in s.metadata:
+                meta = f" ({s.metadata['profile']})"
+        print(f"  {marker} {s.stage:<24} {s.status:<6} {s.duration_ms}ms{meta}")
+        for err in s.errors:
+            print(f"      {err['path']}: {err['message']}")
+
+    return 0
 
 
 def _run_preflight(args: argparse.Namespace) -> int:
