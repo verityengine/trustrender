@@ -47,6 +47,7 @@ RENDER_TIMEOUT = 30  # seconds
 MAX_CONCURRENT_RENDERS = 8  # backpressure: reject with 503 when at capacity
 ALLOWED_FIELDS = {"template", "data", "debug", "validate", "zugferd", "provenance", "template_source"}
 PREFLIGHT_FIELDS = {"template", "data", "zugferd", "template_source"}
+INGEST_FIELDS = {"data"}
 
 
 def _server_render(
@@ -534,6 +535,39 @@ def create_app(
             if ephemeral_path:
                 ephemeral_path.unlink(missing_ok=True)
 
+    async def ingest_endpoint(request: Request) -> JSONResponse:
+        """Structured invoice ingestion — messy data in, canonical payload out."""
+        from .invoice_ingest import ingest_invoice
+
+        request_id = request.state.request_id
+
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > max_body_size:
+            return _error(400, ErrorCode.INVALID_DATA, f"Request body too large (limit: {max_body_size:,} bytes)", request_id, stage="execution")
+
+        body = await request.body()
+        if len(body) > max_body_size:
+            return _error(400, ErrorCode.INVALID_DATA, f"Request body too large (limit: {max_body_size:,} bytes)", request_id, stage="execution")
+
+        try:
+            payload = json.loads(body)
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            return _error(400, ErrorCode.INVALID_DATA, f"Invalid JSON: {exc}", request_id, stage="execution")
+
+        if not isinstance(payload, dict):
+            return _error(400, ErrorCode.INVALID_DATA, "Request body must be a JSON object", request_id, stage="execution")
+
+        unknown = set(payload.keys()) - INGEST_FIELDS
+        if unknown:
+            return _error(400, ErrorCode.INVALID_DATA, f"Unknown fields: {', '.join(sorted(unknown))}", request_id, stage="execution")
+
+        data = payload.get("data")
+        if data is None or not isinstance(data, dict):
+            return _error(400, ErrorCode.INVALID_DATA, "Missing or invalid 'data' field", request_id, stage="execution")
+
+        report = ingest_invoice(data)
+        return JSONResponse(report.to_dict(), headers={"X-Request-ID": request_id})
+
     async def request_id_middleware(request: Request, call_next):
         request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
         request.state.request_id = request_id
@@ -557,6 +591,7 @@ def create_app(
         Route("/health", health, methods=["GET"]),
         Route("/render", render_endpoint, methods=["POST"]),
         Route("/preflight", preflight_endpoint, methods=["POST"]),
+        Route("/ingest", ingest_endpoint, methods=["POST"]),
         Route("/template-source", template_source_endpoint, methods=["GET"]),
         Route("/templates", templates_list_endpoint, methods=["GET"]),
         Route("/template-data", template_data_endpoint, methods=["GET"]),
@@ -580,6 +615,7 @@ def create_app(
         Route("/health", health, methods=["GET"]),
         Route("/render", render_endpoint, methods=["POST"]),
         Route("/preflight", preflight_endpoint, methods=["POST"]),
+        Route("/ingest", ingest_endpoint, methods=["POST"]),
         Route("/template-source", template_source_endpoint, methods=["GET"]),
         Route("/templates", templates_list_endpoint, methods=["GET"]),
         Route("/template-data", template_data_endpoint, methods=["GET"]),

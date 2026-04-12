@@ -1,0 +1,37 @@
+{
+  "invoice": {
+    "invoiceid": 98765,
+    "invoice_number": "0000234",
+    "date": "2026-03-05",
+    "payment_details": "ACH transfer preferred",
+    "notes": "All prices in USD. Late payment fee: 1.5%/month.",
+    "organization": "Northstar Media Group",
+    "fname": "Sarah",
+    "lname": "Chen",
+    "email": "sarah.chen@northstar.com",
+    "p_street": "45 Commerce Drive",
+    "p_city": "Austin",
+    "p_state": "TX",
+    "p_code": "78701",
+    "lines": [
+      {
+        "lineid": 1,
+        "name": "Brand Identity Package",
+        "qty": "1",
+        "unit_cost": {"amount": "8500.00", "code": "USD"},
+        "amount": {"amount": "8500.00", "code": "USD"}
+      },
+      {
+        "lineid": 2,
+        "name": "Brand Guidelines Document",
+        "qty": "1",
+        "unit_cost": {"amount": "2200.00", "code": "USD"},
+        "amount": {"amount": "2200.00", "code": "USD"}
+      }
+    ],
+    "subtotal": {"amount": "10700.00", "code": "USD"},
+    "vat_percent": "7.43",
+    "vat_tax": {"amount": "795.50", "code": "USD"},
+    "amount": {"amount": "11495.50", "code": "USD"}
+  }
+}

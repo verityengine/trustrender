@@ -1,0 +1,29 @@
+{
+  "InvoiceNumber": "INV-0234",
+  "date": "2026-03-20",
+  "DueDate": "2026-04-19",
+  "Contact": {
+    "Name": "Greenfield Dynamics",
+    "EmailAddress": "accounts@greenfield.io",
+    "ContactID": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+  },
+  "LineItems": [
+    {
+      "Description": "Annual SaaS License",
+      "Quantity": 1.0,
+      "UnitAmount": 12000.00,
+      "LineAmount": 12000.00
+    },
+    {
+      "Description": "Onboarding & Implementation",
+      "Quantity": 1.0,
+      "UnitAmount": 4500.00,
+      "LineAmount": 4500.00
+    }
+  ],
+  "SubTotal": 16500.00,
+  "TotalTax": 1402.50,
+  "Total": 17902.50,
+  "CurrencyCode": "USD",
+  "Reference": "PO-8821"
+}

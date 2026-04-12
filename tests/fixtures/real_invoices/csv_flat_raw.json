@@ -1,0 +1,19 @@
+{
+  "invoice_no": "CSV-2026-001",
+  "date": "2026-03-01",
+  "due_date": "2026-03-31",
+  "bill_from_name": "Summit Analytics Co.",
+  "bill_from_address": "312 Innovation Way, Denver, CO 80202",
+  "bill_from_email": "billing@summit-analytics.com",
+  "bill_to_name": "Horizon Financial Group",
+  "bill_to_address": "88 Wall Street, New York, NY 10005",
+  "bill_to_email": "ap@horizon-financial.com",
+  "items": [
+    {"description": "Data pipeline audit", "quantity": 1, "unit_price": 4500.00},
+    {"description": "Dashboard development (40h)", "quantity": 40, "unit_price": 125.00},
+    {"description": "Monthly maintenance (retainer)", "quantity": 1, "unit_price": 800.00}
+  ],
+  "tax_rate": 0,
+  "payment_terms": "Net 30",
+  "notes": "Wire transfer preferred. Please include invoice number in memo."
+}

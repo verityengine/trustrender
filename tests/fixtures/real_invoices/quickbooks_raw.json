@@ -1,0 +1,41 @@
+{
+  "DocNumber": "INV-1089",
+  "TxnDate": "2026-03-10",
+  "DueDate": "2026-04-09",
+  "CompanyName": "Redwood Digital LLC",
+  "CompanyEmail": "ar@redwood-digital.com",
+  "customer": {
+    "Name": "Pinnacle Group",
+    "EmailAddress": "billing@pinnaclegroup.com",
+    "BillingAddress": "200 Corporate Plaza, Chicago, IL 60601"
+  },
+  "Line": [
+    {
+      "LineNum": 1,
+      "Description": "UX/UI Design — Phase 1",
+      "Quantity": 1,
+      "UnitPrice": 3500.00,
+      "Amount": 3500.00
+    },
+    {
+      "LineNum": 2,
+      "Description": "Frontend Development",
+      "Quantity": 40,
+      "UnitPrice": 95.00,
+      "Amount": 3800.00
+    },
+    {
+      "LineNum": 3,
+      "Description": "Project Management",
+      "Quantity": 8,
+      "UnitPrice": 120.00,
+      "Amount": 960.00
+    }
+  ],
+  "SubTotal": 8260.00,
+  "TotalTax": 702.10,
+  "taxRate": "8.5%",
+  "TotalAmt": 8962.10,
+  "CustomerMemo": "Payment due within 30 days of invoice date.",
+  "paymentTerms": "Net 30"
+}

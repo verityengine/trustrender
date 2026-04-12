@@ -1,0 +1,21 @@
+{
+  "number": "INV-2026-00042",
+  "date": "2026-03-01",
+  "due_date": "2026-03-31",
+  "account_name": "Buildspace Labs Inc.",
+  "account_email": "billing@buildspace.so",
+  "customer_name": "Momentum Ventures",
+  "customer_email": "finance@momentum.vc",
+  "lines": {
+    "data": [
+      {"title": "Platform subscription (Pro)", "count": 1, "price": 399.00, "amount": 399.00},
+      {"title": "API calls overage (50K)", "count": 1, "price": 45.00, "amount": 45.00},
+      {"title": "Priority support (monthly)", "count": 1, "price": 149.00, "amount": 149.00}
+    ]
+  },
+  "sub_total": 593.00,
+  "tax": 50.41,
+  "taxRate": "8.5%",
+  "grand_total": 643.41,
+  "currency": "usd"
+}
