@@ -1346,7 +1346,17 @@ function ReadyDemo() {
                 )}
               </div>
               <div className="flex-1 flex items-start p-4 overflow-y-auto">
-                {!verdict && !checking && (
+                {!verdict && !checking && parseError && (
+                  <div className="w-full py-12 px-6 text-center">
+                    <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-wine/10 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-wine" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </div>
+                    <p className="text-[14px] font-semibold text-wine">Invalid JSON</p>
+                    <p className="text-[12px] text-mid mt-1">{parseError}</p>
+                    <p className="text-[11px] text-muted mt-2">Fix syntax to run readiness checks</p>
+                  </div>
+                )}
+                {!verdict && !checking && !parseError && (
                   <div className="w-full text-center py-16">
                     <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-rule flex items-center justify-center">
                       <svg className="w-5 h-5 text-rule" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -2091,7 +2101,39 @@ function AppWorkspace() {
                   </div>
                   )
                 })()}
-                {!verdict && !checking && (
+                {!verdict && !checking && parseError && (
+                  <>
+                    <div className="flex items-center gap-4 px-5 py-4 rounded-lg border bg-wine/[0.04] border-wine/20">
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 bg-wine/10">
+                        <svg className="w-4.5 h-4.5 text-wine" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[14px] font-semibold text-wine">Invalid JSON</div>
+                        <div className="text-[12px] text-mid mt-0.5">{parseError}</div>
+                        <div className="text-[11px] text-muted mt-1">Fix syntax to run readiness checks</div>
+                      </div>
+                    </div>
+                    <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
+                      <div className="px-4 py-2.5 border-b border-rule-light">
+                        <span className="text-[10px] font-mono text-muted">stages</span>
+                      </div>
+                      <div className="divide-y divide-rule-light">
+                        {STAGES.map(stage => (
+                          <div key={stage} className="px-4 py-3 opacity-50">
+                            <div className="flex items-center gap-3">
+                              <div className="w-[18px] h-[18px] rounded-full border-2 border-rule flex items-center justify-center flex-shrink-0">
+                                <div className="w-1.5 h-1.5 rounded-full bg-rule" />
+                              </div>
+                              <span className="text-[13px] font-medium text-muted">{STAGE_LABELS[stage] || stage}</span>
+                              <span className="text-[10px] font-mono text-muted ml-auto">blocked</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+                {!verdict && !checking && !parseError && (
                   <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-rule-light bg-panel">
                     <div className="w-8 h-8 rounded-full border-2 border-rule flex items-center justify-center flex-shrink-0">
                       <svg className="w-4 h-4 text-rule" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
