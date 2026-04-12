@@ -1,5 +1,4 @@
-// ZUGFeRD EN 16931 Invoice Template
-// Data: einvoice_data.json (numeric amounts, structured tax, VAT IDs)
+// E-Invoice layout (EN 16931)
 
 #let primary = rgb("#1B2838")
 #let accent = rgb("#C4622A")

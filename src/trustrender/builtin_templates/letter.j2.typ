@@ -1,5 +1,4 @@
-// Business letter template
-// Tests: text-first layout, sender/recipient blocks, paragraphs, signature
+// Letter layout
 
 #let primary = rgb("#1B2838")
 #let accent = rgb("#C4622A")

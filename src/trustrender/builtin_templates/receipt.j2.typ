@@ -1,5 +1,4 @@
-// Receipt template - compact thermal-style layout
-// Tests: narrow width, tax lines, payment method, wrapping item names
+// Receipt layout
 
 #let primary = rgb("#1B2838")
 #let accent = rgb("#C4622A")

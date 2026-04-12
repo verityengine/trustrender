@@ -1,5 +1,4 @@
-// Report template - structured business report
-// Tests: section headings, summary metrics, tables, conditional formatting
+// Report layout
 
 #let primary = rgb("#1B2838")
 #let accent = rgb("#C4622A")
