@@ -1203,9 +1203,9 @@ const bundleDisplayName = (templateKey, data) => {
     if (templateKey === 'invoice.j2.typ') id = d.invoice_number || (d.recipient?.name ? `for ${d.recipient.name}` : '')
     else if (templateKey === 'receipt.j2.typ') id = d.receipt_number || (d.company?.name ? `from ${d.company.name}` : '')
     else if (templateKey === 'statement.j2.typ') id = d.customer?.account_number || (d.customer?.name ? `for ${d.customer.name}` : '')
-    else if (templateKey === 'letter.j2.typ') id = d.recipient?.name ? `to ${d.recipient.name}` : d.subject || ''
+    else if (templateKey === 'letter.j2.typ') id = d.recipient?.name ? `to ${d.recipient.name}` : d.subject ? `- ${d.subject}` : ''
     else if (templateKey === 'einvoice.j2.typ') id = d.invoice_number || (d.buyer?.name ? `for ${d.buyer.name}` : '')
-    else if (templateKey === 'report.j2.typ') id = d.title || d.subtitle || ''
+    else if (templateKey === 'report.j2.typ') return d.title || d.subtitle || label
   } catch {}
   return id ? `${label} ${id}` : label
 }
