@@ -525,9 +525,16 @@ def create_app(
 
     # Bundled playground: serve built static files at / if they exist.
     # Must be mounted last so API routes and /dashboard take precedence.
+    # Redirect / to /#app so local server lands in the workspace, not the landing page.
     playground_dir = Path(__file__).parent / "playground"
     if playground_dir.is_dir() and (playground_dir / "index.html").exists():
         from starlette.staticfiles import StaticFiles
+        from starlette.responses import RedirectResponse
+
+        async def _redirect_to_app(request):
+            return RedirectResponse("/#app")
+
+        routes.append(Route("/", endpoint=_redirect_to_app))
         routes.append(Mount("/", app=StaticFiles(directory=str(playground_dir), html=True), name="playground"))
 
     middleware_stack = [

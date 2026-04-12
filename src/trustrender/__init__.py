@@ -22,7 +22,7 @@ class RenderResult:
 from .errors import ErrorCode as ErrorCode  # noqa: F811
 from .templates import render_template
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 __all__ = [
     "render", "audit", "AuditResult",
