@@ -1552,38 +1552,48 @@ function AppWorkspace() {
     prevRenderStatus.current = renderStatus
   }, [renderStatus])
 
-  const switchFixture = (tpl, mode) => {
-    // Cancel pending preflight to prevent stale flash
+  // Centralized doc-type transition — one generation counter guards all async
+  const transitionGen = useRef(0)
+
+  const beginTransition = (tpl) => {
+    const gen = ++transitionGen.current
     if (preflightTimer.current) clearTimeout(preflightTimer.current)
     preflightSeq.current++
-    setTemplate(tpl); setPayloadMode(mode)
-    // If it's a server-only template (not in FIXTURES), load from server
+    setTemplate(tpl)
+    setVerdict(null); setChecking(false)
+    setRenderStatus('idle'); setPdfData(null); setRenderError(null)
+    setParseError(null)
+    setTemplateSource(''); setOriginalSource('')
+    // Generation-guarded template source fetch
+    ;(async () => {
+      setSourceLoading(true)
+      try {
+        const res = await fetch(apiUrl(`/template-source?name=${encodeURIComponent(tpl)}`))
+        if (res.ok && transitionGen.current === gen) {
+          const { source } = await res.json()
+          setTemplateSource(source); setOriginalSource(source)
+        }
+      } catch {}
+      if (transitionGen.current === gen) setSourceLoading(false)
+    })()
+    return gen
+  }
+
+  const switchFixture = (tpl, mode) => {
+    beginTransition(tpl)
+    setPayloadMode(mode)
     if (!FIXTURES[tpl]) {
       loadServerTemplate(tpl)
       return
     }
     setJson(JSON.stringify(FIXTURES[tpl][mode === 'valid' ? 'valid' : 'invalid'], null, 2))
-    setVerdict(null); setChecking(false)
-    setRenderStatus('idle'); setPdfData(null); setRenderError(null)
-    // Template editor: fetch fresh source, clear modified state
-    setTemplateSource(''); setOriginalSource('')
-    fetchTemplateSource(tpl)
   }
 
-  // Create blank draft from canonical schema — no demo data
   const selectDocType = (tpl) => {
-    // Cancel any pending/in-flight preflight to prevent stale flash
-    if (preflightTimer.current) clearTimeout(preflightTimer.current)
-    preflightSeq.current++
-    setTemplate(tpl)
+    beginTransition(tpl)
     setPayloadMode('valid')
     setJson(JSON.stringify(SCAFFOLDS[tpl] || {}, null, 2))
-    setVerdict(null); setChecking(false)
-    setRenderStatus('idle'); setPdfData(null); setRenderError(null)
-    setParseError(null)
-    setTemplateSource(''); setOriginalSource('')
     setEditorTab('data')
-    fetchTemplateSource(tpl)
   }
 
   // Load sample data into current draft
@@ -1612,19 +1622,20 @@ function AppWorkspace() {
   }
 
   const fetchTemplateSource = async (tpl) => {
+    const gen = transitionGen.current
     setSourceLoading(true)
     try {
       const res = await fetch(apiUrl(`/template-source?name=${encodeURIComponent(tpl)}`))
-      if (res.ok) {
+      if (res.ok && transitionGen.current === gen) {
         const { source } = await res.json()
         setTemplateSource(source); setOriginalSource(source)
       }
-    } catch { /* server unreachable — editor stays empty */ }
-    setSourceLoading(false)
+    } catch {}
+    if (transitionGen.current === gen) setSourceLoading(false)
   }
 
   // Fetch template source on initial mount
-  useEffect(() => { fetchTemplateSource(template) }, [])
+  useEffect(() => { if (template) fetchTemplateSource(template) }, [])
 
   // JSON parse check + path index build
   useEffect(() => {
