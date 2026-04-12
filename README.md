@@ -68,11 +68,10 @@ TrustRender is a rendering engine, not a security boundary. Treat it like a data
 ## Quick start
 
 ```
-pip install trustrender
-trustrender quickstart
+pip install trustrender && trustrender quickstart
 ```
 
-This creates a sample invoice template and starts the server. Open `http://localhost:8190` to render your first PDF.
+Creates a sample invoice template, starts the server, and opens the app in your browser. Render your first PDF in under 30 seconds.
 
 **Python:**
 
