@@ -1194,6 +1194,22 @@ const FIXTURES = {
   },
 }
 
+// Display name for a rendered bundle — doc type + best identifier + time fallback
+const bundleDisplayName = (templateKey, data) => {
+  const label = FIXTURES[templateKey]?.label || 'Document'
+  let id = ''
+  try {
+    const d = typeof data === 'string' ? JSON.parse(data) : data
+    if (templateKey === 'invoice.j2.typ') id = d.invoice_number || (d.recipient?.name ? `for ${d.recipient.name}` : '')
+    else if (templateKey === 'receipt.j2.typ') id = d.receipt_number || (d.company?.name ? `from ${d.company.name}` : '')
+    else if (templateKey === 'statement.j2.typ') id = d.customer?.account_number || (d.customer?.name ? `for ${d.customer.name}` : '')
+    else if (templateKey === 'letter.j2.typ') id = d.recipient?.name ? `to ${d.recipient.name}` : d.subject || ''
+    else if (templateKey === 'einvoice.j2.typ') id = d.invoice_number || (d.buyer?.name ? `for ${d.buyer.name}` : '')
+    else if (templateKey === 'report.j2.typ') id = d.title || d.subtitle || ''
+  } catch {}
+  return id ? `${label} ${id}` : label
+}
+
 // Required fields per document type — gate "Ready to render" on these
 const REQUIRED_FIELDS = {
   'invoice.j2.typ': (d) =>
@@ -1797,10 +1813,10 @@ function AppWorkspace() {
   const downloadBundle = async (bundle) => {
     const zip = new JSZip()
     const ts = bundle.timestamp.replace(/[:.]/g, '-').slice(0, 19)
-    const label = (FIXTURES[bundle.templateName]?.label || bundle.templateName.replace(/\.j2\.typ$|\.typ$/, '')).toLowerCase().replace(/[^a-z0-9]+/g, '-')
-    const folderName = `trustrender-${label}-${ts}`
+    const fileLabel = bundleDisplayName(bundle.templateName, bundle.jsonData).toLowerCase().replace(/[^a-z0-9]+/g, '-')
+    const folderName = `trustrender-${fileLabel}-${ts}`
     const folder = zip.folder(folderName)
-    if (bundle.pdfBytes) folder.file(`${label}.pdf`, bundle.pdfBytes)
+    if (bundle.pdfBytes) folder.file(`${fileLabel}.pdf`, bundle.pdfBytes)
     folder.file(bundle.templateName, bundle.templateSource)
     folder.file('data.json', bundle.jsonData)
     if (bundle.trace) folder.file('trace.json', JSON.stringify(bundle.trace, null, 2))
@@ -1815,9 +1831,9 @@ function AppWorkspace() {
     const zip = new JSZip()
     for (const b of outputBundles.filter(b => b.outcome === 'success')) {
       const ts = b.timestamp.replace(/[:.]/g, '-').slice(0, 19)
-      const bLabel = (FIXTURES[b.templateName]?.label || b.templateName.replace(/\.j2\.typ$|\.typ$/, '')).toLowerCase().replace(/[^a-z0-9]+/g, '-')
-      const folder = zip.folder(`${bLabel}-${ts}`)
-      if (b.pdfBytes) folder.file('output.pdf', b.pdfBytes)
+      const bFileLabel = bundleDisplayName(b.templateName, b.jsonData).toLowerCase().replace(/[^a-z0-9]+/g, '-')
+      const folder = zip.folder(`${bFileLabel}-${ts}`)
+      if (b.pdfBytes) folder.file(`${bFileLabel}.pdf`, b.pdfBytes)
       folder.file(b.templateName, b.templateSource)
       folder.file('data.json', b.jsonData)
       if (b.trace) folder.file('trace.json', JSON.stringify(b.trace, null, 2))
@@ -2223,7 +2239,7 @@ function AppWorkspace() {
                         <div key={b.id} className="px-4 py-3 flex items-center gap-3">
                           <div className={`w-2 h-2 rounded-full ${b.outcome === 'success' ? 'bg-sage' : 'bg-wine'}`} />
                           <div className="flex-1 min-w-0">
-                            <div className="text-[13px] font-semibold text-ink truncate">{FIXTURES[b.templateName]?.label || b.templateName}</div>
+                            <div className="text-[13px] font-semibold text-ink truncate">{bundleDisplayName(b.templateName, b.jsonData)}</div>
                             <div className="text-[10px] text-muted font-mono">{new Date(b.timestamp).toLocaleTimeString()}{b.trace ? ` · ${b.trace.total_ms}ms` : ''}</div>
                           </div>
                           <span className={`text-[10px] font-mono font-semibold ${b.outcome === 'success' ? 'text-sage' : 'text-wine'}`}>{b.outcome}</span>
