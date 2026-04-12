@@ -241,11 +241,10 @@ class TestRenderErrors:
                     "invoice_date": "T",
                     "due_date": "T",
                     "payment_terms": "T",
-                    "sender": {"name": "T", "address_line1": "", "address_line2": "", "email": ""},
+                    "sender": {"name": "T", "address": "", "email": ""},
                     "recipient": {
                         "name": "T",
-                        "address_line1": "",
-                        "address_line2": "",
+                        "address": "",
                         "email": "",
                     },
                     "items": [],

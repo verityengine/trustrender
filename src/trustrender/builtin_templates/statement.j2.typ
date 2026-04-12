@@ -38,9 +38,7 @@
   #grid(
     columns: (1fr, 1fr),
     [
-      #image("assets/logo.png", width: 1.1in)
-      #v(6pt)
-      #text(size: 7.5pt, fill: muted)[{{ company.name }}]
+      #text(weight: "bold", size: 14pt)[{{ company.name }}]
     ],
     align(right)[
       #text(size: 28pt, weight: "bold", fill: primary, tracking: 0.5pt)[STATEMENT]
@@ -101,8 +99,7 @@
       #v(6pt)
       #text(weight: "bold")[{{ company.name }}]
       #v(3pt)
-      {{ company.address_line1 }} \
-      {{ company.address_line2 }}
+      {{ company.address }}
       #v(4pt)
       #text(size: 8.5pt, fill: muted)[{{ company.email }} · {{ company.phone }}]
     ]
@@ -113,8 +110,7 @@
       #v(6pt)
       #text(weight: "bold")[{{ customer.name }}]
       #v(3pt)
-      {{ customer.address_line1 }} \
-      {{ customer.address_line2 }}
+      {{ customer.address }}
       #v(4pt)
       #text(size: 8.5pt, fill: muted)[{{ customer.email }}]
     ]

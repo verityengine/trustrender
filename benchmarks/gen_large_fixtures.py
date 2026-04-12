@@ -75,14 +75,12 @@ def generate_invoice_1000() -> dict:
         "payment_terms": "Net 30",
         "sender": {
             "name": "Acme Corporation",
-            "address_line1": "123 Business Ave, Suite 400",
-            "address_line2": "San Francisco, CA 94105",
+            "address": "123 Business Ave, Suite 400, San Francisco, CA 94105",
             "email": "billing@acme.com",
         },
         "recipient": {
             "name": "Contoso Ltd.",
-            "address_line1": "456 Enterprise Blvd",
-            "address_line2": "New York, NY 10001",
+            "address": "456 Enterprise Blvd, New York, NY 10001",
             "email": "accounts@contoso.com",
         },
         "items": items,
@@ -176,16 +174,14 @@ def generate_statement_1000() -> dict:
     return {
         "company": {
             "name": "Acme Corporation",
-            "address_line1": "123 Business Ave, Suite 400",
-            "address_line2": "San Francisco, CA 94105",
+            "address": "123 Business Ave, Suite 400, San Francisco, CA 94105",
             "email": "billing@acme.com",
             "phone": "(415) 555-0142",
         },
         "customer": {
             "name": "Contoso Ltd.",
             "account_number": "ACCT-78291",
-            "address_line1": "456 Enterprise Blvd",
-            "address_line2": "New York, NY 10001",
+            "address": "456 Enterprise Blvd, New York, NY 10001",
         },
         "statement_date": "December 31, 2026",
         "period": "January 1 - December 31, 2026",

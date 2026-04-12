@@ -27,14 +27,12 @@
 // ══════════════════════════════════════════════════════════════
 
 #grid(
-  columns: (auto, 1fr),
+  columns: (1fr, 1fr),
   gutter: 0.2in,
-  image("assets/logo.png", width: 0.9in),
+  text(weight: "bold", size: 14pt)[{{ sender.name }}],
   align(right)[
-    #text(weight: "bold", size: 11pt)[{{ sender.name }}]
-    #v(2pt)
     #text(size: 8.5pt, fill: muted)[
-      {{ sender.address_line1 }} · {{ sender.address_line2 }} \
+      {{ sender.address }} \
       {{ sender.phone }} · {{ sender.email }}
     ]
   ],
@@ -61,8 +59,7 @@
   #text(weight: "bold")[{{ recipient.name }}] \
   {{ recipient.title }} \
   {{ recipient.company }} \
-  {{ recipient.address_line1 }} \
-  {{ recipient.address_line2 }}
+  {{ recipient.address }}
 ]
 
 #v(0.3in)

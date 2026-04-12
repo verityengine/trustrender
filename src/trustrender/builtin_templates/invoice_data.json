@@ -4,32 +4,23 @@
   "due_date": "May 10, 2026",
   "payment_terms": "Net 30",
   "sender": {
-    "name": "Acme Corporation",
-    "address_line1": "123 Business Ave, Suite 400",
-    "address_line2": "San Francisco, CA 94105",
+    "name": "Acme Corp",
+    "address": "123 Business Ave, SF, CA 94105",
     "email": "billing@acme.com"
   },
   "recipient": {
-    "name": "Contoso Ltd.",
-    "address_line1": "456 Enterprise Blvd",
-    "address_line2": "New York, NY 10001",
-    "email": "accounts@contoso.com"
+    "name": "Contoso Ltd",
+    "address": "456 Enterprise Blvd, NY, NY 10001",
+    "email": "ap@contoso.com"
   },
   "items": [
-    {"num": 1, "description": "Website redesign and development", "qty": 1, "unit_price": "$4,500.00", "amount": "$4,500.00"},
-    {"num": 2, "description": "Logo design and brand identity package", "qty": 1, "unit_price": "$2,200.00", "amount": "$2,200.00"},
-    {"num": 3, "description": "SEO optimization and keyword research", "qty": 1, "unit_price": "$1,800.00", "amount": "$1,800.00"},
-    {"num": 4, "description": "Social media content creation (monthly)", "qty": 3, "unit_price": "$750.00", "amount": "$2,250.00"},
-    {"num": 5, "description": "Email marketing campaign setup", "qty": 1, "unit_price": "$1,200.00", "amount": "$1,200.00"},
-    {"num": 6, "description": "Analytics dashboard configuration", "qty": 1, "unit_price": "$950.00", "amount": "$950.00"},
-    {"num": 7, "description": "Content writing - blog posts", "qty": 5, "unit_price": "$300.00", "amount": "$1,500.00"},
-    {"num": 8, "description": "Photography and image editing", "qty": 1, "unit_price": "$800.00", "amount": "$800.00"},
-    {"num": 9, "description": "Hosting setup and DNS configuration", "qty": 1, "unit_price": "$350.00", "amount": "$350.00"},
-    {"num": 10, "description": "Staff training and documentation", "qty": 2, "unit_price": "$500.00", "amount": "$1,000.00"}
+    {"num": 1, "description": "Website redesign", "qty": 1, "unit_price": "$4,500.00", "amount": "$4,500.00"},
+    {"num": 2, "description": "Logo and brand", "qty": 1, "unit_price": "$2,200.00", "amount": "$2,200.00"},
+    {"num": 3, "description": "SEO optimization", "qty": 1, "unit_price": "$1,800.00", "amount": "$1,800.00"}
   ],
-  "subtotal": "$16,550.00",
+  "subtotal": "$8,500.00",
   "tax_rate": "8.5%",
-  "tax_amount": "$1,406.75",
-  "total": "$17,956.75",
-  "notes": "Payment is due within 30 days. Please include the invoice number with your payment. For questions, contact billing@acme.com."
+  "tax_amount": "$722.50",
+  "total": "$9,222.50",
+  "notes": "Payment due within 30 days."
 }

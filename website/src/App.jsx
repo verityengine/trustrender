@@ -1071,8 +1071,8 @@ const FIXTURES = {
   'statement.j2.typ': {
     label: 'Statement',
     valid: {
-      company: { name: "Acme Corp", address_line1: "123 Business Ave", address_line2: "SF, CA 94105", email: "accounts@acme.com", phone: "(415) 555-0100" },
-      customer: { name: "Contoso Ltd", account_number: "ACCT-78432", address_line1: "456 Enterprise Blvd", address_line2: "NY, NY 10001", email: "ap@contoso.com" },
+      company: { name: "Acme Corp", address: "123 Business Ave, SF, CA 94105", email: "accounts@acme.com", phone: "(415) 555-0100" },
+      customer: { name: "Contoso Ltd", account_number: "ACCT-78432", address: "456 Enterprise Blvd, NY, NY 10001", email: "ap@contoso.com" },
       statement_date: "April 10, 2026", period: "Mar 1 \u2013 Mar 31, 2026",
       opening_balance: "$12,450.00", closing_balance: "$18,267.50", total_charges: "$9,225.00", total_payments: "-$3,407.50",
       transactions: [
@@ -1084,8 +1084,8 @@ const FIXTURES = {
       notes: "Payment terms: Net 30."
     },
     invalid: {
-      company: { name: "Acme Corp", address_line1: "123 Business Ave", address_line2: "SF, CA 94105", email: "accounts@acme.com", phone: "(415) 555-0100" },
-      customer: { name: "Contoso Ltd", address_line1: "456 Enterprise Blvd", address_line2: "NY, NY 10001", email: "ap@contoso.com" },
+      company: { name: "Acme Corp", address: "123 Business Ave, SF, CA 94105", email: "accounts@acme.com", phone: "(415) 555-0100" },
+      customer: { name: "Contoso Ltd", address: "456 Enterprise Blvd, NY, NY 10001", email: "ap@contoso.com" },
       statement_date: "April 10, 2026", period: "Mar 1 \u2013 Mar 31, 2026",
       opening_balance: "$12,450.00", closing_balance: "$18,267.50", total_charges: "$9,225.00", total_payments: "-$3,407.50",
       transactions: [
@@ -1099,7 +1099,7 @@ const FIXTURES = {
   'receipt.j2.typ': {
     label: 'Receipt',
     valid: {
-      company: { name: "Daily Grind Coffee", address_line1: "782 Market St", address_line2: "SF, CA 94102", phone: "(415) 555-0187", website: "dailygrind.com" },
+      company: { name: "Daily Grind Coffee", address: "782 Market St, SF, CA 94102", phone: "(415) 555-0187", website: "dailygrind.com" },
       receipt_number: "REC-20260410", date: "April 10, 2026", time: "8:47 AM", cashier: "Maria S.", register: "POS-03",
       items: [
         { description: "Oat Milk Latte (Large)", qty: 2, unit_price: "$6.75", amount: "$13.50" },
@@ -1110,7 +1110,7 @@ const FIXTURES = {
       amount_tendered: "$28.73", change_due: "$0.00", footer_message: "Thank you!"
     },
     invalid: {
-      company: { name: "Daily Grind Coffee", address_line1: "782 Market St", address_line2: "SF, CA 94102", phone: "(415) 555-0187" },
+      company: { name: "Daily Grind Coffee", address: "782 Market St, SF, CA 94102", phone: "(415) 555-0187" },
       receipt_number: "REC-20260410", date: "April 10, 2026", time: "8:47 AM", cashier: "Maria S.", register: "POS-03",
       items: [
         { description: "Oat Milk Latte (Large)", qty: 2, unit_price: "$6.75", amount: "$13.50" },
@@ -1124,15 +1124,15 @@ const FIXTURES = {
   'letter.j2.typ': {
     label: 'Letter',
     valid: {
-      sender: { name: "Acme Corp", title: "Accounts Receivable", address_line1: "123 Business Ave", address_line2: "SF, CA 94105", phone: "(415) 555-0100", email: "ar@acme.com" },
-      recipient: { name: "Margaret Chen", title: "CFO", company: "Contoso Ltd", address_line1: "456 Enterprise Blvd", address_line2: "NY, NY 10001" },
+      sender: { name: "Acme Corp", title: "Accounts Receivable", address: "123 Business Ave, SF, CA 94105", phone: "(415) 555-0100", email: "ar@acme.com" },
+      recipient: { name: "Margaret Chen", title: "CFO", company: "Contoso Ltd", address: "456 Enterprise Blvd, NY, NY 10001" },
       date: "April 10, 2026", subject: "Outstanding Balance", salutation: "Dear Ms. Chen,",
       body_paragraphs: ["Your account has an outstanding balance of $18,267.50.", "Please settle at your earliest convenience."],
       closing: "Sincerely,", signature_name: "James Rodriguez", signature_title: "Director of Finance", signature_company: "Acme Corp",
     },
     invalid: {
-      sender: { name: "Acme Corp", title: "Accounts Receivable", address_line1: "123 Business Ave", address_line2: "SF, CA 94105", phone: "(415) 555-0100" },
-      recipient: { name: "Margaret Chen", title: "CFO", company: "Contoso Ltd", address_line1: "456 Enterprise Blvd", address_line2: "NY, NY 10001" },
+      sender: { name: "Acme Corp", title: "Accounts Receivable", address: "123 Business Ave, SF, CA 94105", phone: "(415) 555-0100" },
+      recipient: { name: "Margaret Chen", title: "CFO", company: "Contoso Ltd", address: "456 Enterprise Blvd, NY, NY 10001" },
       date: "April 10, 2026", subject: "Outstanding Balance", salutation: "Dear Ms. Chen,",
       body_paragraphs: "Your account has an outstanding balance.",
       closing: "Sincerely,", signature_name: "James Rodriguez", signature_title: "Director of Finance",
@@ -1384,9 +1384,9 @@ function ReadyDemo() {
 /* ── Full App Workspace (at #app) ────────────────────────────────── */
 function AppWorkspace() {
   const [tab, setTab] = useState('ready')
-  const [template, setTemplate] = useState('invoice.j2.typ')
+  const [template, setTemplate] = useState('')
   const [payloadMode, setPayloadMode] = useState('valid')
-  const [json, setJson] = useState(() => JSON.stringify(FIXTURES['invoice.j2.typ'].valid, null, 2))
+  const [json, setJson] = useState('{\n  \n}')
   const [parseError, setParseError] = useState(null)
 
   // Server templates — discovered from /templates endpoint
@@ -1399,21 +1399,13 @@ function AppWorkspace() {
       .then(data => {
         if (data?.templates?.length) {
           setServerTemplates(data.templates)
-          const first = data.templates[0].name
-          setTemplate(first)
-          loadServerTemplate(first)
         } else {
           setServerTemplates([])
-          // No server templates — fall back to fixtures
-          setTemplate('invoice.j2.typ')
-          setJson(JSON.stringify(FIXTURES['invoice.j2.typ'].valid, null, 2))
         }
         setServerLoaded(true)
       })
       .catch(() => {
         setServerTemplates([])
-        setTemplate('invoice.j2.typ')
-        setJson(JSON.stringify(FIXTURES['invoice.j2.typ'].valid, null, 2))
         setServerLoaded(true)
       })
   }, [])
@@ -1752,7 +1744,8 @@ function AppWorkspace() {
   const downloadBundle = async (bundle) => {
     const zip = new JSZip()
     const ts = bundle.timestamp.replace(/[:.]/g, '-').slice(0, 19)
-    const folderName = `trustrender-${bundle.templateName.replace(/\.j2\.typ$|\.typ$/, '')}-${ts}`
+    const label = (FIXTURES[bundle.templateName]?.label || bundle.templateName.replace(/\.j2\.typ$|\.typ$/, '')).toLowerCase().replace(/[^a-z0-9]+/g, '-')
+    const folderName = `trustrender-${label}-${ts}`
     const folder = zip.folder(folderName)
     if (bundle.pdfBytes) folder.file('output.pdf', bundle.pdfBytes)
     folder.file(bundle.templateName, bundle.templateSource)
@@ -1769,7 +1762,8 @@ function AppWorkspace() {
     const zip = new JSZip()
     for (const b of outputBundles.filter(b => b.outcome === 'success')) {
       const ts = b.timestamp.replace(/[:.]/g, '-').slice(0, 19)
-      const folder = zip.folder(`${b.templateName.replace(/\.j2\.typ$|\.typ$/, '')}-${ts}`)
+      const bLabel = (FIXTURES[b.templateName]?.label || b.templateName.replace(/\.j2\.typ$|\.typ$/, '')).toLowerCase().replace(/[^a-z0-9]+/g, '-')
+      const folder = zip.folder(`${bLabel}-${ts}`)
       if (b.pdfBytes) folder.file('output.pdf', b.pdfBytes)
       folder.file(b.templateName, b.templateSource)
       folder.file('data.json', b.jsonData)
@@ -1980,7 +1974,26 @@ function AppWorkspace() {
                     )}
                   </div>
                 )}
-                {!verdict && !checking && (
+                {!verdict && !checking && !template && (
+                  <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
+                    <div className="px-4 py-3 border-b border-rule-light">
+                      <span className="text-[13px] font-semibold text-ink">Choose a document type</span>
+                    </div>
+                    <div className="divide-y divide-rule-light">
+                      {Object.entries(FIXTURES).map(([key, fix]) => (
+                        <button key={key} onClick={() => switchFixture(key, 'valid')}
+                          className="w-full px-4 py-3 flex items-center justify-between hover:bg-surface transition-colors cursor-pointer text-left">
+                          <div>
+                            <div className="text-[13px] font-medium text-ink">{fix.label}</div>
+                            <div className="text-[10px] text-muted font-mono">{key}</div>
+                          </div>
+                          <span className="text-[10px] text-muted">select</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {!verdict && !checking && template && (
                   <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-rule-light bg-panel">
                     <div className="w-8 h-8 rounded-full border-2 border-rule flex items-center justify-center flex-shrink-0">
                       <svg className="w-4 h-4 text-rule" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -2163,7 +2176,7 @@ function AppWorkspace() {
                         <div key={b.id} className="px-4 py-3 flex items-center gap-3">
                           <div className={`w-2 h-2 rounded-full ${b.outcome === 'success' ? 'bg-sage' : 'bg-wine'}`} />
                           <div className="flex-1 min-w-0">
-                            <div className="text-[13px] font-semibold text-ink truncate">{b.templateName}</div>
+                            <div className="text-[13px] font-semibold text-ink truncate">{FIXTURES[b.templateName]?.label || b.templateName}</div>
                             <div className="text-[10px] text-muted font-mono">{new Date(b.timestamp).toLocaleTimeString()}{b.trace ? ` · ${b.trace.total_ms}ms` : ''}</div>
                           </div>
                           <span className={`text-[10px] font-mono font-semibold ${b.outcome === 'success' ? 'text-sage' : 'text-wine'}`}>{b.outcome}</span>

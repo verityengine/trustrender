@@ -101,8 +101,7 @@
       #v(6pt)
       #text(weight: "bold")[{{ company.name }}]
       #v(3pt)
-      {{ company.address_line1 }} \
-      {{ company.address_line2 }}
+      {{ company.address }}
       #v(4pt)
       #text(size: 8.5pt, fill: muted)[{{ company.email }} · {{ company.phone }}]
     ]
@@ -113,8 +112,7 @@
       #v(6pt)
       #text(weight: "bold")[{{ customer.name }}]
       #v(3pt)
-      {{ customer.address_line1 }} \
-      {{ customer.address_line2 }}
+      {{ customer.address }}
       #v(4pt)
       #text(size: 8.5pt, fill: muted)[{{ customer.email }}]
     ]

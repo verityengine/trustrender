@@ -54,8 +54,7 @@ class TestInferInvoice:
         assert sender.required is True
         assert set(sender.children.keys()) == {
             "name",
-            "address_line1",
-            "address_line2",
+            "address",
             "email",
         }
 
@@ -64,8 +63,7 @@ class TestInferInvoice:
         assert recipient.expected_type == OBJECT
         assert set(recipient.children.keys()) == {
             "name",
-            "address_line1",
-            "address_line2",
+            "address",
             "email",
         }
 

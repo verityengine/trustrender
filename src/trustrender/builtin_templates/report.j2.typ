@@ -35,9 +35,9 @@
 // ══════════════════════════════════════════════════════════════
 
 #grid(
-  columns: (auto, 1fr),
+  columns: (1fr, 1fr),
   gutter: 0.2in,
-  image("assets/logo.png", width: 1in),
+  text(weight: "bold", size: 14pt)[{{ company.name }}],
   align(right + bottom)[
     #text(size: 7.5pt, fill: muted)[{{ company.name }} / {{ company.department }}]
   ],

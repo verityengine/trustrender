@@ -1,8 +1,7 @@
 {
   "company": {
     "name": "The Daily Grind Coffee Co.",
-    "address_line1": "782 Market Street",
-    "address_line2": "San Francisco, CA 94102",
+    "address": "782 Market Street, San Francisco, CA 94102",
     "phone": "(415) 555-0187",
     "website": "www.dailygrindcoffee.com"
   },

@@ -1,6 +1,4 @@
-// Invoice template - Jinja2 preprocessed
-// Data flows: JSON -> Jinja2 -> Typst markup -> PDF
-
+// Invoice template
 #let primary = rgb("#1B2838")
 #let accent = rgb("#C4622A")
 #let muted = rgb("#7A7670")
@@ -12,7 +10,7 @@
   margin: (top: 0.8in, bottom: 1in, left: 0.9in, right: 0.9in),
   header: [],
   footer: context align(center, text(size: 7.5pt, fill: muted, font: "Inter")[
-    {{ sender.name }} · {{ sender.address_line1 }}, {{ sender.address_line2 }} · {{ sender.email }}
+    {{ sender.name }} · {{ sender.address }} · {{ sender.email }}
     #v(2pt)
     Page #counter(page).display("1") of #counter(page).final().at(0)
   ]),
@@ -20,19 +18,11 @@
 
 #set text(size: 9.5pt, font: "Inter", fill: primary)
 
-// ══════════════════════════════════════════════════════════════
-// HEADER
-// ══════════════════════════════════════════════════════════════
-
-{% set logo_path = "assets/logo.png" %}
-
 #block(width: 100%, inset: (bottom: 16pt))[
   #grid(
     columns: (1fr, 1fr),
     [
-      #image("{{ logo_path }}", width: 1.1in)
-      #v(6pt)
-      #text(size: 7.5pt, fill: muted)[{{ sender.name }}]
+      #text(size: 14pt, weight: "bold")[{{ sender.name }}]
     ],
     align(right)[
       #text(size: 28pt, weight: "bold", fill: primary, tracking: 0.5pt)[INVOICE]
@@ -48,10 +38,6 @@
 
 #line(length: 100%, stroke: 1.5pt + accent)
 #v(16pt)
-
-// ══════════════════════════════════════════════════════════════
-// META ROW
-// ══════════════════════════════════════════════════════════════
 
 #grid(
   columns: (1fr, 1fr, 1fr),
@@ -75,10 +61,6 @@
 
 #v(20pt)
 
-// ══════════════════════════════════════════════════════════════
-// ADDRESSES
-// ══════════════════════════════════════════════════════════════
-
 #grid(
   columns: (1fr, 1fr),
   gutter: 0.5in,
@@ -88,8 +70,7 @@
       #v(6pt)
       #text(size: 10pt, weight: "bold")[{{ sender.name }}]
       #v(3pt)
-      {{ sender.address_line1 }} \
-      {{ sender.address_line2 }}
+      {{ sender.address }}
       #v(4pt)
       #text(size: 8.5pt, fill: muted)[{{ sender.email }}]
     ]
@@ -100,8 +81,7 @@
       #v(6pt)
       #text(size: 10pt, weight: "bold")[{{ recipient.name }}]
       #v(3pt)
-      {{ recipient.address_line1 }} \
-      {{ recipient.address_line2 }}
+      {{ recipient.address }}
       #v(4pt)
       #text(size: 8.5pt, fill: muted)[{{ recipient.email }}]
     ]
@@ -109,10 +89,6 @@
 )
 
 #v(24pt)
-
-// ══════════════════════════════════════════════════════════════
-// LINE ITEMS
-// ══════════════════════════════════════════════════════════════
 
 #text(size: 7pt, weight: "bold", fill: muted, tracking: 0.8pt)[LINE ITEMS]
 #v(8pt)
@@ -140,10 +116,6 @@
 
 #v(16pt)
 
-// ══════════════════════════════════════════════════════════════
-// TOTALS
-// ══════════════════════════════════════════════════════════════
-
 #align(right)[
   #block(width: 260pt)[
     #grid(
@@ -166,10 +138,6 @@
 ]
 
 #v(28pt)
-
-// ══════════════════════════════════════════════════════════════
-// NOTES
-// ══════════════════════════════════════════════════════════════
 
 #block(width: 100%, fill: light-bg, radius: 4pt, inset: (x: 14pt, y: 12pt))[
   #text(size: 7pt, weight: "bold", fill: muted, tracking: 0.8pt)[NOTES]

@@ -12,7 +12,7 @@
   margin: (top: 0.8in, bottom: 1in, left: 0.9in, right: 0.9in),
   header: [],
   footer: context align(center, text(size: 7.5pt, fill: muted, font: "Inter")[
-    {{ sender.name }} · {{ sender.address_line1 }}, {{ sender.address_line2 }} · {{ sender.email }}
+    {{ sender.name }} · {{ sender.address }} · {{ sender.email }}
     #v(2pt)
     Page #counter(page).display("1") of #counter(page).final().at(0)
   ]),
@@ -88,8 +88,7 @@
       #v(6pt)
       #text(size: 10pt, weight: "bold")[{{ sender.name }}]
       #v(3pt)
-      {{ sender.address_line1 }} \
-      {{ sender.address_line2 }}
+      {{ sender.address }}
       #v(4pt)
       #text(size: 8.5pt, fill: muted)[{{ sender.email }}]
     ]
@@ -100,8 +99,7 @@
       #v(6pt)
       #text(size: 10pt, weight: "bold")[{{ recipient.name }}]
       #v(3pt)
-      {{ recipient.address_line1 }} \
-      {{ recipient.address_line2 }}
+      {{ recipient.address }}
       #v(4pt)
       #text(size: 8.5pt, fill: muted)[{{ recipient.email }}]
     ]

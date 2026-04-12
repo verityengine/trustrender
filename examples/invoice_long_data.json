@@ -5,14 +5,12 @@
   "payment_terms": "Net 30",
   "sender": {
     "name": "Acme Corporation",
-    "address_line1": "123 Business Ave, Suite 400",
-    "address_line2": "San Francisco, CA 94105",
+    "address": "123 Business Ave, Suite 400, San Francisco, CA 94105",
     "email": "billing@acme.com"
   },
   "recipient": {
     "name": "Contoso Ltd.",
-    "address_line1": "456 Enterprise Blvd",
-    "address_line2": "New York, NY 10001",
+    "address": "456 Enterprise Blvd, New York, NY 10001",
     "email": "accounts@contoso.com"
   },
   "items": [

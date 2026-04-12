@@ -20,12 +20,10 @@
 // ══════════════════════════════════════════════════════════════
 
 #align(center)[
-  #image("assets/logo.png", width: 0.8in)
-  #v(6pt)
   #text(weight: "bold", size: 12pt)[{{ company.name }}]
   #v(3pt)
   #text(size: 7.5pt, fill: muted)[
-    {{ company.address_line1 }} · {{ company.address_line2 }} \
+    {{ company.address }} \
     {{ company.phone }}{% if company.website %} · {{ company.website }}{% endif %}
   ]
 ]
@@ -124,6 +122,6 @@
   #text(size: 9pt, weight: "bold", fill: accent)[{{ footer_message }}]
   #v(8pt)
   #text(size: 6.5pt, fill: muted)[
-    {{ company.name }} · {{ company.address_line1 }}
+    {{ company.name }} · {{ company.address }}
   ]
 ]

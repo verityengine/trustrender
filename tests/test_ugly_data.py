@@ -37,14 +37,12 @@ class TestInvoiceUglyData:
             "payment_terms": "Net 30",
             "sender": {
                 "name": "Sender Co",
-                "address_line1": "123 Main St",
-                "address_line2": "City, ST 00000",
+                "address": "123 Main St, City, ST 00000",
                 "email": "a@b.com",
             },
             "recipient": {
                 "name": "Recipient Co",
-                "address_line1": "456 Oak Ave",
-                "address_line2": "Town, ST 11111",
+                "address": "456 Oak Ave, Town, ST 11111",
                 "email": "x@y.com",
             },
             "items": [
@@ -75,7 +73,7 @@ class TestInvoiceUglyData:
 
     def test_long_address(self):
         data = self._base_data()
-        data["recipient"]["address_line1"] = (
+        data["recipient"]["address"] = (
             "12345 North Southeast Boulevard, Building C, Suite 4200, Wing B, Floor 37"
         )
         assert_valid_pdf(render(self.TEMPLATE, data))
@@ -183,16 +181,14 @@ class TestStatementUglyData:
         data = {
             "company": {
                 "name": "Co",
-                "address_line1": "Addr",
-                "address_line2": "City",
+                "address": "Addr, City",
                 "email": "a@b.com",
                 "phone": "555-0000",
             },
             "customer": {
                 "name": "Cust",
                 "account_number": "ACCT-001",
-                "address_line1": "Addr",
-                "address_line2": "City",
+                "address": "Addr, City",
                 "email": "x@y.com",
             },
             "statement_date": "Jan 1, 2026",
@@ -298,8 +294,7 @@ class TestReceiptUglyData:
         data = {
             "company": {
                 "name": "Shop",
-                "address_line1": "123 St",
-                "address_line2": "City, ST",
+                "address": "123 St, City, ST",
                 "phone": "555-0000",
                 "website": "shop.com",
             },
@@ -385,8 +380,7 @@ class TestLetterUglyData:
             "sender": {
                 "name": "Sender Co",
                 "title": "Dept",
-                "address_line1": "123 St",
-                "address_line2": "City, ST",
+                "address": "123 St, City, ST",
                 "phone": "555-0000",
                 "email": "a@b.com",
             },
@@ -394,8 +388,7 @@ class TestLetterUglyData:
                 "name": "Jane Doe",
                 "title": "CEO",
                 "company": "Other Co",
-                "address_line1": "456 Ave",
-                "address_line2": "Town, ST",
+                "address": "456 Ave, Town, ST",
             },
             "date": "Jan 1, 2026",
             "subject": "Test Subject",

@@ -96,8 +96,8 @@ trustrender check examples/invoice.j2.typ
 Template: examples/invoice.j2.typ
 Fields: 12 top-level (12 required)
 
-  * sender: object {address_line1, address_line2, email, name}
-  * recipient: object {address_line1, address_line2, email, name}
+  * sender: object {address, email, name}
+  * recipient: object {address, email, name}
   * items: list[{amount, description, num, qty, unit_price}]
   * invoice_number: scalar
   ...

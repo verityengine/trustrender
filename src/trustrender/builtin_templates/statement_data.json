@@ -1,16 +1,14 @@
 {
   "company": {
     "name": "Acme Corporation",
-    "address_line1": "123 Business Ave, Suite 400",
-    "address_line2": "San Francisco, CA 94105",
+    "address": "123 Business Ave, Suite 400, San Francisco, CA 94105",
     "email": "accounts@acme.com",
     "phone": "(415) 555-0100"
   },
   "customer": {
     "name": "Contoso Ltd.",
     "account_number": "ACCT-78432",
-    "address_line1": "456 Enterprise Blvd",
-    "address_line2": "New York, NY 10001",
+    "address": "456 Enterprise Blvd, New York, NY 10001",
     "email": "accounts@contoso.com"
   },
   "statement_date": "April 10, 2026",

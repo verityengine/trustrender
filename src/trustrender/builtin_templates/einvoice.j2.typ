@@ -31,9 +31,9 @@
   #grid(
     columns: (1fr, 1fr),
     [
-      #image("assets/logo.png", width: 1.1in)
+      #text(weight: "bold", size: 14pt)[{{ seller.name }}]
       #v(6pt)
-      #text(size: 7.5pt, fill: muted)[{{ seller.name }} · USt-IdNr. {{ seller.vat_id }}]
+      #text(size: 7.5pt, fill: muted)[USt-IdNr. {{ seller.vat_id }}]
     ],
     align(right)[
       #text(size: 28pt, weight: "bold", fill: primary, tracking: 0.5pt)[{% if invoice_type|default("380") == "381" %}GUTSCHRIFT{% else %}RECHNUNG{% endif %}]

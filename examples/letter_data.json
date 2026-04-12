@@ -2,8 +2,7 @@
   "sender": {
     "name": "Acme Corporation",
     "title": "Accounts Receivable",
-    "address_line1": "123 Business Ave, Suite 400",
-    "address_line2": "San Francisco, CA 94105",
+    "address": "123 Business Ave, Suite 400, San Francisco, CA 94105",
     "phone": "(415) 555-0100",
     "email": "ar@acme.com"
   },
@@ -11,8 +10,7 @@
     "name": "Margaret Chen",
     "title": "Chief Financial Officer",
     "company": "Contoso Ltd.",
-    "address_line1": "456 Enterprise Blvd, Floor 12",
-    "address_line2": "New York, NY 10001"
+    "address": "456 Enterprise Blvd, Floor 12, New York, NY 10001"
   },
   "date": "April 10, 2026",
   "subject": "Outstanding Balance Notification - Account ACCT-78432",

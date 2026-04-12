@@ -61,14 +61,12 @@ def _invoice_data(**overrides):
         "payment_terms": "Net 30",
         "sender": {
             "name": "Sender Co",
-            "address_line1": "123 Main St",
-            "address_line2": "City, ST 00000",
+            "address": "123 Main St, City, ST 00000",
             "email": "a@b.com",
         },
         "recipient": {
             "name": "Recipient Co",
-            "address_line1": "456 Oak Ave",
-            "address_line2": "Town, ST 11111",
+            "address": "456 Oak Ave, Town, ST 11111",
             "email": "x@y.com",
         },
         "items": [
@@ -94,16 +92,14 @@ def _statement_data(**overrides):
     data = {
         "company": {
             "name": "Co",
-            "address_line1": "Addr",
-            "address_line2": "City",
+            "address": "Addr, City",
             "email": "a@b.com",
             "phone": "555-0000",
         },
         "customer": {
             "name": "Cust",
             "account_number": "ACCT-001",
-            "address_line1": "Addr",
-            "address_line2": "City",
+            "address": "Addr, City",
             "email": "x@y.com",
         },
         "statement_date": "Jan 1, 2026",
