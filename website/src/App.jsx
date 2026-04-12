@@ -1846,6 +1846,13 @@ function AppWorkspace() {
   }
 
   const STAGES = ['payload', 'template', 'environment', 'compliance', 'semantic']
+  const STAGE_LABELS = {
+    payload: 'Payload',
+    template: 'Layout',
+    environment: 'Render engine',
+    compliance: 'Compliance',
+    semantic: 'Semantic',
+  }
   const STAGE_SKIP_INFO = {
     compliance: { label: 'optional', reason: 'Enable with a compliance profile' },
     semantic: { label: 'optional', reason: 'Enable with semantic hints for this template' },
@@ -2080,7 +2087,7 @@ function AppWorkspace() {
                             <div className="flex items-center gap-3">
                               <StageIcon status={s} />
                               <div className="flex-1 min-w-0">
-                                <span className={`text-[13px] font-medium capitalize ${s === 'skipped' ? 'text-muted' : 'text-ink'}`}>{stage}</span>
+                                <span className={`text-[13px] font-medium ${s === 'skipped' ? 'text-muted' : 'text-ink'}`}>{STAGE_LABELS[stage] || stage}</span>
                                 {s === 'skipped' && STAGE_SKIP_INFO[stage] && (
                                   <div className="text-[10px] text-muted">{STAGE_SKIP_INFO[stage].reason}</div>
                                 )}
