@@ -827,14 +827,6 @@ function HeroReveal() {
     <section className="text-panel relative overflow-hidden" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 30%, rgba(179,108,57,0.10) 0%, transparent 70%), linear-gradient(180deg, #141618 0%, #111214 40%, #0f1012 100%)' }}>
       {/* Animated particle background */}
       <DocumentField />
-      {/* Nav */}
-      <nav className="max-w-[1280px] mx-auto px-6 md:px-10 py-5 flex items-center justify-between relative z-10">
-        <div className="text-panel"><AnimatedLogo animate /></div>
-        <div className="flex items-center gap-4">
-          <a href="#app" className="text-[14px] font-semibold px-5 py-2.5 rounded-lg bg-rust hover:bg-rust-light text-white transition-colors hidden md:inline-block nav-pulse">Try the playground</a>
-          <a href="https://github.com/verityengine/trustrender" className="text-[14px] font-medium px-5 py-2.5 rounded-lg bg-panel hover:bg-panel/90 text-ink transition-colors">GitHub</a>
-        </div>
-      </nav>
 
       {/* Hero content */}
       <div className="max-w-[1280px] mx-auto px-6 md:px-10 pt-16 md:pt-24 pb-12 md:pb-16 relative z-10">
@@ -2348,7 +2340,7 @@ function PerformanceProof() {
           <h2 className="font-display font-extrabold text-[28px] md:text-[40px] tracking-[-0.03em] leading-[1.08] mb-6 max-w-lg">
             1,000 line items. 33 pages. 211ms.
           </h2>
-          <p className="text-[15px] text-panel/60 max-w-lg mb-12 leading-relaxed">
+          <p className="text-[15px] text-panel/75 max-w-lg mb-12 leading-relaxed">
             Every number on this page comes from committed benchmarks, not marketing estimates. Soak-tested at 500+ sequential renders with zero errors and zero temp file leaks.
           </p>
         </FadeUp>
@@ -2357,7 +2349,7 @@ function PerformanceProof() {
           {/* Performance stats */}
           <FadeUp delay={100}>
             <div className="bg-panel/[0.06] rounded-xl border border-panel/10 p-6">
-              <div className="text-[11px] tracking-[0.15em] uppercase text-panel/40 font-semibold mb-5">Render performance</div>
+              <div className="text-[11px] tracking-[0.15em] uppercase text-panel/55 font-semibold mb-5">Render performance</div>
               <div className="space-y-4">
                 {[
                   { label: '1,000-row invoice', value: '211ms', detail: '33 pages, 0.21ms/row' },
@@ -2367,8 +2359,8 @@ function PerformanceProof() {
                 ].map(s => (
                   <div key={s.label} className="flex items-baseline justify-between">
                     <div>
-                      <div className="text-[13px] text-panel/80">{s.label}</div>
-                      <div className="text-[10px] text-panel/30 font-mono">{s.detail}</div>
+                      <div className="text-[13px] text-panel/90">{s.label}</div>
+                      <div className="text-[10px] text-panel/45 font-mono">{s.detail}</div>
                     </div>
                     <div className="text-[18px] font-bold text-rust font-mono">{s.value}</div>
                   </div>
@@ -2429,7 +2421,7 @@ function PerformanceProof() {
           </FadeUp>
         </div>
 
-        <p className="text-[11px] text-panel/30 font-mono mb-8 text-center">
+        <p className="text-[11px] text-panel/45 font-mono mb-8 text-center">
           Benchmarks: macOS, Apple Silicon, Python 3.12, Typst 0.14. Results vary by platform.
         </p>
 
@@ -2535,12 +2527,12 @@ function FinalCTA() {
               { label: 'With e-invoicing', cmd: 'pip install "trustrender[zugferd]" && trustrender quickstart', accent: true },
             ].map(({ label, cmd, accent }) => (
               <button key={label} onClick={() => { navigator.clipboard.writeText(cmd) }}
-                className={`px-5 py-4 rounded-lg text-left cursor-pointer transition-colors group ${accent ? 'border border-rust/30 bg-rust/[0.06] hover:bg-rust/[0.10]' : 'border border-panel/15 hover:bg-panel/[0.06]'}`}>
+                className={`px-5 py-4 rounded-lg text-left cursor-pointer transition-colors group ${accent ? 'border border-rust/40 bg-rust/[0.12] hover:bg-rust/[0.18]' : 'border border-panel/25 bg-panel/[0.08] hover:bg-panel/[0.12]'}`}>
                 <div className="flex items-center justify-between mb-2">
-                  <span className={`text-[10px] tracking-[0.15em] uppercase font-semibold ${accent ? 'text-rust/60' : 'text-panel/30'}`}>{label}</span>
-                  <span className="text-[9px] text-panel/25 group-hover:text-panel/50 transition-colors">copy</span>
+                  <span className={`text-[10px] tracking-[0.15em] uppercase font-semibold ${accent ? 'text-rust/70' : 'text-panel/50'}`}>{label}</span>
+                  <span className="text-[9px] text-panel/30 group-hover:text-panel/60 transition-colors">copy</span>
                 </div>
-                <code className="font-mono text-[13px] text-panel/70">{cmd}</code>
+                <code className="font-mono text-[13px] text-panel/90">{cmd}</code>
               </button>
             ))}
           </div>
@@ -2570,6 +2562,15 @@ export default function App() {
 
   return (
     <div>
+      <nav className="sticky top-0 z-50 bg-ink/90 backdrop-blur-md border-b border-panel/10">
+        <div className="max-w-[1280px] mx-auto px-6 md:px-10 py-4 flex items-center justify-between">
+          <a href="/" className="text-panel"><AnimatedLogo animate /></a>
+          <div className="flex items-center gap-4">
+            <a href="#app" className="text-[14px] font-semibold px-5 py-2.5 rounded-lg bg-rust hover:bg-rust-light text-white transition-colors hidden md:inline-block">Try the playground</a>
+            <a href="https://github.com/verityengine/trustrender" className="text-[14px] font-medium px-5 py-2.5 rounded-lg bg-panel hover:bg-panel/90 text-ink transition-colors">GitHub</a>
+          </div>
+        </div>
+      </nav>
       <HeroReveal />
       <TrustLayers />
       <ReadyDemo />
