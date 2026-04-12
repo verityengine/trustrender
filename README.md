@@ -2,6 +2,9 @@
 
 Structured business PDFs from code. Pre-render validated. No browser. No Chromium.
 
+**Website:** [trustrender.dev](https://trustrender.dev)
+**PyPI:** [pypi.org/project/trustrender](https://pypi.org/project/trustrender/)
+
 ## Why TrustRender
 
 - **Pre-render validation** — catches bad payloads before they reach the renderer
