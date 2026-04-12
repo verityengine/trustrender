@@ -1045,8 +1045,8 @@ const FIXTURES = {
     label: 'Invoice',
     valid: {
       invoice_number: "INV-2026-0042", invoice_date: "April 10, 2026", due_date: "May 10, 2026", payment_terms: "Net 30",
-      sender: { name: "Acme Corp", address_line1: "123 Business Ave", address_line2: "SF, CA 94105", email: "billing@acme.com" },
-      recipient: { name: "Contoso Ltd", address_line1: "456 Enterprise Blvd", address_line2: "NY, NY 10001", email: "ap@contoso.com" },
+      sender: { name: "Acme Corp", address: "123 Business Ave, SF, CA 94105", email: "billing@acme.com" },
+      recipient: { name: "Contoso Ltd", address: "456 Enterprise Blvd, NY, NY 10001", email: "ap@contoso.com" },
       items: [
         { num: 1, description: "Website redesign", qty: 1, unit_price: "$4,500.00", amount: "$4,500.00" },
         { num: 2, description: "Logo and brand", qty: 1, unit_price: "$2,200.00", amount: "$2,200.00" },
@@ -1057,8 +1057,8 @@ const FIXTURES = {
     },
     invalid: {
       invoice_number: "INV-2026-0042", invoice_date: "April 10, 2026", due_date: "May 10, 2026", payment_terms: "Net 30",
-      sender: { name: "Acme Corp", address_line1: "123 Business Ave", address_line2: "SF, CA 94105" },
-      recipient: { address_line1: "456 Enterprise Blvd", address_line2: "NY, NY 10001", email: "ap@contoso.com" },
+      sender: { name: "Acme Corp", address: "123 Business Ave, SF, CA 94105" },
+      recipient: { address: "456 Enterprise Blvd, NY, NY 10001", email: "ap@contoso.com" },
       items: [
         { num: 1, description: "Website redesign", qty: 1, unit_price: "$4,500.00", amount: "$4,500.00" },
         { num: 2, qty: 1, unit_price: "$2,200.00", amount: "$2,200.00" },
@@ -1862,10 +1862,7 @@ function AppWorkspace() {
               <div className="flex items-center gap-2">
                 <select value={template} onChange={e => switchFixture(e.target.value, payloadMode)} className="text-[10px] font-mono text-muted bg-transparent border border-rule rounded px-2 py-1 cursor-pointer">
                   {!template && <option value="">Untitled</option>}
-                  {serverTemplates && serverTemplates.length > 0
-                    ? serverTemplates.map(t => <option key={t.name} value={t.name}>{t.name}</option>)
-                    : Object.entries(FIXTURES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)
-                  }
+                  {Object.entries(FIXTURES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                 </select>
                 {(FIXTURES[template]?.zugferd || template.includes('einvoice')) && (
                   <span className="text-[8px] font-mono px-2 py-0.5 rounded-full bg-rust/10 text-rust font-semibold">EN 16931</span>

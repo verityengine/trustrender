@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "trustrender"
-version = "0.1.6"
+version = "0.1.7"
 description = "Fast, code-first PDF generation from structured data. No browser, no Chromium."
 license = "MIT"
 classifiers = [
