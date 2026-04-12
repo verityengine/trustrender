@@ -67,27 +67,31 @@ TrustRender is a rendering engine, not a security boundary. Treat it like a data
 
 ## Quick start
 
+```
+pip install trustrender
+trustrender quickstart
+```
+
+This creates a sample invoice template and starts the server. Open `http://localhost:8190` to render your first PDF.
+
 **Python:**
 
 ```python
 from trustrender import render
 
-pdf = render("examples/invoice.j2.typ", "examples/invoice_data.json", output="invoice.pdf")
+pdf = render("invoice.j2.typ", "invoice_data.json", output="invoice.pdf")
 ```
 
 **CLI:**
 
 ```
-trustrender render examples/invoice.j2.typ examples/invoice_data.json -o invoice.pdf
+trustrender render invoice.j2.typ invoice_data.json -o invoice.pdf
 ```
 
 **Server:**
 
 ```
-trustrender serve --templates examples/ --port 8190
-curl -X POST http://localhost:8190/render \
-  -H "Content-Type: application/json" \
-  --data @examples/request_invoice.json -o invoice.pdf
+trustrender serve --templates . --dashboard --port 8190
 ```
 
 ## Why TrustRender
