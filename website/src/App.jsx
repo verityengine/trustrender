@@ -1194,6 +1194,56 @@ const FIXTURES = {
   },
 }
 
+// Empty scaffolds — canonical schema with blank values, no demo data
+const SCAFFOLDS = {
+  'invoice.j2.typ': {
+    invoice_number: "", invoice_date: "", due_date: "", payment_terms: "",
+    sender: { name: "", address: "", email: "" },
+    recipient: { name: "", address: "", email: "" },
+    items: [],
+    subtotal: "", tax_rate: "", tax_amount: "", total: "", notes: ""
+  },
+  'statement.j2.typ': {
+    company: { name: "", address: "", email: "", phone: "" },
+    customer: { name: "", account_number: "", address: "", email: "" },
+    statement_date: "", period: "",
+    opening_balance: "", closing_balance: "", total_charges: "", total_payments: "",
+    transactions: [],
+    aging: { current: "", days_30: "", days_60: "", days_90: "", total: "" },
+    notes: ""
+  },
+  'receipt.j2.typ': {
+    company: { name: "", address: "", phone: "", website: "" },
+    receipt_number: "", date: "", time: "", cashier: "", register: "",
+    items: [],
+    subtotal: "", tax_label: "", tax_amount: "", total: "",
+    payment: { method: "", last_four: "", auth_code: "" },
+    amount_tendered: "", change_due: "", footer_message: ""
+  },
+  'letter.j2.typ': {
+    sender: { name: "", title: "", address: "", phone: "", email: "" },
+    recipient: { name: "", title: "", company: "", address: "" },
+    date: "", subject: "", salutation: "",
+    body_paragraphs: [],
+    closing: "", signature_name: "", signature_title: "", signature_company: ""
+  },
+  'einvoice.j2.typ': {
+    invoice_type: "380", invoice_number: "", invoice_date: "", due_date: "", currency: "EUR",
+    seller: { name: "", address: "", city: "", postal_code: "", country: "DE", vat_id: "", email: "", phone: "" },
+    buyer: { name: "", address: "", city: "", postal_code: "", country: "DE", vat_id: "" },
+    items: [],
+    subtotal: 0, tax_entries: [], tax_total: 0, total: 0,
+    payment: { means: "credit_transfer", iban: "", bic: "", bank_name: "" },
+    notes: ""
+  },
+  'report.j2.typ': {
+    company: { name: "", department: "" },
+    title: "", subtitle: "", date: "", prepared_by: "", period: "",
+    executive_summary: "",
+    metrics: [], incidents: [], spend_by_service: [], recommendations: []
+  },
+}
+
 /* ── Mini Ready Demo (landing page teaser) ───────────────────────── */
 function ReadyDemo() {
   const [template, setTemplate] = useState('invoice.j2.typ')
@@ -1515,6 +1565,26 @@ function AppWorkspace() {
     // Template editor: fetch fresh source, clear modified state
     setTemplateSource(''); setOriginalSource('')
     fetchTemplateSource(tpl)
+  }
+
+  // Create blank draft from canonical schema — no demo data
+  const selectDocType = (tpl) => {
+    setTemplate(tpl)
+    setPayloadMode('valid')
+    setJson(JSON.stringify(SCAFFOLDS[tpl] || {}, null, 2))
+    setVerdict(null); setRenderStatus('idle'); setPdfData(null); setRenderError(null)
+    setParseError(null)
+    setTemplateSource(''); setOriginalSource('')
+    setEditorTab('data')
+    fetchTemplateSource(tpl)
+  }
+
+  // Load sample data into current draft
+  const loadSample = () => {
+    if (FIXTURES[template]) {
+      setJson(JSON.stringify(FIXTURES[template].valid, null, 2))
+      setPayloadMode('valid')
+    }
   }
 
   const startFresh = () => {
@@ -1841,12 +1911,9 @@ function AppWorkspace() {
             </div>
             <div className="divide-y divide-rule-light">
               {Object.entries(FIXTURES).map(([key, fix]) => (
-                <button key={key} onClick={() => switchFixture(key, 'valid')}
+                <button key={key} onClick={() => selectDocType(key)}
                   className="w-full px-4 py-3.5 flex items-center justify-between hover:bg-surface transition-colors cursor-pointer text-left">
-                  <div>
-                    <div className="text-[13px] font-medium text-ink">{fix.label}</div>
-                    <div className="text-[10px] text-muted font-mono mt-0.5">{key}</div>
-                  </div>
+                  <span className="text-[13px] font-medium text-ink">{fix.label}</span>
                   <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
                 </button>
               ))}
@@ -1873,28 +1940,17 @@ function AppWorkspace() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <select value={template} onChange={e => switchFixture(e.target.value, payloadMode)} className="text-[10px] font-mono text-muted bg-transparent border border-rule rounded px-2 py-1 cursor-pointer">
+                <select value={template} onChange={e => selectDocType(e.target.value)} className="text-[10px] font-mono text-muted bg-transparent border border-rule rounded px-2 py-1 cursor-pointer">
                   {Object.entries(FIXTURES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                 </select>
                 {(FIXTURES[template]?.zugferd || template.includes('einvoice')) && (
                   <span className="text-[8px] font-mono px-2 py-0.5 rounded-full bg-rust/10 text-rust font-semibold">EN 16931</span>
                 )}
                 {editorTab === 'data' && FIXTURES[template] && (
-                  <>
-                    <span className="text-[9px] text-muted">example</span>
-                    <div className="flex rounded-full border border-rule overflow-hidden">
-                      <button onClick={() => switchFixture(template, 'valid')}
-                        className={`text-[9px] px-2.5 py-1 font-medium cursor-pointer transition-colors
-                          ${payloadMode === 'valid' ? 'bg-sage/10 text-sage' : 'text-muted hover:text-mid'}`}>
-                        passing
-                      </button>
-                      <button onClick={() => switchFixture(template, 'invalid')}
-                        className={`text-[9px] px-2.5 py-1 font-medium cursor-pointer transition-colors
-                          ${payloadMode === 'invalid' ? 'bg-wine/10 text-wine' : 'text-muted hover:text-mid'}`}>
-                        broken
-                      </button>
-                    </div>
-                  </>
+                  <button onClick={loadSample}
+                    className="text-[9px] px-2.5 py-1 font-medium cursor-pointer text-muted hover:text-ink border border-rule rounded-full transition-colors">
+                    Load sample
+                  </button>
                 )}
                 {editorTab === 'template' && isTemplateModified && (
                   <button onClick={() => setTemplateSource(originalSource)}
