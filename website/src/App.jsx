@@ -1834,6 +1834,25 @@ function AppWorkspace() {
         {/* Shared: template selector + editor */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6 items-start">
           {/* Left: Editor (shared across tabs) */}
+          {!template ? (
+          <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
+            <div className="px-4 py-3 border-b border-rule-light">
+              <span className="text-[13px] font-semibold text-ink">Choose a document type</span>
+            </div>
+            <div className="divide-y divide-rule-light">
+              {Object.entries(FIXTURES).map(([key, fix]) => (
+                <button key={key} onClick={() => switchFixture(key, 'valid')}
+                  className="w-full px-4 py-3.5 flex items-center justify-between hover:bg-surface transition-colors cursor-pointer text-left">
+                  <div>
+                    <div className="text-[13px] font-medium text-ink">{fix.label}</div>
+                    <div className="text-[10px] text-muted font-mono mt-0.5">{key}</div>
+                  </div>
+                  <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                </button>
+              ))}
+            </div>
+          </div>
+          ) : (
           <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
             {/* Editor header: tab switcher + template selector */}
             <div className="px-4 py-2.5 border-b border-rule-light flex items-center justify-between">
@@ -1855,7 +1874,6 @@ function AppWorkspace() {
               </div>
               <div className="flex items-center gap-2">
                 <select value={template} onChange={e => switchFixture(e.target.value, payloadMode)} className="text-[10px] font-mono text-muted bg-transparent border border-rule rounded px-2 py-1 cursor-pointer">
-                  {!template && <option value="">Untitled</option>}
                   {Object.entries(FIXTURES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                 </select>
                 {(FIXTURES[template]?.zugferd || template.includes('einvoice')) && (
@@ -1934,6 +1952,7 @@ function AppWorkspace() {
               </>
             )}
           </div>
+          )}
 
           {/* Right: Tab content */}
           <div>
@@ -1974,26 +1993,7 @@ function AppWorkspace() {
                     )}
                   </div>
                 )}
-                {!verdict && !checking && !template && (
-                  <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-                    <div className="px-4 py-3 border-b border-rule-light">
-                      <span className="text-[13px] font-semibold text-ink">Choose a document type</span>
-                    </div>
-                    <div className="divide-y divide-rule-light">
-                      {Object.entries(FIXTURES).map(([key, fix]) => (
-                        <button key={key} onClick={() => switchFixture(key, 'valid')}
-                          className="w-full px-4 py-3 flex items-center justify-between hover:bg-surface transition-colors cursor-pointer text-left">
-                          <div>
-                            <div className="text-[13px] font-medium text-ink">{fix.label}</div>
-                            <div className="text-[10px] text-muted font-mono">{key}</div>
-                          </div>
-                          <span className="text-[10px] text-muted">select</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {!verdict && !checking && template && (
+                {!verdict && !checking && (
                   <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-rule-light bg-panel">
                     <div className="w-8 h-8 rounded-full border-2 border-rule flex items-center justify-center flex-shrink-0">
                       <svg className="w-4 h-4 text-rule" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
