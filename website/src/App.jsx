@@ -1553,6 +1553,9 @@ function AppWorkspace() {
   }, [renderStatus])
 
   const switchFixture = (tpl, mode) => {
+    // Cancel pending preflight to prevent stale flash
+    if (preflightTimer.current) clearTimeout(preflightTimer.current)
+    preflightSeq.current++
     setTemplate(tpl); setPayloadMode(mode)
     // If it's a server-only template (not in FIXTURES), load from server
     if (!FIXTURES[tpl]) {
@@ -1560,7 +1563,8 @@ function AppWorkspace() {
       return
     }
     setJson(JSON.stringify(FIXTURES[tpl][mode === 'valid' ? 'valid' : 'invalid'], null, 2))
-    setVerdict(null); setRenderStatus('idle'); setPdfData(null); setRenderError(null)
+    setVerdict(null); setChecking(false)
+    setRenderStatus('idle'); setPdfData(null); setRenderError(null)
     // Template editor: fetch fresh source, clear modified state
     setTemplateSource(''); setOriginalSource('')
     fetchTemplateSource(tpl)
@@ -1568,10 +1572,14 @@ function AppWorkspace() {
 
   // Create blank draft from canonical schema — no demo data
   const selectDocType = (tpl) => {
+    // Cancel any pending/in-flight preflight to prevent stale flash
+    if (preflightTimer.current) clearTimeout(preflightTimer.current)
+    preflightSeq.current++
     setTemplate(tpl)
     setPayloadMode('valid')
     setJson(JSON.stringify(SCAFFOLDS[tpl] || {}, null, 2))
-    setVerdict(null); setRenderStatus('idle'); setPdfData(null); setRenderError(null)
+    setVerdict(null); setChecking(false)
+    setRenderStatus('idle'); setPdfData(null); setRenderError(null)
     setParseError(null)
     setTemplateSource(''); setOriginalSource('')
     setEditorTab('data')
