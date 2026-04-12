@@ -124,6 +124,16 @@ def create_app(
     async def health(request: Request) -> JSONResponse:
         return JSONResponse({"status": "ok", "version": __version__})
 
+    async def templates_list_endpoint(request: Request) -> JSONResponse:
+        """List available templates in the templates directory."""
+        templates = []
+        for p in sorted(templates_dir.glob("**/*")):
+            if p.suffix == ".typ" and p.is_file():
+                rel = str(p.relative_to(templates_dir))
+                has_data = (templates_dir / (p.stem.replace(".j2", "") + "_data.json")).exists()
+                templates.append({"name": rel, "has_data": has_data})
+        return JSONResponse({"templates": templates})
+
     async def template_source_endpoint(request: Request) -> Response:
         """Return raw template source for browser-based editing."""
         request_id = request.state.request_id
@@ -140,6 +150,26 @@ def create_app(
 
         source = template_path.read_text(encoding="utf-8")
         return JSONResponse({"source": source}, headers={"X-Request-ID": request_id})
+
+    async def template_data_endpoint(request: Request) -> Response:
+        """Return matching JSON data file for a template."""
+        request_id = request.state.request_id
+        name = request.query_params.get("name")
+        if not name or not isinstance(name, str):
+            return _error(400, ErrorCode.INVALID_DATA, "Missing 'name' query parameter", request_id, stage="execution")
+
+        # Derive data file name: invoice.j2.typ -> invoice_data.json
+        base = name.replace(".j2.typ", "").replace(".typ", "")
+        data_path = (templates_dir / f"{base}_data.json").resolve()
+        if not str(data_path).startswith(str(templates_dir)):
+            return _error(400, ErrorCode.INVALID_DATA, "Invalid path", request_id, stage="execution")
+        if not data_path.exists():
+            return JSONResponse({"data": None}, headers={"X-Request-ID": request_id})
+
+        import json
+        with open(data_path) as f:
+            data = json.load(f)
+        return JSONResponse({"data": data}, headers={"X-Request-ID": request_id})
 
     def _write_ephemeral_template(template_name: str, source: str) -> Path:
         """Write ephemeral template source to a temp file for pipeline consumption.
@@ -491,6 +521,8 @@ def create_app(
         Route("/render", render_endpoint, methods=["POST"]),
         Route("/preflight", preflight_endpoint, methods=["POST"]),
         Route("/template-source", template_source_endpoint, methods=["GET"]),
+        Route("/templates", templates_list_endpoint, methods=["GET"]),
+        Route("/template-data", template_data_endpoint, methods=["GET"]),
     ]
 
     # Always mount trace API (returns 503 if history not enabled).
@@ -512,6 +544,8 @@ def create_app(
         Route("/render", render_endpoint, methods=["POST"]),
         Route("/preflight", preflight_endpoint, methods=["POST"]),
         Route("/template-source", template_source_endpoint, methods=["GET"]),
+        Route("/templates", templates_list_endpoint, methods=["GET"]),
+        Route("/template-data", template_data_endpoint, methods=["GET"]),
         Route("/history", api_history, methods=["GET"]),
         Route("/history/{trace_id}", api_trace, methods=["GET"]),
         Route("/stats", api_stats, methods=["GET"]),

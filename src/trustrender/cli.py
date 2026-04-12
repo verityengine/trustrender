@@ -227,6 +227,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command is None:
         parser.print_help()
+        print()
+        print("  Get started:  trustrender quickstart")
+        print()
         return 1
 
     if args.command == "quickstart":

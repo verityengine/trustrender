@@ -1389,6 +1389,56 @@ function AppWorkspace() {
   const [json, setJson] = useState(() => JSON.stringify(FIXTURES['invoice.j2.typ'].valid, null, 2))
   const [parseError, setParseError] = useState(null)
 
+  // Server templates — discovered from /templates endpoint
+  const [serverTemplates, setServerTemplates] = useState(null) // null=loading, []=none
+
+  useEffect(() => {
+    fetch(apiUrl('/templates'))
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.templates?.length) {
+          setServerTemplates(data.templates)
+          // Auto-select first server template and load its data
+          const first = data.templates[0].name
+          setTemplate(first)
+          loadServerTemplate(first)
+        } else {
+          setServerTemplates([])
+        }
+      })
+      .catch(() => setServerTemplates([]))
+  }, [])
+
+  const loadServerTemplate = async (tpl) => {
+    setVerdict(null); setRenderStatus('idle'); setPdfData(null); setRenderError(null)
+    setPayloadMode('valid')
+    // Fetch template source
+    try {
+      const srcRes = await fetch(apiUrl(`/template-source?name=${encodeURIComponent(tpl)}`))
+      if (srcRes.ok) {
+        const { source } = await srcRes.json()
+        setTemplateSource(source); setOriginalSource(source)
+      }
+    } catch {}
+    // Fetch matching data file
+    try {
+      const dataRes = await fetch(apiUrl(`/template-data?name=${encodeURIComponent(tpl)}`))
+      if (dataRes.ok) {
+        const { data } = await dataRes.json()
+        if (data) {
+          setJson(JSON.stringify(data, null, 2))
+          return
+        }
+      }
+    } catch {}
+    // Fallback to fixture data if available
+    if (FIXTURES[tpl]) {
+      setJson(JSON.stringify(FIXTURES[tpl].valid, null, 2))
+    } else {
+      setJson('{\n  \n}')
+    }
+  }
+
   // Error-to-editor mapping
   const [pathIndex, setPathIndex] = useState(null)
   const dataScrollToLine = useRef(null)
@@ -1454,6 +1504,11 @@ function AppWorkspace() {
 
   const switchFixture = (tpl, mode) => {
     setTemplate(tpl); setPayloadMode(mode)
+    // If it's a server-only template (not in FIXTURES), load from server
+    if (!FIXTURES[tpl]) {
+      loadServerTemplate(tpl)
+      return
+    }
     setJson(JSON.stringify(FIXTURES[tpl][mode === 'valid' ? 'valid' : 'invalid'], null, 2))
     setVerdict(null); setRenderStatus('idle'); setPdfData(null); setRenderError(null)
     // Template editor: fetch fresh source, clear modified state
@@ -1788,12 +1843,15 @@ function AppWorkspace() {
               </div>
               <div className="flex items-center gap-2">
                 <select value={template} onChange={e => switchFixture(e.target.value, payloadMode)} className="text-[10px] font-mono text-muted bg-transparent border border-rule rounded px-2 py-1 cursor-pointer">
-                  {Object.entries(FIXTURES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                  {serverTemplates && serverTemplates.length > 0
+                    ? serverTemplates.map(t => <option key={t.name} value={t.name}>{t.name}</option>)
+                    : Object.entries(FIXTURES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)
+                  }
                 </select>
-                {FIXTURES[template]?.zugferd && (
+                {(FIXTURES[template]?.zugferd || template.includes('einvoice')) && (
                   <span className="text-[8px] font-mono px-2 py-0.5 rounded-full bg-rust/10 text-rust font-semibold">EN 16931</span>
                 )}
-                {editorTab === 'data' && (
+                {editorTab === 'data' && FIXTURES[template] && (
                   <>
                     <span className="text-[9px] text-muted">example</span>
                     <div className="flex rounded-full border border-rule overflow-hidden">
