@@ -1,7 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import * as pdfjsLib from 'pdfjs-dist'
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import JSZip from 'jszip'
+import CodeEditor from './CodeEditor.jsx'
+import { buildPathIndex } from './json-path-index.js'
+import { resolveErrorLocation } from './error-resolver.js'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
@@ -842,11 +845,13 @@ function HeroReveal() {
           <p className="text-[16px] md:text-[18px] text-panel/45 max-w-xl mx-auto mt-6 leading-relaxed">
             Validate document data before render. Catch missing fields, broken paths, and structural errors before a bad invoice reaches a customer.
           </p>
-          <button onClick={() => navigator.clipboard.writeText('pip install trustrender')}
-            className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-panel/15 hover:border-panel/30 bg-panel/[0.05] hover:bg-panel/[0.08] transition-colors cursor-pointer group">
-            <code className="font-mono text-[13px] text-panel/60 group-hover:text-panel/80">pip install trustrender</code>
-            <span className="text-[9px] text-panel/25 group-hover:text-panel/50 transition-colors">copy</span>
-          </button>
+          <div className="mt-6 inline-flex flex-col items-center gap-2">
+            <button onClick={() => navigator.clipboard.writeText('pip install trustrender && trustrender quickstart')}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-panel/15 hover:border-panel/30 bg-panel/[0.05] hover:bg-panel/[0.08] transition-colors cursor-pointer group">
+              <code className="font-mono text-[13px] text-panel/60 group-hover:text-panel/80">pip install trustrender && trustrender quickstart</code>
+              <span className="text-[9px] text-panel/25 group-hover:text-panel/50 transition-colors">copy</span>
+            </button>
+          </div>
           {/* Scroll indicator */}
           <div className="mt-8 flex justify-center">
             <div className="w-6 h-10 rounded-full border border-panel/20 flex items-start justify-center pt-2">
@@ -1392,6 +1397,11 @@ function AppWorkspace() {
   const [json, setJson] = useState(() => JSON.stringify(FIXTURES['invoice.j2.typ'].valid, null, 2))
   const [parseError, setParseError] = useState(null)
 
+  // Error-to-editor mapping
+  const [pathIndex, setPathIndex] = useState(null)
+  const dataScrollToLine = useRef(null)
+  const templateScrollToLine = useRef(null)
+
   // Template editor state
   const [editorTab, setEditorTab] = useState('data') // 'data' | 'template'
   const [templateSource, setTemplateSource] = useState('')
@@ -1482,10 +1492,20 @@ function AppWorkspace() {
   // Fetch template source on initial mount
   useEffect(() => { fetchTemplateSource(template) }, [])
 
-  // JSON parse check
+  // JSON parse check + path index build
   useEffect(() => {
-    try { JSON.parse(json); setParseError(null) }
-    catch (e) { setParseError(e.message.split(' at ')[0]) }
+    try {
+      JSON.parse(json)
+      setParseError(null)
+      // Build path index on successful parse (non-blocking)
+      if (typeof requestIdleCallback !== 'undefined') {
+        requestIdleCallback(() => setPathIndex(buildPathIndex(json)))
+      } else {
+        setTimeout(() => setPathIndex(buildPathIndex(json)), 0)
+      }
+    } catch (e) {
+      setParseError(e.message.split(' at ')[0])
+    }
   }, [json])
 
   // Auto-preflight on valid JSON / template source change
@@ -1544,6 +1564,26 @@ function AppWorkspace() {
     }
     if (seq === preflightSeq.current) setChecking(false)
   }
+
+  // Error-to-editor navigation
+  const handleErrorClick = useCallback((issue) => {
+    const location = resolveErrorLocation(issue, pathIndex, templateSource)
+    if (!location || !location.navigable) return
+
+    if (location.editor === 'data') {
+      setEditorTab('data')
+      // Small delay to let tab switch render the editor
+      setTimeout(() => { dataScrollToLine.current?.(location.line) }, 50)
+    } else if (location.editor === 'template') {
+      setEditorTab('template')
+      setTimeout(() => { templateScrollToLine.current?.(location.line) }, 50)
+    }
+  }, [pathIndex, templateSource])
+
+  const isErrorNavigable = useCallback((issue) => {
+    const location = resolveErrorLocation(issue, pathIndex, templateSource)
+    return location?.navigable ?? false
+  }, [pathIndex, templateSource])
 
   const renderPdf = async () => {
     if (parseError) return
@@ -1790,9 +1830,13 @@ function AppWorkspace() {
             {/* Data editor */}
             {editorTab === 'data' && (
               <>
-                <textarea value={json} onChange={e => setJson(e.target.value)} spellCheck={false} wrap="off"
-                  className="w-full p-4 font-mono text-[11px] leading-[1.8] text-ink-2 bg-panel resize-none focus:outline-none min-h-[520px] whitespace-pre overflow-x-auto"
-                  style={{ tabSize: 2 }} />
+                <CodeEditor
+                  value={json}
+                  onChange={setJson}
+                  language="json"
+                  onEditorReady={(scrollFn) => { dataScrollToLine.current = scrollFn }}
+                  className="w-full min-h-[520px]"
+                />
                 {parseError && <div className="px-4 py-2 border-t border-wine/20 bg-wine/[0.04] text-[11px] text-wine font-mono">JSON: {parseError}</div>}
                 {payloadMode === 'invalid' && !parseError && (
                   <div className="px-4 py-2 border-t border-rule-light text-[10px] text-muted">Try the broken payload to see what Ready catches.</div>
@@ -1808,12 +1852,13 @@ function AppWorkspace() {
                     <span className="text-[11px] text-muted font-mono">Loading template...</span>
                   </div>
                 ) : (
-                  <textarea value={templateSource} onChange={e => setTemplateSource(e.target.value)} spellCheck={false} wrap="off"
-                    onKeyDown={e => {
-                      if (e.key === 'Tab') { e.preventDefault(); const s = e.target; const start = s.selectionStart; const end = s.selectionEnd; setTemplateSource(templateSource.slice(0, start) + '  ' + templateSource.slice(end)); setTimeout(() => { s.selectionStart = s.selectionEnd = start + 2 }, 0) }
-                    }}
-                    className="w-full p-4 font-mono text-[11px] leading-[1.8] text-ink-2 bg-panel resize-none focus:outline-none min-h-[520px] whitespace-pre overflow-x-auto"
-                    style={{ tabSize: 2 }} />
+                  <CodeEditor
+                    value={templateSource}
+                    onChange={setTemplateSource}
+                    language="plain"
+                    onEditorReady={(scrollFn) => { templateScrollToLine.current = scrollFn }}
+                    className="w-full min-h-[520px]"
+                  />
                 )}
                 {/* Template compile errors from preflight */}
                 {verdict && !checking && verdict.errors?.filter(e => ['template', 'template_preprocess', 'compilation', 'template_syntax'].includes(e.stage) || e.check?.includes('syntax')).length > 0 && (
@@ -1904,12 +1949,18 @@ function AppWorkspace() {
                             </div>
                             {issues.length > 0 && (
                               <div className="mt-2 ml-6.5 space-y-1">
-                                {issues.map((issue, i) => (
-                                  <div key={i} className={`border-l-[3px] pl-3 py-1.5 rounded-r-sm ${issue.severity === 'error' ? 'border-wine/30 bg-wine/[0.03]' : 'border-rust/30 bg-rust/[0.03]'}`}>
-                                    <div className="font-mono text-[11px] font-semibold text-ink">{issue.path}</div>
-                                    <div className="text-[10px] text-mid">{issue.message}</div>
-                                  </div>
-                                ))}
+                                {issues.map((issue, i) => {
+                                  const navigable = isErrorNavigable(issue)
+                                  return (
+                                    <div key={i}
+                                      onClick={navigable ? () => handleErrorClick(issue) : undefined}
+                                      className={`border-l-[3px] pl-3 py-1.5 rounded-r-sm ${issue.severity === 'error' ? 'border-wine/30 bg-wine/[0.03]' : 'border-rust/30 bg-rust/[0.03]'} ${navigable ? 'cursor-pointer hover:bg-wine/[0.06] transition-colors' : ''}`}
+                                    >
+                                      <div className="font-mono text-[11px] font-semibold text-ink">{issue.path}</div>
+                                      <div className="text-[10px] text-mid">{issue.message}</div>
+                                    </div>
+                                  )
+                                })}
                               </div>
                             )}
                           </div>

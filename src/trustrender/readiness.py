@@ -43,6 +43,7 @@ class ReadinessIssue:
     severity: str  # "error" (blocks render) or "warning" (advisory)
     path: str  # "seller.vat_id", "line 14: image", "backend", etc.
     message: str  # Human-readable description
+    line: int | None = None  # 1-based source line when available (template errors)
 
 
 @dataclass
@@ -127,6 +128,7 @@ def _check_template(
             severity="error",
             path=f"{template_path.name}:{exc.lineno}" if exc.lineno else template_path.name,
             message=f"Jinja2 syntax error: {exc.message}",
+            line=exc.lineno,
         ))
         return  # Can't check further if template doesn't parse
 
