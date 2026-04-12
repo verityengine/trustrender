@@ -1194,6 +1194,16 @@ const FIXTURES = {
   },
 }
 
+// Check if data has meaningful content (not just empty objects/arrays/strings)
+const hasContent = (obj) => {
+  if (obj === null || obj === undefined) return false
+  if (typeof obj === 'string') return obj.trim().length > 0
+  if (typeof obj === 'number') return obj !== 0
+  if (Array.isArray(obj)) return obj.length > 0 && obj.some(hasContent)
+  if (typeof obj === 'object') return Object.values(obj).some(hasContent)
+  return Boolean(obj)
+}
+
 // Minimal starter shape — just enough structure, no field dump
 const SCAFFOLDS = {
   'invoice.j2.typ': { sender: {}, recipient: {}, items: [] },
@@ -1777,7 +1787,7 @@ function AppWorkspace() {
     const label = (FIXTURES[bundle.templateName]?.label || bundle.templateName.replace(/\.j2\.typ$|\.typ$/, '')).toLowerCase().replace(/[^a-z0-9]+/g, '-')
     const folderName = `trustrender-${label}-${ts}`
     const folder = zip.folder(folderName)
-    if (bundle.pdfBytes) folder.file('output.pdf', bundle.pdfBytes)
+    if (bundle.pdfBytes) folder.file(`${label}.pdf`, bundle.pdfBytes)
     folder.file(bundle.templateName, bundle.templateSource)
     folder.file('data.json', bundle.jsonData)
     if (bundle.trace) folder.file('trace.json', JSON.stringify(bundle.trace, null, 2))
@@ -1894,7 +1904,7 @@ function AppWorkspace() {
                   <button onClick={() => setEditorTab('template')}
                     className={`text-[10px] font-mono px-2.5 py-1 cursor-pointer transition-colors flex items-center gap-1
                       ${editorTab === 'template' ? 'bg-surface text-ink font-semibold' : 'text-muted hover:text-mid'}`}>
-                    Template
+                    Layout
                     {isTemplateModified && <span className="w-1.5 h-1.5 rounded-full bg-rust" />}
                   </button>
                 </div>
@@ -1963,7 +1973,7 @@ function AppWorkspace() {
                   </div>
                 )}
                 <div className="px-4 py-1.5 border-t border-rule-light text-[9px] text-muted">
-                  Edits are session-only and not saved to disk.{isTemplateModified ? '' : ` Includes resolve from ${template.split('/')[0]}/`}
+                  Edits are session-only and not saved to disk.
                 </div>
               </>
             )}
@@ -1982,24 +1992,31 @@ function AppWorkspace() {
                     <span className="text-[12px] text-muted">Checking readiness&hellip;</span>
                   </div>
                 )}
-                {verdict && !checking && (
-                  <div className={`flex items-center gap-4 px-5 py-4 rounded-lg border ${verdict.ready ? 'bg-sage/[0.06] border-sage/20' : 'bg-wine/[0.04] border-wine/20'}`}>
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${verdict.ready ? 'bg-sage/15' : 'bg-wine/10'}`}>
-                      {verdict.ready
+                {verdict && !checking && (() => {
+                  let parsedData; try { parsedData = JSON.parse(json) } catch { parsedData = null }
+                  const dataFilled = parsedData && hasContent(parsedData)
+                  const actuallyReady = verdict.ready && dataFilled
+                  const incompleteButValid = verdict.ready && !dataFilled
+                  return (
+                  <div className={`flex items-center gap-4 px-5 py-4 rounded-lg border ${actuallyReady ? 'bg-sage/[0.06] border-sage/20' : incompleteButValid ? 'bg-surface border-rule-light' : 'bg-wine/[0.04] border-wine/20'}`}>
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${actuallyReady ? 'bg-sage/15' : incompleteButValid ? 'bg-rule/20' : 'bg-wine/10'}`}>
+                      {actuallyReady
                         ? <svg className="w-4.5 h-4.5 text-sage" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                        : incompleteButValid
+                        ? <svg className="w-4.5 h-4.5 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         : <svg className="w-4.5 h-4.5 text-wine" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                       }
                     </div>
                     <div className="flex-1">
-                      <div className={`font-semibold ${verdict.ready ? 'text-[17px] text-sage' : 'text-[14px] text-wine'}`}>
-                        {verdict.ready ? 'Ready to render' : `${verdict.errors?.length || 0} issue${(verdict.errors?.length || 0) !== 1 ? 's' : ''} must be fixed before this request is ready`}
+                      <div className={`font-semibold ${actuallyReady ? 'text-[17px] text-sage' : incompleteButValid ? 'text-[14px] text-muted' : 'text-[14px] text-wine'}`}>
+                        {actuallyReady ? 'Ready to render' : incompleteButValid ? 'Structure valid — fill in your data' : `${verdict.errors?.length || 0} issue${(verdict.errors?.length || 0) !== 1 ? 's' : ''} must be fixed`}
                       </div>
                       <div className="text-[11px] text-muted mt-0.5">
                         {verdict.stages_checked?.length || 0} stages checked
                         {verdict.warnings?.length > 0 && ` \u00b7 ${verdict.warnings.length} warning${verdict.warnings.length !== 1 ? 's' : ''}`}
                       </div>
                     </div>
-                    {verdict.ready ? (
+                    {actuallyReady ? (
                       <button onClick={() => { setTab('generate'); setTimeout(renderPdf, 100) }}
                         className="text-[13px] px-5 py-2 rounded-full font-semibold bg-ink text-panel hover:bg-ink-2 transition-all cursor-pointer flex-shrink-0 shadow-sm hover:shadow-md">
                         Render PDF
@@ -2008,7 +2025,8 @@ function AppWorkspace() {
                       <div className="text-[10px] text-muted font-mono flex-shrink-0">{verdict.checked_at?.split('T')[1]?.split('.')[0] || ''}</div>
                     )}
                   </div>
-                )}
+                  )
+                })()}
                 {!verdict && !checking && (
                   <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-rule-light bg-panel">
                     <div className="w-8 h-8 rounded-full border-2 border-rule flex items-center justify-center flex-shrink-0">
