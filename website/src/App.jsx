@@ -1556,6 +1556,7 @@ function AppWorkspace() {
   const [rawJson, setRawJson] = useState('{\n  \n}')
   const [rawParseError, setRawParseError] = useState(null)
   const [ingestResult, setIngestResult] = useState(null)
+  const [ingestResultStale, setIngestResultStale] = useState(false) // true when rawJson changed after last run
   const [ingesting, setIngesting] = useState(false)
   const [ingestTraceTab, setIngestTraceTab] = useState('aliases')
   const [ingestViewMode, setIngestViewMode] = useState('canonical')
@@ -1648,6 +1649,17 @@ function AppWorkspace() {
     }
   }
 
+  // Infer the right template key from a canonical payload shape.
+  // Returns a FIXTURES key or null if the shape is unknown.
+  // Never auto-maps: if uncertain, returns null and user picks.
+  const inferTemplateFromCanonical = (canonical) => {
+    if (!canonical) return null
+    // Invoice shape: has invoice_number + items array + party objects
+    if (canonical.invoice_number !== undefined && Array.isArray(canonical.items)) return 'invoice.j2.typ'
+    // Extend here as ingestion expands to other document types
+    return null
+  }
+
   const startFresh = () => {
     setTemplate('')
     setPayloadMode('valid')
@@ -1665,6 +1677,7 @@ function AppWorkspace() {
     setRawJson('{\n  \n}')
     setRawParseError(null)
     setIngestResult(null)
+    setIngestResultStale(false)
     setIngesting(false)
     setIngestSampleKey('')
     setTab('ingest')
@@ -1676,6 +1689,7 @@ function AppWorkspace() {
     try { data = JSON.parse(rawJson) } catch { return }
     setIngesting(true)
     setIngestResult(null)
+    setIngestResultStale(false)
     try {
       const res = await fetch(apiUrl('/ingest'), {
         method: 'POST',
@@ -1701,19 +1715,29 @@ function AppWorkspace() {
       setRawJson('{\n  \n}')
     }
     setIngestResult(null)
+    setIngestResultStale(false)
   }
 
-  // Ingest → Preflight: copy template_payload into the preflight editor and switch tabs
+  // Ingest → Preflight: copy template_payload into the preflight editor and switch tabs.
+  // Template is inferred from canonical shape — never blindly assumed.
   const continueToPreFlight = () => {
-    if (!ingestResult?.template_payload) return
+    if (!ingestResult?.template_payload || ingestResultStale) return
     const payload = ingestResult.template_payload
+    const inferredTemplate = inferTemplateFromCanonical(ingestResult.canonical)
     setJson(JSON.stringify(payload, null, 2))
-    // Auto-select invoice template and kick off source fetch
-    if (!template) {
-      beginTransition('invoice.j2.typ')
-      setPayloadMode('valid')
-    }
     setEditorTab('data')
+    if (inferredTemplate) {
+      // Deterministic: we know what template this canonical shape maps to
+      beginTransition(inferredTemplate)
+      setPayloadMode('valid')
+    } else if (!template) {
+      // Unknown shape — user must pick a template on the Preflight tab
+      setJson(JSON.stringify(payload, null, 2))
+    }
+    // Explicitly increment preflight sequence to cancel any in-flight check
+    preflightSeq.current++
+    setVerdict(null)
+    setChecking(false)
     setTab('preflight')
   }
 
@@ -1741,6 +1765,11 @@ function AppWorkspace() {
     } catch (e) {
       setRawParseError(e.message.split(' at ')[0])
     }
+  }, [rawJson])
+
+  // Mark ingest result stale when raw JSON is edited after a run
+  useEffect(() => {
+    if (ingestResult && !ingesting) setIngestResultStale(true)
   }, [rawJson])
 
   // JSON parse check + path index build
@@ -2216,6 +2245,7 @@ function AppWorkspace() {
 
                 {/* Result */}
                 {ingestResult && !ingesting && (() => {
+                  const stale = ingestResultStale
                   const aliases = ingestResult.normalizations?.filter(n => n.source === 'alias') || []
                   const computed = ingestResult.normalizations?.filter(n => n.source === 'computed' || n.source === 'default') || []
                   const unknown = ingestResult.unknown_fields || []
@@ -2224,27 +2254,30 @@ function AppWorkspace() {
                   return (
                     <div className="space-y-4">
                       {/* Status pill */}
-                      <div className={`flex items-center gap-4 px-5 py-4 rounded-lg border ${ingestResult.render_ready ? 'bg-sage/[0.06] border-sage/20' : ingestResult.status === 'ready_with_warnings' ? 'bg-rust/[0.04] border-rust/20' : 'bg-wine/[0.04] border-wine/20'}`}>
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${ingestResult.render_ready ? 'bg-sage/15' : 'bg-wine/10'}`}>
-                          {ingestResult.render_ready
+                      <div className={`flex items-center gap-4 px-5 py-4 rounded-lg border ${stale ? 'bg-surface border-rule-light opacity-60' : ingestResult.render_ready ? 'bg-sage/[0.06] border-sage/20' : ingestResult.status === 'ready_with_warnings' ? 'bg-rust/[0.04] border-rust/20' : 'bg-wine/[0.04] border-wine/20'}`}>
+                        <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${stale ? 'bg-rule/20' : ingestResult.render_ready ? 'bg-sage/15' : 'bg-wine/10'}`}>
+                          {stale
+                            ? <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
+                            : ingestResult.render_ready
                             ? <svg className="w-4.5 h-4.5 text-sage" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
                             : <svg className="w-4.5 h-4.5 text-wine" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                           }
                         </div>
                         <div className="flex-1">
-                          <div className={`font-semibold ${ingestResult.render_ready ? 'text-[17px] text-sage' : 'text-[14px] text-wine'}`}>
-                            {ingestResult.render_ready ? 'Render-ready' : `Blocked — ${blocked.length} issue${blocked.length !== 1 ? 's' : ''}`}
+                          <div className={`font-semibold ${stale ? 'text-[14px] text-muted' : ingestResult.render_ready ? 'text-[17px] text-sage' : 'text-[14px] text-wine'}`}>
+                            {stale ? 'Input changed — re-run ingest' : ingestResult.render_ready ? 'Render-ready' : `Blocked — ${blocked.length} issue${blocked.length !== 1 ? 's' : ''}`}
                           </div>
                           <div className="text-[11px] text-muted mt-0.5 flex items-center gap-2.5">
-                            {aliases.length > 0 && <span>{aliases.length} alias{aliases.length !== 1 ? 'es' : ''}</span>}
-                            {ingestResult.computed_fields?.length > 0 && <span>{ingestResult.computed_fields.length} computed</span>}
-                            {unknown.length > 0 && <span>{unknown.length} unknown</span>}
-                            {warnings.length > 0 && <span>{warnings.length} warning{warnings.length !== 1 ? 's' : ''}</span>}
+                            {!stale && aliases.length > 0 && <span>{aliases.length} alias{aliases.length !== 1 ? 'es' : ''}</span>}
+                            {!stale && ingestResult.computed_fields?.length > 0 && <span>{ingestResult.computed_fields.length} computed</span>}
+                            {!stale && unknown.length > 0 && <span>{unknown.length} unknown</span>}
+                            {!stale && warnings.length > 0 && <span>{warnings.length} warning{warnings.length !== 1 ? 's' : ''}</span>}
+                            {stale && <span className="text-[10px] font-mono">result from previous run</span>}
                           </div>
                         </div>
-                        <span className={`text-[10px] font-mono px-2.5 py-1 rounded-full border flex-shrink-0 ${ingestResult.render_ready ? 'text-sage border-sage/30 bg-sage/8' : ingestResult.status === 'ready_with_warnings' ? 'text-rust border-rust/30 bg-rust/8' : 'text-wine border-wine/30 bg-wine/8'}`}>
+                        {!stale && <span className={`text-[10px] font-mono px-2.5 py-1 rounded-full border flex-shrink-0 ${ingestResult.render_ready ? 'text-sage border-sage/30 bg-sage/8' : ingestResult.status === 'ready_with_warnings' ? 'text-rust border-rust/30 bg-rust/8' : 'text-wine border-wine/30 bg-wine/8'}`}>
                           {ingestResult.status}
-                        </span>
+                        </span>}
                       </div>
 
                       {/* Canonical output (hero) */}
@@ -2359,17 +2392,24 @@ function AppWorkspace() {
                       {/* CTA footer */}
                       <div className="flex items-center justify-between">
                         <div className="text-[11px] text-muted">
-                          {ingestResult.render_ready
-                            ? 'Payload normalized — ready for preflight.'
+                          {stale
+                            ? 'Re-run ingest to get a fresh result.'
+                            : ingestResult.render_ready
+                            ? `Template: ${inferTemplateFromCanonical(ingestResult.canonical) ?? 'unknown — pick manually'}`
                             : 'Resolve blocking issues before continuing.'}
                         </div>
-                        {ingestResult.render_ready ? (
+                        {!stale && ingestResult.render_ready ? (
                           <button onClick={continueToPreFlight}
                             className="text-[13px] px-5 py-2 rounded-full font-semibold bg-ink text-panel hover:bg-ink-2 transition-all cursor-pointer shadow-sm hover:shadow-md">
                             Continue to preflight →
                           </button>
+                        ) : stale ? (
+                          <button onClick={runIngest}
+                            className="text-[13px] px-5 py-2 rounded-full font-semibold border border-rule text-muted hover:text-ink hover:border-ink transition-all cursor-pointer">
+                            Re-run ingest →
+                          </button>
                         ) : (
-                          <span className="text-[12px] text-wine font-medium">Blocked</span>
+                          <span className="text-[12px] text-wine font-medium">Blocked — fix to continue</span>
                         )}
                       </div>
                     </div>
@@ -2607,53 +2647,6 @@ function AppWorkspace() {
                     )}
                   </div>
                 </div>
-              </div>
-            )}
-
-            {/* ── OUTPUTS TAB ── */}
-            {tab === 'outputs' && (
-              <div className="space-y-4">
-                {outputBundles.length === 0 ? (
-                  <div className="bg-panel rounded-xl border border-rule-light p-8 text-center" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-                    <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-rule-light flex items-center justify-center text-muted text-[18px]">{'\u2193'}</div>
-                    <p className="text-[13px] text-mid mb-1">No renders in this session yet.</p>
-                    <p className="text-[12px] text-muted">Render a document from the Ready tab to see output bundles here.</p>
-                    <p className="text-[10px] text-muted/50 mt-3">Session outputs — stored in browser, cleared on refresh.</p>
-                  </div>
-                ) : (
-                  <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-                    <div className="px-4 py-2.5 border-b border-rule-light flex items-center justify-between">
-                      <span className="text-[10px] font-mono text-muted">{outputBundles.length} bundle{outputBundles.length !== 1 ? 's' : ''} <span className="text-muted/40">· session only</span></span>
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => setOutputBundles([])} className="text-[10px] text-muted hover:text-ink cursor-pointer">Clear</button>
-                        {outputBundles.some(b => b.outcome === 'success') && (
-                          <button onClick={downloadAllBundles} className="text-[11px] px-3 py-1 rounded-md border border-rule-light hover:border-rule text-muted hover:text-ink font-medium cursor-pointer transition-colors">
-                            Download all
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    <div className="divide-y divide-rule-light">
-                      {outputBundles.map(b => (
-                        <div key={b.id} className="px-4 py-3 flex items-center gap-3">
-                          <div className={`w-2 h-2 rounded-full ${b.outcome === 'success' ? 'bg-sage' : 'bg-wine'}`} />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[13px] font-semibold text-ink truncate">{bundleDisplayName(b.templateName, b.jsonData)}</div>
-                            <div className="text-[10px] text-muted font-mono">{new Date(b.timestamp).toLocaleTimeString()}{b.trace ? ` · ${b.trace.total_ms}ms` : ''}</div>
-                          </div>
-                          <span className={`text-[10px] font-mono font-semibold ${b.outcome === 'success' ? 'text-sage' : 'text-wine'}`}>{b.outcome}</span>
-                          {b.outcome === 'success' ? (
-                            <button onClick={() => downloadBundle(b)} className="text-[11px] text-rust hover:text-wine font-medium cursor-pointer ml-2">
-                              ZIP
-                            </button>
-                          ) : (
-                            <span className="text-[10px] text-muted/40 ml-2">{b.errorMessage || 'failed'}</span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
