@@ -1590,7 +1590,7 @@ function AppWorkspace() {
 
   // Debounce: 500ms for data changes, 900ms for template source edits (burstier typing)
   useEffect(() => {
-    if (parseError) return
+    if (parseError || !template) return
     if (preflightTimer.current) clearTimeout(preflightTimer.current)
     preflightTimer.current = setTimeout(() => { runPreflight() }, 500)
     return () => clearTimeout(preflightTimer.current)
@@ -1861,6 +1861,7 @@ function AppWorkspace() {
               </div>
               <div className="flex items-center gap-2">
                 <select value={template} onChange={e => switchFixture(e.target.value, payloadMode)} className="text-[10px] font-mono text-muted bg-transparent border border-rule rounded px-2 py-1 cursor-pointer">
+                  {!template && <option value="">Untitled</option>}
                   {serverTemplates && serverTemplates.length > 0
                     ? serverTemplates.map(t => <option key={t.name} value={t.name}>{t.name}</option>)
                     : Object.entries(FIXTURES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)
