@@ -516,7 +516,9 @@ def create_app(
                     return _error(404, ErrorCode.TEMPLATE_NOT_FOUND, f"Template not found: {template_name}", request_id, stage="execution")
 
         try:
-            verdict = preflight(template_path, data, font_paths=resolved_fonts, zugferd=req_zugferd)
+            from .semantic import resolve_hints
+            sem_hints = resolve_hints(template_name)
+            verdict = preflight(template_path, data, font_paths=resolved_fonts, zugferd=req_zugferd, semantic_hints=sem_hints)
             return JSONResponse(
                 {
                     "ready": verdict.ready,
