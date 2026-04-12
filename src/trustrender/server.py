@@ -111,6 +111,7 @@ def create_app(
             When at capacity, new requests get 503.  Default 8.
     """
     templates_dir = Path(templates_dir).resolve()
+    builtin_templates_dir = Path(__file__).parent / "builtin_templates"
     # Resolve font paths once at startup — same precedence as render():
     # explicit paths + bundled fonts + system fonts (Typst default)
     resolved_fonts = _build_font_paths(font_paths)
@@ -125,13 +126,23 @@ def create_app(
         return JSONResponse({"status": "ok", "version": __version__})
 
     async def templates_list_endpoint(request: Request) -> JSONResponse:
-        """List available templates in the templates directory."""
+        """List available templates: user templates + built-in templates."""
         templates = []
+        seen = set()
+        # User templates first
         for p in sorted(templates_dir.glob("**/*")):
             if p.suffix == ".typ" and p.is_file():
                 rel = str(p.relative_to(templates_dir))
                 has_data = (templates_dir / (p.stem.replace(".j2", "") + "_data.json")).exists()
                 templates.append({"name": rel, "has_data": has_data})
+                seen.add(rel)
+        # Built-in templates (skip if user has one with the same name)
+        if builtin_templates_dir.is_dir():
+            for p in sorted(builtin_templates_dir.glob("*.typ")):
+                rel = p.name
+                if rel not in seen:
+                    has_data = (builtin_templates_dir / (p.stem.replace(".j2", "") + "_data.json")).exists()
+                    templates.append({"name": rel, "has_data": has_data, "builtin": True})
         return JSONResponse({"templates": templates})
 
     async def template_source_endpoint(request: Request) -> Response:
@@ -146,7 +157,12 @@ def create_app(
         if not str(template_path).startswith(str(templates_dir)):
             return _error(400, ErrorCode.INVALID_DATA, "Invalid template path", request_id, stage="execution")
         if not template_path.exists():
-            return _error(404, ErrorCode.TEMPLATE_NOT_FOUND, f"Template not found: {name}", request_id, stage="execution")
+            # Fall back to built-in templates
+            builtin_path = builtin_templates_dir / name
+            if builtin_path.exists() and str(builtin_path.resolve()).startswith(str(builtin_templates_dir)):
+                template_path = builtin_path
+            else:
+                return _error(404, ErrorCode.TEMPLATE_NOT_FOUND, f"Template not found: {name}", request_id, stage="execution")
 
         source = template_path.read_text(encoding="utf-8")
         return JSONResponse({"source": source}, headers={"X-Request-ID": request_id})
@@ -164,7 +180,12 @@ def create_app(
         if not str(data_path).startswith(str(templates_dir)):
             return _error(400, ErrorCode.INVALID_DATA, "Invalid path", request_id, stage="execution")
         if not data_path.exists():
-            return JSONResponse({"data": None}, headers={"X-Request-ID": request_id})
+            # Fall back to built-in data
+            builtin_data = builtin_templates_dir / f"{base}_data.json"
+            if builtin_data.exists():
+                data_path = builtin_data
+            else:
+                return JSONResponse({"data": None}, headers={"X-Request-ID": request_id})
 
         import json
         with open(data_path) as f:
@@ -296,7 +317,10 @@ def create_app(
             if not str(base_path).startswith(str(templates_dir)):
                 return _error(400, ErrorCode.INVALID_DATA, "Invalid template path", request_id, stage="execution")
             if not base_path.exists():
-                return _error(404, ErrorCode.TEMPLATE_NOT_FOUND, f"Base template not found: {template_name}", request_id, stage="execution")
+                # Fall back to built-in template
+                builtin_base = builtin_templates_dir / template_name
+                if not builtin_base.exists():
+                    return _error(404, ErrorCode.TEMPLATE_NOT_FOUND, f"Base template not found: {template_name}", request_id, stage="execution")
             ephemeral_path = _write_ephemeral_template(template_name, template_source)
             template_path = ephemeral_path
         else:
@@ -311,13 +335,18 @@ def create_app(
                     stage="execution",
                 )
             if not template_path.exists():
-                return _error(
-                    404,
-                    ErrorCode.TEMPLATE_NOT_FOUND,
-                    f"Template not found: {template_name}",
-                    request_id,
-                    stage="execution",
-                )
+                # Fall back to built-in template
+                builtin_path = builtin_templates_dir / template_name
+                if builtin_path.exists():
+                    template_path = builtin_path
+                else:
+                    return _error(
+                        404,
+                        ErrorCode.TEMPLATE_NOT_FOUND,
+                        f"Template not found: {template_name}",
+                        request_id,
+                        stage="execution",
+                    )
 
         # Render with killable execution via CLI subprocess backend.
         # Primary timeout: subprocess kill inside TypstCliBackend.
@@ -469,7 +498,9 @@ def create_app(
             if not str(base_path).startswith(str(templates_dir)):
                 return _error(400, ErrorCode.INVALID_DATA, "Invalid template path", request_id, stage="execution")
             if not base_path.exists():
-                return _error(404, ErrorCode.TEMPLATE_NOT_FOUND, f"Base template not found: {template_name}", request_id, stage="execution")
+                builtin_base = builtin_templates_dir / template_name
+                if not builtin_base.exists():
+                    return _error(404, ErrorCode.TEMPLATE_NOT_FOUND, f"Base template not found: {template_name}", request_id, stage="execution")
             ephemeral_path = _write_ephemeral_template(template_name, template_source)
             template_path = ephemeral_path
         else:
@@ -478,7 +509,11 @@ def create_app(
             if not str(template_path).startswith(str(templates_dir)):
                 return _error(400, ErrorCode.INVALID_DATA, "Invalid template path", request_id, stage="execution")
             if not template_path.exists():
-                return _error(404, ErrorCode.TEMPLATE_NOT_FOUND, f"Template not found: {template_name}", request_id, stage="execution")
+                builtin_path = builtin_templates_dir / template_name
+                if builtin_path.exists():
+                    template_path = builtin_path
+                else:
+                    return _error(404, ErrorCode.TEMPLATE_NOT_FOUND, f"Template not found: {template_name}", request_id, stage="execution")
 
         try:
             verdict = preflight(template_path, data, font_paths=resolved_fonts, zugferd=req_zugferd)

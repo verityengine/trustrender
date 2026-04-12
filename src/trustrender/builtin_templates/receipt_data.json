@@ -1,0 +1,33 @@
+{
+  "company": {
+    "name": "The Daily Grind Coffee Co.",
+    "address_line1": "782 Market Street",
+    "address_line2": "San Francisco, CA 94102",
+    "phone": "(415) 555-0187",
+    "website": "www.dailygrindcoffee.com"
+  },
+  "receipt_number": "REC-20260410-0847",
+  "date": "April 10, 2026",
+  "time": "8:47 AM",
+  "cashier": "Maria S.",
+  "register": "POS-03",
+  "items": [
+    {"description": "Oat Milk Lavender Latte (Large, Extra Shot)", "qty": 2, "unit_price": "$6.75", "amount": "$13.50"},
+    {"description": "Avocado Toast w/ Everything Seasoning on Sourdough", "qty": 1, "unit_price": "$12.95", "amount": "$12.95"},
+    {"description": "Blueberry Scone", "qty": 3, "unit_price": "$4.50", "amount": "$13.50"},
+    {"description": "Cold Brew Concentrate (32oz Take-Home Bottle)", "qty": 1, "unit_price": "$14.99", "amount": "$14.99"},
+    {"description": "House-Made Granola Bar (Maple Pecan)", "qty": 2, "unit_price": "$3.75", "amount": "$7.50"}
+  ],
+  "subtotal": "$62.44",
+  "tax_label": "CA Sales Tax (8.625%)",
+  "tax_amount": "$5.39",
+  "total": "$67.83",
+  "payment": {
+    "method": "Visa",
+    "last_four": "4821",
+    "auth_code": "A94721"
+  },
+  "amount_tendered": "$67.83",
+  "change_due": "$0.00",
+  "footer_message": "Thank you for supporting local! Follow us @dailygrindcoffee for weekly specials."
+}

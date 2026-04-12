@@ -1,0 +1,53 @@
+{
+  "company": {
+    "name": "Acme Corporation",
+    "department": "Engineering Operations"
+  },
+  "title": "Q1 2026 Infrastructure Review",
+  "subtitle": "Quarterly Performance and Incident Summary",
+  "date": "April 10, 2026",
+  "prepared_by": "Sarah Kim, VP of Engineering",
+  "period": "January 1 - March 31, 2026",
+  "executive_summary": "Infrastructure availability exceeded targets in Q1 2026, with overall uptime of 99.94% across production services. Two P1 incidents occurred during the quarter, both resolved within SLA. Cloud spend came in 4% under budget due to reserved instance optimization completed in February. The team deployed 847 changes to production, up 12% from Q4 2025, with zero rollbacks attributed to infrastructure failures.",
+  "metrics": [
+    {"label": "Uptime", "value": "99.94%", "target": "99.9%", "status": "above"},
+    {"label": "P1 Incidents", "value": "2", "target": "<4", "status": "met"},
+    {"label": "Mean Time to Resolve", "value": "23 min", "target": "<30 min", "status": "met"},
+    {"label": "Cloud Spend", "value": "$142,300", "target": "$148,000", "status": "above"},
+    {"label": "Deployments", "value": "847", "target": ">700", "status": "above"},
+    {"label": "Change Failure Rate", "value": "1.2%", "target": "<3%", "status": "above"}
+  ],
+  "incidents": [
+    {
+      "id": "INC-2026-0012",
+      "date": "Feb 14",
+      "severity": "P1",
+      "duration": "18 min",
+      "description": "Database connection pool exhaustion in the payments service caused transaction failures for approximately 2,400 customers during peak hours.",
+      "root_cause": "Connection leak in the retry logic introduced in deploy #712. Connections were not being returned to the pool on timeout exceptions.",
+      "resolution": "Hotfix deployed to correct connection handling. Added connection pool monitoring alerts."
+    },
+    {
+      "id": "INC-2026-0031",
+      "date": "Mar 5",
+      "severity": "P1",
+      "duration": "27 min",
+      "description": "DNS propagation failure during planned migration from legacy nameservers caused intermittent resolution failures across all public-facing services.",
+      "root_cause": "TTL values on legacy records were set to 24 hours instead of the planned 5 minutes, causing stale records to persist in downstream caches.",
+      "resolution": "Manual cache flush coordinated with CDN provider. DNS migration playbook updated with TTL pre-flight checklist."
+    }
+  ],
+  "spend_by_service": [
+    {"service": "Compute (EC2/ECS)", "q1_spend": "$52,100", "q4_spend": "$58,400", "change": "-10.8%"},
+    {"service": "Database (RDS/DynamoDB)", "q1_spend": "$38,200", "q4_spend": "$36,900", "change": "+3.5%"},
+    {"service": "Storage (S3/EBS)", "q1_spend": "$18,700", "q4_spend": "$17,200", "change": "+8.7%"},
+    {"service": "Networking (CloudFront/ALB)", "q1_spend": "$15,300", "q4_spend": "$14,800", "change": "+3.4%"},
+    {"service": "Other (Lambda, SQS, etc.)", "q1_spend": "$18,000", "q4_spend": "$19,100", "change": "-5.8%"}
+  ],
+  "recommendations": [
+    "Migrate remaining on-demand compute workloads to reserved instances (est. savings: $8,400/quarter).",
+    "Implement automated S3 lifecycle policies for log archives older than 90 days.",
+    "Complete the transition to the new DNS provider before Q2 maintenance window.",
+    "Add connection pool exhaustion to the standard pre-deploy health check suite."
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "invoice_type": "380",
+  "invoice_number": "RE-2026-0042",
+  "invoice_date": "2026-04-10",
+  "due_date": "2026-05-10",
+  "currency": "EUR",
+
+  "seller": {
+    "name": "Muster GmbH",
+    "address": "Musterstraße 1",
+    "city": "Berlin",
+    "postal_code": "10115",
+    "country": "DE",
+    "vat_id": "DE123456789",
+    "email": "rechnung@muster.de",
+    "phone": "+49 30 12345678"
+  },
+
+  "buyer": {
+    "name": "Kunde AG",
+    "address": "Kundenweg 42",
+    "city": "München",
+    "postal_code": "80331",
+    "country": "DE",
+    "vat_id": "DE987654321"
+  },
+
+  "items": [
+    {
+      "description": "Webseiten-Redesign und Entwicklung",
+      "quantity": 1,
+      "unit": "C62",
+      "unit_price": 4500.00,
+      "tax_rate": 19,
+      "line_total": 4500.00
+    },
+    {
+      "description": "SEO-Optimierung (Monatspauschale)",
+      "quantity": 3,
+      "unit": "MON",
+      "unit_price": 750.00,
+      "tax_rate": 19,
+      "line_total": 2250.00
+    },
+    {
+      "description": "Logo-Design und Corporate Identity",
+      "quantity": 1,
+      "unit": "C62",
+      "unit_price": 2200.00,
+      "tax_rate": 19,
+      "line_total": 2200.00
+    }
+  ],
+
+  "subtotal": 8950.00,
+  "tax_entries": [
+    { "rate": 19, "basis": 8950.00, "amount": 1700.50 }
+  ],
+  "tax_total": 1700.50,
+  "total": 10650.50,
+
+  "payment": {
+    "means": "credit_transfer",
+    "iban": "DE89370400440532013000",
+    "bic": "COBADEFFXXX",
+    "bank_name": "Commerzbank"
+  },
+
+  "notes": "Zahlbar innerhalb von 30 Tagen netto. Bei Fragen wenden Sie sich bitte an rechnung@muster.de."
+}
