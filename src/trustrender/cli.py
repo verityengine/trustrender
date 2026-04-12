@@ -360,9 +360,14 @@ def _run_quickstart() -> int:
     print(f"    {template_path}")
     print(f"    {data_path}")
     print()
-    print(f"  Starting server at http://localhost:8190/#app")
-    print(f"  Open that URL to render your first PDF.")
+    print(f"  Starting server at http://localhost:8190")
+    print(f"  Opening in your browser...")
     print()
+
+    import threading
+    import webbrowser
+
+    threading.Timer(1.0, lambda: webbrowser.open("http://localhost:8190")).start()
 
     import uvicorn
     from .server import create_app
