@@ -1194,54 +1194,14 @@ const FIXTURES = {
   },
 }
 
-// Empty scaffolds — canonical schema with blank values, no demo data
+// Minimal starter shape — just enough structure, no field dump
 const SCAFFOLDS = {
-  'invoice.j2.typ': {
-    invoice_number: "", invoice_date: "", due_date: "", payment_terms: "",
-    sender: { name: "", address: "", email: "" },
-    recipient: { name: "", address: "", email: "" },
-    items: [],
-    subtotal: "", tax_rate: "", tax_amount: "", total: "", notes: ""
-  },
-  'statement.j2.typ': {
-    company: { name: "", address: "", email: "", phone: "" },
-    customer: { name: "", account_number: "", address: "", email: "" },
-    statement_date: "", period: "",
-    opening_balance: "", closing_balance: "", total_charges: "", total_payments: "",
-    transactions: [],
-    aging: { current: "", days_30: "", days_60: "", days_90: "", total: "" },
-    notes: ""
-  },
-  'receipt.j2.typ': {
-    company: { name: "", address: "", phone: "", website: "" },
-    receipt_number: "", date: "", time: "", cashier: "", register: "",
-    items: [],
-    subtotal: "", tax_label: "", tax_amount: "", total: "",
-    payment: { method: "", last_four: "", auth_code: "" },
-    amount_tendered: "", change_due: "", footer_message: ""
-  },
-  'letter.j2.typ': {
-    sender: { name: "", title: "", address: "", phone: "", email: "" },
-    recipient: { name: "", title: "", company: "", address: "" },
-    date: "", subject: "", salutation: "",
-    body_paragraphs: [],
-    closing: "", signature_name: "", signature_title: "", signature_company: ""
-  },
-  'einvoice.j2.typ': {
-    invoice_type: "380", invoice_number: "", invoice_date: "", due_date: "", currency: "EUR",
-    seller: { name: "", address: "", city: "", postal_code: "", country: "DE", vat_id: "", email: "", phone: "" },
-    buyer: { name: "", address: "", city: "", postal_code: "", country: "DE", vat_id: "" },
-    items: [],
-    subtotal: 0, tax_entries: [], tax_total: 0, total: 0,
-    payment: { means: "credit_transfer", iban: "", bic: "", bank_name: "" },
-    notes: ""
-  },
-  'report.j2.typ': {
-    company: { name: "", department: "" },
-    title: "", subtitle: "", date: "", prepared_by: "", period: "",
-    executive_summary: "",
-    metrics: [], incidents: [], spend_by_service: [], recommendations: []
-  },
+  'invoice.j2.typ': { sender: {}, recipient: {}, items: [] },
+  'statement.j2.typ': { company: {}, customer: {}, transactions: [], aging: {} },
+  'receipt.j2.typ': { company: {}, items: [], payment: {} },
+  'letter.j2.typ': { sender: {}, recipient: {}, body_paragraphs: [] },
+  'einvoice.j2.typ': { seller: {}, buyer: {}, items: [], tax_entries: [], payment: {} },
+  'report.j2.typ': { company: {}, metrics: [], incidents: [], spend_by_service: [], recommendations: [] },
 }
 
 /* ── Mini Ready Demo (landing page teaser) ───────────────────────── */
