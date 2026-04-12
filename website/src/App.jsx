@@ -1194,14 +1194,27 @@ const FIXTURES = {
   },
 }
 
-// Check if data has meaningful content (not just empty objects/arrays/strings)
-const hasContent = (obj) => {
-  if (obj === null || obj === undefined) return false
-  if (typeof obj === 'string') return obj.trim().length > 0
-  if (typeof obj === 'number') return obj !== 0
-  if (Array.isArray(obj)) return obj.length > 0 && obj.some(hasContent)
-  if (typeof obj === 'object') return Object.values(obj).some(hasContent)
-  return Boolean(obj)
+// Required fields per document type — gate "Ready to render" on these
+const REQUIRED_FIELDS = {
+  'invoice.j2.typ': (d) =>
+    d.invoice_number && d.invoice_date && d.sender?.name && d.recipient?.name
+    && d.items?.length > 0 && d.total,
+  'statement.j2.typ': (d) =>
+    d.company?.name && d.customer?.name && d.statement_date && d.closing_balance,
+  'receipt.j2.typ': (d) =>
+    d.company?.name && (d.receipt_number || d.date) && d.items?.length > 0 && d.total,
+  'letter.j2.typ': (d) =>
+    d.sender?.name && d.recipient?.name && d.subject && d.body_paragraphs?.length > 0,
+  'einvoice.j2.typ': (d) =>
+    d.invoice_number && d.seller?.name && d.buyer?.name && d.items?.length > 0 && d.total,
+  'report.j2.typ': (d) =>
+    d.title && d.company?.name && d.executive_summary,
+}
+
+const isComplete = (templateKey, data) => {
+  const check = REQUIRED_FIELDS[templateKey]
+  if (!check) return false
+  try { return Boolean(check(data)) } catch { return false }
 }
 
 // Minimal starter shape — just enough structure, no field dump
@@ -1994,7 +2007,7 @@ function AppWorkspace() {
                 )}
                 {verdict && !checking && (() => {
                   let parsedData; try { parsedData = JSON.parse(json) } catch { parsedData = null }
-                  const dataFilled = parsedData && hasContent(parsedData)
+                  const dataFilled = parsedData && isComplete(template, parsedData)
                   const actuallyReady = verdict.ready && dataFilled
                   const incompleteButValid = verdict.ready && !dataFilled
                   return (
