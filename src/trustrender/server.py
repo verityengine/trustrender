@@ -611,8 +611,9 @@ def create_app(
         middleware_stack.insert(0, Middleware(
             CORSMiddleware,
             allow_origins=cors_origins,
-            allow_methods=["GET", "POST", "OPTIONS"],
-            allow_headers=["Content-Type", "X-Request-ID"],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
         ))
         logger.info("CORS enabled for origins: %s", cors_origins)
 
