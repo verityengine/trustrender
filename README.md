@@ -25,14 +25,20 @@ It does one thing: structured business PDFs from code.
 ## Install
 
 ```
-git clone https://github.com/verityengine/trustrender.git
-cd trustrender
-pip install .
+pip install trustrender
 ```
 
 Requires Python 3.11+ and the Typst CLI binary (`brew install typst` on macOS, or [typst.app](https://typst.app/)).
 
-For development: `pip install -e ".[dev]"` or `make dev`.
+For e-invoice support: `pip install "trustrender[zugferd]"`
+
+### Development
+
+```
+git clone https://github.com/verityengine/trustrender.git
+cd trustrender
+pip install -e ".[dev]"
+```
 
 ### Verify
 
