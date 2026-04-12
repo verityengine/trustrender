@@ -355,32 +355,23 @@ def _run_quickstart() -> int:
     template_path.write_text(template_content)
     data_path.write_text(json.dumps(data_content, indent=2) + "\n")
 
-    try:
-        pdf_bytes = render(
-            str(template_path),
-            data_content,
-            output=str(output_path),
-        )
-    except TrustRenderError as exc:
-        print(_format_error(exc), file=sys.stderr)
-        return 1
-
-    size_kb = len(pdf_bytes) / 1024
-
     print()
     print(f"  Created:")
     print(f"    {template_path}")
     print(f"    {data_path}")
-    print(f"    {output_path}")
     print()
-    print(f"  Your first PDF: {output_path} ({size_kb:.0f} KB)")
-    print()
-    print(f"  Next steps:")
-    print(f"    open {output_path}")
-    print(f"    cd {outdir}")
-    print(f"    trustrender render invoice.j2.typ invoice_data.json -o invoice.pdf")
+    print(f"  Starting server at http://localhost:8190")
+    print(f"  Open that URL to render your first PDF.")
     print()
 
+    import uvicorn
+    from .server import create_app
+
+    app = create_app(
+        str(outdir),
+        dashboard=True,
+    )
+    uvicorn.run(app, host="127.0.0.1", port=8190, log_level="warning")
     return 0
 
 
