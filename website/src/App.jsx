@@ -2466,13 +2466,13 @@ function DeveloperSetup() {
             <div className="md:w-2/5">
               <p className="text-[11px] tracking-[0.22em] uppercase text-rust mb-4 font-semibold">Setup</p>
               <h2 className="font-display font-extrabold text-[28px] md:text-[36px] tracking-[-0.03em] leading-[1.08] mb-4">
-                Verifiable setup in 5 seconds.
+                First PDF in 30 seconds.
               </h2>
               <p className="text-[15px] text-mid leading-relaxed mb-4">
-                No fighting with font paths, broken dependencies, or mysterious failures. One command tells you if everything works.
+                Install, run one command, get a real invoice PDF. No config, no boilerplate, no fighting with dependencies.
               </p>
               <p className="text-[13px] text-mid/70 leading-relaxed">
-                Checks Python version, both Typst backends, bundled fonts, template font declarations, and environment variables. Add <span className="font-mono">--smoke</span> to render a real PDF and hit the server health endpoint.
+                <span className="font-mono">quickstart</span> creates a sample template, data file, and rendered PDF in your current directory. Edit the template, change the data, re-render.
               </p>
             </div>
             <div className="md:w-3/5">
@@ -2487,19 +2487,15 @@ function DeveloperSetup() {
                 </div>
                 <div className="p-5 font-mono text-[11px] leading-[1.9]">
                   <div className="text-panel/50">$ pip install trustrender</div>
-                  <div className="text-panel/50">$ trustrender doctor --smoke</div>
-                  <div className="text-panel/30 mt-3">Environment</div>
-                  <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  Python 3.12.13 ({'>='}3.11 required)</span></div>
-                  <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  trustrender 0.1.0 importable</span></div>
-                  <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  typst-py 0.14.8 (Python binding)</span></div>
-                  <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  typst CLI: typst 0.14.2</span></div>
-                  <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  Both backends available (library + server)</span></div>
-                  <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  Bundled fonts (4 files)</span></div>
-                  <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  Font inventory: Inter {'—'} all found</span></div>
-                  <div className="text-panel/30 mt-3">Smoke test</div>
-                  <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  Smoke render: 51 KB in 0.06s</span></div>
-                  <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  Server /health: ok (in-process, no port)</span></div>
-                  <div className="mt-3 text-sage font-semibold">All checks passed.</div>
+                  <div className="text-panel/50">$ trustrender quickstart</div>
+                  <div className="text-panel/30 mt-3">Created:</div>
+                  <div className="text-panel/70">    trustrender-quickstart/invoice.j2.typ</div>
+                  <div className="text-panel/70">    trustrender-quickstart/invoice_data.json</div>
+                  <div className="text-panel/70">    trustrender-quickstart/invoice.pdf</div>
+                  <div className="mt-3 text-sage font-semibold">Your first PDF: invoice.pdf (34 KB)</div>
+                  <div className="text-panel/30 mt-3">Next:</div>
+                  <div className="text-panel/70">    open trustrender-quickstart/invoice.pdf</div>
+                  <div className="text-panel/70">    trustrender render invoice.j2.typ invoice_data.json -o invoice.pdf</div>
                 </div>
               </div>
             </div>
@@ -2535,8 +2531,8 @@ function FinalCTA() {
           </div>
           <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
             {[
-              { label: 'Lean core', cmd: 'pip install trustrender', accent: false },
-              { label: 'With e-invoicing', cmd: 'pip install "trustrender[zugferd]"', accent: true },
+              { label: 'Lean core', cmd: 'pip install trustrender && trustrender quickstart', accent: false },
+              { label: 'With e-invoicing', cmd: 'pip install "trustrender[zugferd]" && trustrender quickstart', accent: true },
             ].map(({ label, cmd, accent }) => (
               <button key={label} onClick={() => { navigator.clipboard.writeText(cmd) }}
                 className={`px-5 py-4 rounded-lg text-left cursor-pointer transition-colors group ${accent ? 'border border-rust/30 bg-rust/[0.06] hover:bg-rust/[0.10]' : 'border border-panel/15 hover:bg-panel/[0.06]'}`}>
