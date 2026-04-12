@@ -1522,9 +1522,14 @@ function AppWorkspace() {
   const [selectedTrace, setSelectedTrace] = useState(null)
   const [dashboardAvailable, setDashboardAvailable] = useState(false)
 
-  // Probe /dashboard availability once
+  // Probe /dashboard availability once (local dev only — production API
+  // host never mounts /dashboard, so skip the wasted request)
   useEffect(() => {
-    fetch(apiUrl('/dashboard'), { method: 'HEAD' })
+    if (API_BASE) {
+      setDashboardAvailable(false)
+      return
+    }
+    fetch('/dashboard', { method: 'HEAD' })
       .then(res => setDashboardAvailable(res.ok))
       .catch(() => setDashboardAvailable(false))
   }, [])
