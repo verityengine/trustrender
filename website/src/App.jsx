@@ -2410,7 +2410,7 @@ function PerformanceProof() {
                     <div className="flex justify-between"><span className="text-panel/30">template</span><span className="text-panel/50">sha256:6958217f022d9d54</span></div>
                     <div className="flex justify-between"><span className="text-panel/30">data</span><span className="text-panel/50">sha256:5184ad6254598a63</span></div>
                     <div className="flex justify-between"><span className="text-panel/30">output</span><span className="text-panel/50">sha256:a23cc650b6d7c7ab</span></div>
-                    <div className="flex justify-between"><span className="text-panel/30">engine</span><span className="text-panel/50">trustrender 0.1.0</span></div>
+                    <div className="flex justify-between"><span className="text-panel/30">engine</span><span className="text-panel/50">trustrender 0.1.2</span></div>
                   </div>
                 </div>
               </div>
