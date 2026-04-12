@@ -367,7 +367,7 @@ def _run_quickstart() -> int:
     import threading
     import webbrowser
 
-    threading.Timer(1.0, lambda: webbrowser.open("http://localhost:8190")).start()
+    threading.Timer(1.0, lambda: webbrowser.open("http://localhost:8190/#app")).start()
 
     import uvicorn
     from .server import create_app
