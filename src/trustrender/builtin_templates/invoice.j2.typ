@@ -1,4 +1,4 @@
-// Invoice template
+// Invoice layout
 #let primary = rgb("#1B2838")
 #let accent = rgb("#C4622A")
 #let muted = rgb("#7A7670")
