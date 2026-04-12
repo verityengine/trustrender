@@ -168,6 +168,43 @@ class TestCompare:
         cs = compare(fp1, fp2, data, data)
         assert "config" in cs.change_categories
 
+    def test_zugferd_profile_none_and_string_none_are_different(self):
+        """Regression: None and literal 'None' must not compare equal."""
+        baseline = InputFingerprint(
+            template_hash=FileHash("invoice.j2.typ", "sha256:a", 1),
+            include_hashes=(),
+            asset_hashes=(),
+            font_hashes=(),
+            data_hash="sha256:data",
+            backend="typst-py",
+            zugferd_profile=None,
+            provenance_enabled=False,
+            validate_enabled=True,
+            trustrender_version="0.2.0",
+            typst_version="0.13.0",
+            fingerprint="sha256:baseline",
+            created_at="2026-01-01T00:00:00+00:00",
+        )
+        current = InputFingerprint(
+            template_hash=FileHash("invoice.j2.typ", "sha256:a", 1),
+            include_hashes=(),
+            asset_hashes=(),
+            font_hashes=(),
+            data_hash="sha256:data",
+            backend="typst-py",
+            zugferd_profile="None",
+            provenance_enabled=False,
+            validate_enabled=True,
+            trustrender_version="0.2.0",
+            typst_version="0.13.0",
+            fingerprint="sha256:current",
+            created_at="2026-01-01T00:00:01+00:00",
+        )
+
+        cs = compare(baseline, current)
+        assert "config" in cs.change_categories
+        assert any(c.key == "zugferd_profile" for c in cs.config_changes)
+
     def test_hash_only_diff_when_no_data(self):
         """When data dicts not provided, only reports hash changed."""
         data1 = _load_data()

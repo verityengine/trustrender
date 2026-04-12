@@ -676,14 +676,14 @@ def compare(
     # Config changes
     config_fields = [
         ("backend", baseline.backend, current.backend),
-        ("zugferd_profile", str(baseline.zugferd_profile), str(current.zugferd_profile)),
-        ("provenance_enabled", str(baseline.provenance_enabled), str(current.provenance_enabled)),
-        ("validate_enabled", str(baseline.validate_enabled), str(current.validate_enabled)),
+        ("zugferd_profile", baseline.zugferd_profile, current.zugferd_profile),
+        ("provenance_enabled", baseline.provenance_enabled, current.provenance_enabled),
+        ("validate_enabled", baseline.validate_enabled, current.validate_enabled),
     ]
     for key, old_val, new_val in config_fields:
         if old_val != new_val:
             cs.config_changes.append(ConfigChange(
-                key=key, old_value=old_val, new_value=new_val,
+                key=key, old_value=_truncate(old_val), new_value=_truncate(new_val),
             ))
 
     # Environment changes
