@@ -1391,6 +1391,7 @@ function AppWorkspace() {
 
   // Server templates — discovered from /templates endpoint
   const [serverTemplates, setServerTemplates] = useState(null) // null=loading, []=none
+  const [serverLoaded, setServerLoaded] = useState(false)
 
   useEffect(() => {
     fetch(apiUrl('/templates'))
@@ -1398,15 +1399,23 @@ function AppWorkspace() {
       .then(data => {
         if (data?.templates?.length) {
           setServerTemplates(data.templates)
-          // Auto-select first server template and load its data
           const first = data.templates[0].name
           setTemplate(first)
           loadServerTemplate(first)
         } else {
           setServerTemplates([])
+          // No server templates — fall back to fixtures
+          setTemplate('invoice.j2.typ')
+          setJson(JSON.stringify(FIXTURES['invoice.j2.typ'].valid, null, 2))
         }
+        setServerLoaded(true)
       })
-      .catch(() => setServerTemplates([]))
+      .catch(() => {
+        setServerTemplates([])
+        setTemplate('invoice.j2.typ')
+        setJson(JSON.stringify(FIXTURES['invoice.j2.typ'].valid, null, 2))
+        setServerLoaded(true)
+      })
   }, [])
 
   const loadServerTemplate = async (tpl) => {
@@ -1517,7 +1526,16 @@ function AppWorkspace() {
   }
 
   const startFresh = () => {
-    switchFixture('invoice.j2.typ', 'valid')
+    setTemplate('')
+    setPayloadMode('valid')
+    setJson('{\n  \n}')
+    setTemplateSource('')
+    setOriginalSource('')
+    setVerdict(null)
+    setRenderStatus('idle')
+    setPdfData(null)
+    setRenderError(null)
+    setParseError(null)
     setEditorTab('data')
     setTraceId(null)
     setSelectedTrace(null)
