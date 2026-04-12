@@ -175,8 +175,11 @@ function ReadinessFlourish() {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
+    const dpr = window.devicePixelRatio || 1
     const W = 560, H = 360
-    canvas.width = W; canvas.height = H
+    canvas.width = W * dpr; canvas.height = H * dpr
+    canvas.style.width = W + 'px'; canvas.style.height = H + 'px'
+    ctx.scale(dpr, dpr)
     let raf, t = 0
 
     const fields = ['sender.name','sender.email','recipient.name','items[]','items[].qty','items[].amount','subtotal','tax_rate','total','notes']
@@ -279,132 +282,67 @@ function ReadinessFlourish() {
 
 /* ── Trust Layer Flourish: Compliance (canvas-rendered) ───────────── */
 function ComplianceFlourish() {
-  const canvasRef = useRef(null)
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    const W = 560, H = 340
-    canvas.width = W; canvas.height = H
-    let raf, t = 0
-
-    // Asymmetric, organic layout — not a perfect centered tree
-    const nodes = [
-      { x: 240, y: 40, label: 'Invoice', r: 30, weight: 700 },
-      { x: 100, y: 130, label: 'Seller', r: 24, weight: 500 },
-      { x: 260, y: 140, label: 'Buyer', r: 22, weight: 500 },
-      { x: 430, y: 125, label: 'Lines', r: 26, weight: 500 },
-      { x: 45, y: 230, label: 'VAT', r: 17, weight: 400 },
-      { x: 155, y: 240, label: 'Addr', r: 16, weight: 400 },
-      { x: 260, y: 245, label: 'Name', r: 16, weight: 400 },
-      { x: 380, y: 235, label: 'Item 1', r: 17, weight: 400 },
-      { x: 490, y: 225, label: 'Item 2', r: 17, weight: 400 },
-    ]
-    const edges = [[0,1],[0,2],[0,3],[1,4],[1,5],[2,6],[3,7],[3,8]]
-
-    // Bezier control points for organic curves
-    function bezierPoint(a, b, t, cx, cy) {
-      const u = 1 - t
-      return { x: u*u*a.x + 2*u*t*cx + t*t*b.x, y: u*u*a.y + 2*u*t*cy + t*t*b.y }
-    }
-
-    function draw() {
-      t += 0.007
-      ctx.clearRect(0, 0, W, H)
-
-      // Draw edges as bezier curves with flowing particles
-      edges.forEach(([a, b], i) => {
-        const na = nodes[a], nb = nodes[b]
-        const pulse = Math.sin(t * 2.5 + i * 0.9) * 0.15 + 0.55
-        // Control point — offset sideways for organic feel
-        const cx = (na.x + nb.x) / 2 + Math.sin(i * 1.7) * 25
-        const cy = (na.y + nb.y) / 2
-
-        // Draw bezier
-        ctx.beginPath()
-        ctx.moveTo(na.x, na.y + na.r * 0.6)
-        ctx.quadraticCurveTo(cx, cy, nb.x, nb.y - nb.r * 0.6)
-        ctx.strokeStyle = `rgba(28,27,25,${pulse * 0.18})`
-        ctx.lineWidth = 1.2
-        ctx.stroke()
-
-        // Multiple flowing particles per edge
-        for (let p = 0; p < 2; p++) {
-          const pt = ((t * (1.2 + i * 0.15) + p * 0.5 + i * 0.2) % 1)
-          const pos = bezierPoint(
-            { x: na.x, y: na.y + na.r * 0.6 },
-            { x: nb.x, y: nb.y - nb.r * 0.6 },
-            pt, cx, cy
-          )
-          const alpha = 0.7 * (1 - Math.abs(pt - 0.5) * 2)
-          // Glow trail
-          ctx.beginPath()
-          ctx.arc(pos.x, pos.y, 8, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(45,110,86,${0.06 * alpha})`
-          ctx.fill()
-          // Particle
-          ctx.beginPath()
-          ctx.arc(pos.x, pos.y, 2.5, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(45,110,86,${alpha})`
-          ctx.fill()
-        }
-      })
-
-      // Draw nodes — varying styles by depth
-      nodes.forEach((n, i) => {
-        const pulse = Math.sin(t * 1.8 + i * 0.7) * 0.1 + 0.9
-        const isRoot = i === 0
-        const isLeaf = i >= 4
-
-        // Outer breathing glow
-        const glowR = n.r + 6 + Math.sin(t * 2 + i) * 3
-        ctx.beginPath()
-        ctx.arc(n.x, n.y, glowR, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(45,110,86,${(isRoot ? 0.04 : 0.02) * pulse})`
-        ctx.fill()
-
-        // Node circle
-        ctx.beginPath()
-        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2)
-        ctx.fillStyle = isRoot ? `rgba(28,27,25,${0.05 * pulse})` : `rgba(28,27,25,${0.025 * pulse})`
-        ctx.strokeStyle = `rgba(28,27,25,${(isRoot ? 0.3 : isLeaf ? 0.12 : 0.18) * pulse})`
-        ctx.lineWidth = isRoot ? 1.8 : 1
-        ctx.fill(); ctx.stroke()
-
-        // Label
-        ctx.font = `${n.weight} ${isRoot ? 13 : isLeaf ? 9.5 : 11}px "JetBrains Mono", monospace`
-        ctx.fillStyle = `rgba(28,27,25,${(isRoot ? 0.8 : isLeaf ? 0.45 : 0.6) * pulse})`
-        ctx.textAlign = 'center'
-        ctx.fillText(n.label, n.x, n.y + (isRoot ? 5 : 4))
-      })
-
-      // EN 16931 badge — bottom center, with glow
-      const badgeY = 295
-      const bp = Math.sin(t * 1.2) * 0.08 + 0.92
-      // Glow behind badge
-      const bgrd = ctx.createRadialGradient(240, badgeY, 0, 240, badgeY, 60)
-      bgrd.addColorStop(0, `rgba(45,110,86,${0.06 * bp})`)
-      bgrd.addColorStop(1, 'rgba(45,110,86,0)')
-      ctx.fillStyle = bgrd
-      ctx.fillRect(180, badgeY - 20, 120, 40)
-      // Badge pill
-      ctx.beginPath()
-      ctx.roundRect(200, badgeY - 12, 80, 24, 12)
-      ctx.fillStyle = `rgba(45,110,86,${0.1 * bp})`
-      ctx.strokeStyle = `rgba(45,110,86,${0.3 * bp})`
-      ctx.lineWidth = 1
-      ctx.fill(); ctx.stroke()
-      ctx.font = '600 10px "JetBrains Mono", monospace'
-      ctx.fillStyle = `rgba(45,110,86,${0.75 * bp})`
-      ctx.textAlign = 'center'
-      ctx.fillText('EN 16931', 240, badgeY + 4)
-
-      raf = requestAnimationFrame(draw)
-    }
-    raf = requestAnimationFrame(draw)
-    return () => cancelAnimationFrame(raf)
-  }, [])
-  return <canvas ref={canvasRef} className="w-full" style={{ aspectRatio: '560/340' }} />
+  return (
+    <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
+      <div className="grid grid-cols-2 divide-x divide-rule-light">
+        {/* JSON input */}
+        <div>
+          <div className="px-3 py-2 border-b border-rule-light flex items-center gap-2">
+            <span className="text-[9px] font-mono text-muted">your data</span>
+            <span className="text-[8px] px-1.5 py-0.5 rounded bg-surface text-muted font-mono">.json</span>
+          </div>
+          <pre className="p-3 font-mono text-[9px] leading-[1.8] text-ink-2 overflow-hidden">{`{
+  "seller": {
+    "name": "Muster GmbH",
+    "vat_id": "DE123456789"
+  },
+  "buyer": {
+    "name": "Kunde AG",
+    "vat_id": "DE987654321"
+  },
+  "items": [{
+    "description": "Consulting",
+    "unit_price": 4500.00,
+    "tax_rate": 19
+  }],
+  "payment": {
+    "iban": "DE8937...013000"
+  }
+}`}</pre>
+        </div>
+        {/* CII XML output */}
+        <div>
+          <div className="px-3 py-2 border-b border-rule-light flex items-center gap-2">
+            <span className="text-[9px] font-mono text-sage">embedded XML</span>
+            <span className="text-[8px] px-1.5 py-0.5 rounded bg-sage/10 text-sage font-mono">CII</span>
+          </div>
+          <pre className="p-3 font-mono text-[9px] leading-[1.8] text-ink-2 overflow-hidden">{`<CrossIndustryInvoice>
+  <ExchangedDocument>
+    <ID>RE-2026-0042</ID>
+    <TypeCode>380</TypeCode>
+  </ExchangedDocument>
+  <SellerTradeParty>
+    <Name>Muster GmbH</Name>
+    <SpecifiedTaxRegistration>
+      <ID>DE123456789</ID>
+    </SpecifiedTaxRegistration>
+  </SellerTradeParty>
+  <ApplicableTradeTax>
+    <TypeCode>VAT</TypeCode>
+    <CategoryCode>S</CategoryCode>
+    <RateApplicablePercent>
+      19
+    </RateApplicablePercent>
+  </ApplicableTradeTax>
+</CrossIndustryInvoice>`}</pre>
+        </div>
+      </div>
+      <div className="px-3 py-2 border-t border-rule-light flex items-center justify-between">
+        <span className="text-[9px] text-muted italic">XSD + Schematron validated, embedded in PDF/A-3b</span>
+        <span className="text-[8px] px-2 py-0.5 rounded-full bg-sage/10 text-sage font-semibold">EN 16931</span>
+      </div>
+    </div>
+  )
 }
 
 /* ── Trust Layer Flourish: Provenance (canvas-rendered) ───────────── */
@@ -414,8 +352,11 @@ function ProvenanceFlourish() {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
+    const dpr = window.devicePixelRatio || 1
     const W = 520, H = 300
-    canvas.width = W; canvas.height = H
+    canvas.width = W * dpr; canvas.height = H * dpr
+    canvas.style.width = W + 'px'; canvas.style.height = H + 'px'
+    ctx.scale(dpr, dpr)
     let raf, t = 0
 
     const rows = [
@@ -880,7 +821,7 @@ function HeroReveal() {
   const showErrors = phase === 'fail' && mode === 'invalid'
 
   return (
-    <section className="text-panel relative overflow-hidden" style={{ background: 'linear-gradient(180deg, #0e0d0c 0%, #1a1815 40%, #15130f 100%)' }}>
+    <section className="text-panel relative overflow-hidden" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 30%, rgba(179,108,57,0.10) 0%, transparent 70%), linear-gradient(180deg, #141618 0%, #111214 40%, #0f1012 100%)' }}>
       {/* Animated particle background */}
       <DocumentField />
       {/* Nav */}
@@ -888,7 +829,7 @@ function HeroReveal() {
         <div className="text-panel"><AnimatedLogo animate /></div>
         <div className="flex items-center gap-4">
           <a href="#app" className="text-[14px] font-semibold px-5 py-2.5 rounded-lg bg-rust hover:bg-rust-light text-white transition-colors hidden md:inline-block nav-pulse">Try the playground</a>
-          <a href="https://github.com/verityengine/trustrender" className="text-[14px] font-medium px-5 py-2.5 rounded-lg bg-panel/10 hover:bg-panel/15 text-panel transition-colors">GitHub</a>
+          <a href="https://github.com/verityengine/trustrender" className="text-[14px] font-medium px-5 py-2.5 rounded-lg bg-panel hover:bg-panel/90 text-ink transition-colors">GitHub</a>
         </div>
       </nav>
 
@@ -901,6 +842,11 @@ function HeroReveal() {
           <p className="text-[16px] md:text-[18px] text-panel/45 max-w-xl mx-auto mt-6 leading-relaxed">
             Validate document data before render. Catch missing fields, broken paths, and structural errors before a bad invoice reaches a customer.
           </p>
+          <button onClick={() => navigator.clipboard.writeText('pip install trustrender')}
+            className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-panel/15 hover:border-panel/30 bg-panel/[0.05] hover:bg-panel/[0.08] transition-colors cursor-pointer group">
+            <code className="font-mono text-[13px] text-panel/60 group-hover:text-panel/80">pip install trustrender</code>
+            <span className="text-[9px] text-panel/25 group-hover:text-panel/50 transition-colors">copy</span>
+          </button>
           {/* Scroll indicator */}
           <div className="mt-8 flex justify-center">
             <div className="w-6 h-10 rounded-full border border-panel/20 flex items-start justify-center pt-2">
@@ -914,16 +860,16 @@ function HeroReveal() {
           <div className="flex items-center justify-center gap-3 mb-8">
             <button onClick={() => toggle('valid')}
               className={`text-[13px] px-6 py-2.5 rounded-full border-2 transition-all font-medium cursor-pointer
-                ${mode === 'valid' ? 'bg-rust text-white border-rust' : 'text-panel/50 border-panel/20 hover:border-panel/40 bg-transparent'}`}>
+                ${mode === 'valid' ? 'bg-rust text-white border-rust' : 'text-panel/70 border-panel/30 hover:border-panel/50 hover:text-panel/90 bg-panel/[0.06]'}`}>
               See it pass
             </button>
             <button onClick={() => toggle('invalid')}
               className={`text-[13px] px-6 py-2.5 rounded-full border-2 transition-all font-medium cursor-pointer
-                ${mode === 'invalid' ? 'bg-wine text-white border-wine' : 'text-panel/50 border-panel/20 hover:border-panel/40 bg-transparent'}`}>
+                ${mode === 'invalid' ? 'bg-wine text-white border-wine' : 'text-panel/70 border-panel/30 hover:border-panel/50 hover:text-panel/90 bg-panel/[0.06]'}`}>
               See what gets caught
             </button>
             <span className="ml-3 text-[11px] text-panel/50 font-mono hidden md:inline">
-              {mode === null ? 'choose a payload' : mode === 'valid' ? 'invoice_data.json' : 'bad_data.json'}{mode !== null ? ' \u2192 invoice.j2.typ' : ''}
+              {mode === null ? 'pick a scenario' : mode === 'valid' ? 'invoice_data.json' : 'bad_data.json'}{mode !== null ? ' \u2192 invoice.j2.typ' : ''}
             </span>
           </div>
         </div>
@@ -1042,7 +988,7 @@ function TrustLayers() {
       desc: 'Machine-readable German B2B invoices for the supported EN 16931 path. Validated before render, embedded as ZUGFeRD / Factur-X. Pure Python \u2014 no Java stack.',
       stats: ['Supported EN 16931 path', 'ZUGFeRD / Factur-X', 'German B2B invoice flow'],
       flourish: <ComplianceFlourish />,
-      caption: 'Simplified invoice structure \u2014 not a complete EN 16931 field map',
+      caption: 'Real JSON input \u2192 real CII XML output. XSD + Schematron validated.',
     },
     {
       title: 'Provenance',
@@ -1472,6 +1418,14 @@ function AppWorkspace() {
   const [traces, setTraces] = useState(null) // null=not loaded, []=empty, [...]=data
   const [historyError, setHistoryError] = useState(null) // 'disabled' or 'error'
   const [selectedTrace, setSelectedTrace] = useState(null)
+  const [dashboardAvailable, setDashboardAvailable] = useState(false)
+
+  // Probe /dashboard availability once
+  useEffect(() => {
+    fetch(apiUrl('/dashboard'), { method: 'HEAD' })
+      .then(res => setDashboardAvailable(res.ok))
+      .catch(() => setDashboardAvailable(false))
+  }, [])
 
   const fetchTraces = async ({ autoSelect = false } = {}) => {
     try {
@@ -2155,7 +2109,12 @@ function AppWorkspace() {
                   <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
                     <div className="px-4 py-2.5 border-b border-rule-light flex items-center justify-between">
                       <span className="text-[10px] font-mono text-muted">{traces.length} trace{traces.length !== 1 ? 's' : ''}</span>
-                      <button onClick={fetchTraces} className="text-[10px] text-muted hover:text-ink cursor-pointer">refresh</button>
+                      <div className="flex items-center gap-3">
+                        {dashboardAvailable && (
+                          <a href={apiUrl('/dashboard')} target="_blank" rel="noopener noreferrer" className="text-[10px] text-muted hover:text-ink">Open dashboard &rarr;</a>
+                        )}
+                        <button onClick={fetchTraces} className="text-[10px] text-muted hover:text-ink cursor-pointer">refresh</button>
+                      </div>
                     </div>
                     <div className="divide-y divide-rule-light max-h-[300px] overflow-y-auto">
                       {traces.map(t => (
@@ -2483,12 +2442,12 @@ function DeveloperSetup() {
                   <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  trustrender 0.1.0 importable</span></div>
                   <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  typst-py 0.14.8 (Python binding)</span></div>
                   <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  typst CLI: typst 0.14.2</span></div>
-                  <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  Both backends available</span></div>
-                  <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  Bundled fonts: Inter (12 files)</span></div>
-                  <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  Font inventory: all declared fonts found</span></div>
+                  <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  Both backends available (library + server)</span></div>
+                  <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  Bundled fonts (4 files)</span></div>
+                  <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  Font inventory: Inter {'—'} all found</span></div>
                   <div className="text-panel/30 mt-3">Smoke test</div>
-                  <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  Render: invoice.j2.typ {'→'} 42,531 bytes</span></div>
-                  <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  Server: /health {'→'} 200 OK</span></div>
+                  <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  Smoke render: 51 KB in 0.06s</span></div>
+                  <div><span className="text-sage">{'  [ok]'}</span><span className="text-panel/70">  Server /health: ok (in-process, no port)</span></div>
                   <div className="mt-3 text-sage font-semibold">All checks passed.</div>
                 </div>
               </div>
@@ -2505,16 +2464,17 @@ function DeveloperSetup() {
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function FinalCTA() {
   return (
-    <section className="py-20 md:py-28 bg-ink text-panel">
+    <section className="pt-20 md:pt-28 pb-12 md:pb-16 bg-ink text-panel">
       <div className="max-w-[1280px] mx-auto px-6 md:px-10">
         <FadeUp>
-          <h2 className="font-display font-extrabold text-[32px] md:text-[48px] tracking-[-0.03em] leading-[1.05] mb-4 max-w-lg">
+          <div className="text-center">
+          <h2 className="font-display font-extrabold text-[32px] md:text-[48px] tracking-[-0.03em] leading-[1.05] mb-4 max-w-lg mx-auto">
             Stop shipping documents you cannot trust.
           </h2>
-          <p className="text-[15px] text-panel/55 max-w-md mb-8">
+          <p className="text-[15px] text-panel/55 max-w-md mx-auto mb-8">
             Readiness. Compliance. Provenance. Validated by default for Jinja2 templates.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 items-start">
+          <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
             <a href="https://github.com/verityengine/trustrender" className="px-7 py-3.5 bg-rust hover:bg-rust-light text-white text-[14px] font-semibold rounded transition-colors inline-block">
               View on GitHub
             </a>
@@ -2522,15 +2482,21 @@ function FinalCTA() {
               Try the playground
             </a>
           </div>
-          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
-            <div className="px-5 py-4 border border-panel/15 rounded-lg">
-              <div className="text-[10px] tracking-[0.15em] uppercase text-panel/30 font-semibold mb-2">Lean core</div>
-              <code className="font-mono text-[13px] text-panel/70">pip install trustrender</code>
-            </div>
-            <div className="px-5 py-4 border border-rust/30 rounded-lg bg-rust/[0.06]">
-              <div className="text-[10px] tracking-[0.15em] uppercase text-rust/60 font-semibold mb-2">With e-invoicing</div>
-              <code className="font-mono text-[13px] text-panel/70">pip install "trustrender[zugferd]"</code>
-            </div>
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
+            {[
+              { label: 'Lean core', cmd: 'pip install trustrender', accent: false },
+              { label: 'With e-invoicing', cmd: 'pip install "trustrender[zugferd]"', accent: true },
+            ].map(({ label, cmd, accent }) => (
+              <button key={label} onClick={() => { navigator.clipboard.writeText(cmd) }}
+                className={`px-5 py-4 rounded-lg text-left cursor-pointer transition-colors group ${accent ? 'border border-rust/30 bg-rust/[0.06] hover:bg-rust/[0.10]' : 'border border-panel/15 hover:bg-panel/[0.06]'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`text-[10px] tracking-[0.15em] uppercase font-semibold ${accent ? 'text-rust/60' : 'text-panel/30'}`}>{label}</span>
+                  <span className="text-[9px] text-panel/25 group-hover:text-panel/50 transition-colors">copy</span>
+                </div>
+                <code className="font-mono text-[13px] text-panel/70">{cmd}</code>
+              </button>
+            ))}
+          </div>
           </div>
         </FadeUp>
       </div>
