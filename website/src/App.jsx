@@ -1260,7 +1260,7 @@ function ReadyDemo() {
 
   useEffect(() => {
     try { JSON.parse(json); setParseError(null) }
-    catch (e) { setParseError(e.message.split(' at ')[0]) }
+    catch (e) { setParseError(e.message.split(' at ')[0]); setVerdict(null); setChecking(false) }
   }, [json])
 
   const runPreflight = async () => {
@@ -1339,7 +1339,7 @@ function ReadyDemo() {
             <div className="bg-panel rounded-xl border border-rule-light overflow-hidden min-h-[420px] flex flex-col" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
               <div className="px-4 py-2.5 border-b border-rule-light flex items-center justify-between">
                 <span className="text-[10px] font-mono text-muted">readiness</span>
-                {verdict && (
+                {verdict && !parseError && (
                   <span className={`text-[10px] font-medium ${verdict.ready ? 'text-sage' : 'text-wine'}`}>
                     {verdict.ready ? 'ready' : `${verdict.errors.length} issue${verdict.errors.length !== 1 ? 's' : ''}`}
                   </span>
@@ -1360,7 +1360,7 @@ function ReadyDemo() {
                     <p className="text-[13px] text-muted font-medium">Checking&hellip;</p>
                   </div>
                 )}
-                {verdict && (
+                {verdict && !parseError && (
                   <div className="w-full space-y-4">
                     {/* Verdict badge */}
                     <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${verdict.ready ? 'bg-sage/[0.06] border-sage/20' : 'bg-wine/[0.04] border-wine/20'}`}>
@@ -1655,6 +1655,10 @@ function AppWorkspace() {
       }
     } catch (e) {
       setParseError(e.message.split(' at ')[0])
+      setVerdict(null)
+      setChecking(false)
+      if (preflightTimer.current) clearTimeout(preflightTimer.current)
+      preflightSeq.current++
     }
   }, [json])
 
@@ -2052,7 +2056,7 @@ function AppWorkspace() {
                     <span className="text-[12px] text-muted">Checking readiness&hellip;</span>
                   </div>
                 )}
-                {verdict && !checking && (() => {
+                {verdict && !checking && !parseError && (() => {
                   let parsedData; try { parsedData = JSON.parse(json) } catch { parsedData = null }
                   const dataFilled = parsedData && isComplete(template, parsedData)
                   const actuallyReady = verdict.ready && dataFilled
@@ -2097,7 +2101,7 @@ function AppWorkspace() {
                 )}
 
                 {/* Stage list */}
-                {verdict && !checking && (
+                {verdict && !checking && !parseError && (
                   <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
                     <div className="px-4 py-2.5 border-b border-rule-light">
                       <span className="text-[10px] font-mono text-muted">stages</span>
