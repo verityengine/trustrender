@@ -17,7 +17,7 @@ Invoice:   INV-2026-0187
 From:
 To:        Rheingold Maschinenbau GmbH
 Items:     3
-Total:     $2,685.37
+Total:     $2,945.25
 
 BLOCKED — 1 problem(s)
 
@@ -53,7 +53,7 @@ Invoice:   INV-2026-0187
 From:      NovaTech Solutions GmbH
 To:        Rheingold Maschinenbau GmbH
 Items:     3
-Total:     $2,685.37
+Total:     $2,945.25
 
 PASS — invoice data is valid
 

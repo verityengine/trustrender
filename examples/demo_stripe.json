@@ -18,9 +18,6 @@
     "postal_code": "70173",
     "country": "DE"
   },
-  "sender": {
-    "name": "NovaTech Solutions GmbH"
-  },
   "lines": {
     "object": "list",
     "data": [
