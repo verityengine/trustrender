@@ -401,7 +401,8 @@ def _print_validation_result(result: dict) -> None:
         # ZUGFeRD status if checked
         if "zugferd_ready" in result:
             zr = result["zugferd_ready"]
-            print(f"ZUGFeRD ready: {'yes' if zr else 'no \u2014 fix blocking issues first'}")
+            no_msg = "no \u2014 fix blocking issues first"
+            print(f"ZUGFeRD ready: {'yes' if zr else no_msg}")
             for ze in result.get("zugferd_errors", []):
                 print(f"  {ze.get('path', '?')}: {ze.get('message', '')}")
 
