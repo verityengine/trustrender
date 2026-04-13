@@ -222,7 +222,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     ingest_cmd = sub.add_parser("ingest", help="Normalize messy invoice JSON into canonical payload")
-    ingest_cmd.add_argument("data", help="Path to JSON data file")
+    ingest_cmd.add_argument("data", help="Path to JSON data file (use '-' for stdin)")
     ingest_cmd.add_argument("-o", "--output", help="Write canonical payload to file instead of stdout")
     ingest_cmd.add_argument("--quiet", action="store_true", help="Suppress summary, output JSON only")
 
@@ -282,8 +282,11 @@ def _run_ingest(args: argparse.Namespace) -> int:
     from .invoice_ingest import ingest_invoice
 
     try:
-        with open(args.data) as f:
-            raw = json.load(f)
+        if args.data == "-":
+            raw = json.load(sys.stdin)
+        else:
+            with open(args.data) as f:
+                raw = json.load(f)
     except json.JSONDecodeError as exc:
         print(f"error: invalid JSON: {exc}", file=sys.stderr)
         return 1
