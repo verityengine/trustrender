@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "trustrender"
-version = "0.2.0"
-description = "Fast, code-first PDF generation from structured data. No browser, no Chromium."
+version = "0.3.0"
+description = "Validate and normalize Stripe, Shopify, and custom billing data for Factur-X/ZUGFeRD"
 license = "MIT"
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -15,17 +15,14 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Office/Business :: Financial",
-    "Topic :: Text Processing :: Markup",
+    "Topic :: Office/Business :: Financial :: Accounting",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Quality Assurance",
 ]
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "typst>=0.14",
-    "jinja2>=3.1",
-    "starlette>=0.40",
-    "uvicorn>=0.30",
     "drafthorse>=2024.0",
-    "pypdf>=4.0",
 ]
 
 [project.urls]
@@ -39,14 +36,27 @@ Changelog = "https://github.com/verityengine/trustrender/releases"
 trustrender = "trustrender.cli:main"
 
 [project.optional-dependencies]
+render = [
+    "typst>=0.14",
+    "jinja2>=3.1",
+    "pypdf>=4.0",
+]
+serve = [
+    "starlette>=0.40",
+    "uvicorn>=0.30",
+]
+zugferd = [
+    "factur-x>=3.0",
+]
+all = [
+    "trustrender[render,serve,zugferd]",
+]
 dev = [
     "pytest>=8.0",
     "ruff>=0.4",
     "httpx>=0.27",
     "factur-x>=3.0",
-]
-zugferd = [
-    "factur-x>=3.0",
+    "trustrender[all]",
 ]
 
 [tool.setuptools.packages.find]

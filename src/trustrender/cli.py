@@ -7,7 +7,7 @@ import os
 import sys
 from pathlib import Path
 
-from . import AuditResult, TrustRenderError, __version__, audit, render
+from . import TrustRenderError, __version__, validate_invoice
 
 
 # ---------------------------------------------------------------------------
@@ -53,13 +53,25 @@ def _add_provenance(parser: argparse.ArgumentParser) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="trustrender",
-        description="Generate PDFs from structured data. No browser required.",
+        description="Validate and normalize messy invoice data for Factur-X/ZUGFeRD compliance.",
     )
     parser.add_argument("--version", action="version", version=f"trustrender {__version__}")
 
     sub = parser.add_subparsers(dest="command")
 
-    render_cmd = sub.add_parser("render", help="Render a template to PDF")
+    # ── Core: validation (no render deps required) ──
+    validate_cmd = sub.add_parser("validate", help="Validate invoice data before Factur-X/ZUGFeRD embedding")
+    validate_cmd.add_argument("data", help="Path to JSON invoice data (use '-' for stdin)")
+    validate_cmd.add_argument("--zugferd", action="store_true", help="Run ZUGFeRD EN 16931 readiness checks")
+    validate_cmd.add_argument("--format", choices=["text", "json"], default="text", dest="output_format", help="Output format (default: text)")
+
+    ingest_cmd = sub.add_parser("ingest", help="Normalize messy invoice JSON into canonical payload")
+    ingest_cmd.add_argument("data", help="Path to JSON data file (use '-' for stdin)")
+    ingest_cmd.add_argument("-o", "--output", help="Write canonical payload to file instead of stdout")
+    ingest_cmd.add_argument("--quiet", action="store_true", help="Suppress summary, output JSON only")
+
+    # ── Optional: rendering (requires pip install trustrender[render]) ──
+    render_cmd = sub.add_parser("render", help="Render a template to PDF (requires trustrender[render])")
     render_cmd.add_argument("template", help="Path to template (.j2.typ or .typ)")
     render_cmd.add_argument("data", help="Path to JSON data file (use '-' for stdin)")
     render_cmd.add_argument("-o", "--output", required=True, help="Output PDF path")
@@ -221,11 +233,6 @@ def main(argv: list[str] | None = None) -> int:
         help="Run a quick render and server health smoke test",
     )
 
-    ingest_cmd = sub.add_parser("ingest", help="Normalize messy invoice JSON into canonical payload")
-    ingest_cmd.add_argument("data", help="Path to JSON data file (use '-' for stdin)")
-    ingest_cmd.add_argument("-o", "--output", help="Write canonical payload to file instead of stdout")
-    ingest_cmd.add_argument("--quiet", action="store_true", help="Suppress summary, output JSON only")
-
     sub.add_parser("quickstart", help="Demo the ingest-to-render pipeline on real-world invoice data")
 
     args = parser.parse_args(argv)
@@ -239,6 +246,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "quickstart":
         return _run_quickstart()
+
+    if args.command == "validate":
+        return _run_validate(args)
 
     if args.command == "ingest":
         return _run_ingest(args)
@@ -273,6 +283,134 @@ def main(argv: list[str] | None = None) -> int:
         return run_doctor(smoke=args.smoke)
 
     return 1
+
+
+def _run_validate(args: argparse.Namespace) -> int:
+    """Validate invoice data before Factur-X/ZUGFeRD embedding."""
+    import json
+
+    try:
+        if args.data == "-":
+            raw = json.load(sys.stdin)
+        else:
+            with open(args.data) as f:
+                raw = json.load(f)
+    except json.JSONDecodeError as exc:
+        print(f"error: invalid JSON: {exc}", file=sys.stderr)
+        return 1
+    except FileNotFoundError:
+        print(f"error: file not found: {args.data}", file=sys.stderr)
+        return 1
+
+    result = validate_invoice(raw, zugferd=args.zugferd)
+
+    if args.output_format == "json":
+        print(json.dumps(result, indent=2, default=str))
+    else:
+        _print_validation_result(result)
+
+    # Exit codes: 0=pass, 1=blocked, 2=pass_with_warnings
+    if result["status"] == "blocked":
+        return 1
+    elif result["status"] == "ready_with_warnings":
+        return 2
+    return 0
+
+
+def _print_validation_result(result: dict) -> None:
+    """Print human-readable validation result."""
+    canonical = result.get("canonical", {})
+    sender = canonical.get("sender", {})
+    recipient = canonical.get("recipient", {})
+    items = canonical.get("items", [])
+    total = canonical.get("total", 0)
+
+    print(f"trustrender validate v{__version__}")
+    print()
+    print(f"Invoice:   {canonical.get('invoice_number', '(none)')}")
+    print(f"From:      {sender.get('name', '(none)') if isinstance(sender, dict) else '(none)'}")
+    print(f"To:        {recipient.get('name', '(none)') if isinstance(recipient, dict) else '(none)'}")
+    print(f"Items:     {len(items) if isinstance(items, list) else 0}")
+    if isinstance(total, (int, float)):
+        print(f"Total:     ${total:,.2f}")
+    print()
+
+    # Normalizations
+    norms = result.get("normalizations", [])
+    alias_norms = [n for n in norms if n.get("source") == "alias" and n.get("original_key")]
+    if alias_norms:
+        print(f"Normalizations ({len(alias_norms)}):")
+        for n in alias_norms:
+            print(f"  {n['original_key']} \u2192 {n['canonical_name']}")
+        print()
+
+    # Verdict
+    blocked = [e for e in result.get("errors", []) if e.get("severity") == "blocked"]
+    warnings = result.get("warnings", [])
+
+    if result["status"] == "blocked":
+        print(f"BLOCKED \u2014 {len(blocked)} problem(s)")
+        print()
+        for e in blocked:
+            rule = e.get("rule_id", "?")
+            msg = e.get("message", "")
+            path = e.get("path", "")
+            expected = e.get("expected")
+            actual = e.get("actual")
+
+            # Translate to plain language
+            if "line_total" in rule and expected and actual:
+                # items[N].line_total mismatch
+                print(f"  {path.replace('.line_total', '')} total is wrong")
+                print(f"    You entered ${float(actual):,.2f} but math says ${float(expected):,.2f}")
+                print(f"    Fix the line total or the price/quantity.")
+            elif "subtotal" in rule and expected and actual:
+                print(f"  Subtotal is wrong")
+                print(f"    Lines add up to ${float(expected):,.2f} but you listed ${float(actual):,.2f}")
+            elif "total" in rule and expected and actual:
+                print(f"  Total is wrong")
+                print(f"    Subtotal + tax = ${float(expected):,.2f} but you listed ${float(actual):,.2f}")
+            elif "sender_name" in rule:
+                print(f"  Missing vendor/sender name")
+                print(f"    Add a sender.name field to your invoice data.")
+            elif "recipient_name" in rule:
+                print(f"  Missing recipient/buyer name")
+                print(f"    Add a recipient.name field to your invoice data.")
+            elif "invoice_number" in rule:
+                print(f"  Missing invoice number")
+                print(f"    Add an invoice_number field to your invoice data.")
+            elif "items" in rule:
+                print(f"  No line items")
+                print(f"    Add at least one item with description, quantity, and unit_price.")
+            else:
+                print(f"  [{rule}] {msg}")
+                if path:
+                    print(f"    path: {path}")
+            print()
+
+        # ZUGFeRD status if checked
+        if "zugferd_ready" in result:
+            zr = result["zugferd_ready"]
+            print(f"ZUGFeRD ready: {'yes' if zr else 'no \u2014 fix blocking issues first'}")
+            for ze in result.get("zugferd_errors", []):
+                print(f"  {ze.get('path', '?')}: {ze.get('message', '')}")
+
+        print()
+        print("This invoice cannot be processed until the problems above are fixed.")
+
+    elif result["status"] == "ready_with_warnings":
+        print("PASS \u2014 with warnings")
+        for w in warnings:
+            print(f"  [{w.get('rule_id', '?')}] {w.get('message', '')}")
+        if "zugferd_ready" in result:
+            print(f"\nZUGFeRD ready: {'yes' if result['zugferd_ready'] else 'no'}")
+
+    else:
+        print("PASS \u2014 invoice data is valid")
+        if "zugferd_ready" in result:
+            print(f"ZUGFeRD ready: {'yes' if result['zugferd_ready'] else 'no'}")
+        print()
+        print("Safe to embed in Factur-X/ZUGFeRD PDF.")
 
 
 def _run_ingest(args: argparse.Namespace) -> int:
@@ -639,6 +777,8 @@ def _resolve_hints(template_name: str):
 
 def _run_audit(args: argparse.Namespace) -> int:
     """Render with full audit: fingerprint, drift, semantic."""
+    from . import audit, AuditResult
+
     import json as json_mod
 
     template_path = Path(args.template)
@@ -961,6 +1101,8 @@ def _run_check(args: argparse.Namespace) -> int:
 
 def _run_render(args: argparse.Namespace) -> int:
     try:
+        from . import render
+
         data = args.data
         if data == "-":
             data = sys.stdin.read()

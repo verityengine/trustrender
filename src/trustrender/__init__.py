@@ -1,4 +1,13 @@
-"""TrustRender: fast, code-first PDF generation from structured data."""
+"""TrustRender — validate and normalize messy invoice data for Factur-X/ZUGFeRD compliance.
+
+Core API (always available, no rendering deps required):
+    validate_invoice(data, zugferd=False) → structured validation result
+    ingest_invoice(data) → IngestionReport with canonical payload + provenance
+
+Rendering API (requires `pip install trustrender[render]`):
+    render(template, data, ...) → PDF bytes
+    audit(template, data, ...) → AuditResult with fingerprint + drift detection
+"""
 
 from __future__ import annotations
 
@@ -7,8 +16,16 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from .engine import CompileBackend, compile_typst, compile_typst_file
 from .errors import ErrorCode, TrustRenderError
+from .invoice_ingest import IngestionReport, ingest_invoice
+
+# Rendering imports — optional, guarded
+try:
+    from .engine import CompileBackend, compile_typst, compile_typst_file
+    from .templates import render_template
+    _HAS_RENDER = True
+except ImportError:
+    _HAS_RENDER = False
 
 
 @dataclass
@@ -18,16 +35,81 @@ class RenderResult:
     pdf_bytes: bytes
     trace_id: str | None = None
 
-# Re-export for public API
-from .errors import ErrorCode as ErrorCode  # noqa: F811
-from .templates import render_template
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
+    # Core API (always available)
+    "validate_invoice", "ingest_invoice", "IngestionReport",
+    # Rendering API (requires [render] extras)
     "render", "audit", "AuditResult",
-    "TrustRenderError", "ErrorCode", "__version__", "bundled_font_dir",
+    # Errors
+    "TrustRenderError", "ErrorCode",
+    # Meta
+    "__version__", "bundled_font_dir",
 ]
+
+
+# ── Core API: validation (always available) ──────────────────────────
+
+def validate_invoice(data: dict, *, zugferd: bool = False) -> dict:
+    """Validate and normalize messy invoice data. Returns structured result.
+
+    This is the primary API for using TrustRender as a validation layer
+    before Factur-X/ZUGFeRD embedding. No rendering deps required.
+
+    Args:
+        data: Messy invoice data as a dict (any vendor format — QuickBooks,
+              Xero, Stripe, CSV, OCR output, etc.).
+        zugferd: If True, also run ZUGFeRD EN 16931 readiness checks
+                 on the canonical output.
+
+    Returns:
+        Dict with keys:
+          - status: "ready" | "ready_with_warnings" | "blocked"
+          - render_ready: bool
+          - canonical: normalized invoice dict
+          - errors: list of blocking issues
+          - warnings: list of advisory issues
+          - normalizations: list of field changes with provenance
+          - computed_fields: list of auto-computed fields
+          - unknown_fields: list of unrecognized fields with classification
+          - zugferd_ready: bool (only if zugferd=True)
+          - zugferd_errors: list (only if zugferd=True)
+
+    Example::
+
+        from trustrender import validate_invoice
+
+        result = validate_invoice({
+            "invoiceNo": "INV-001",
+            "vendor": {"companyName": "Acme Corp"},
+            "customer": {"Name": "Client Inc"},
+            "LineItems": [{"desc": "Widget", "qty": 2, "unitPrice": 50, "amount": 100}],
+            "SubTotal": 100, "tax": 8.50, "TotalAmt": 108.50,
+        }, zugferd=True)
+
+        if result["render_ready"] and result.get("zugferd_ready"):
+            print("Safe to embed — all checks passed")
+        else:
+            for error in result["errors"]:
+                print(f"BLOCKED: {error['message']}")
+    """
+    report = ingest_invoice(data)
+    result = report.to_dict()
+
+    if zugferd and report.render_ready:
+        from .zugferd import validate_zugferd_invoice_data
+        zug_errors = validate_zugferd_invoice_data(report.canonical)
+        result["zugferd_errors"] = [
+            {"path": e.path, "message": e.message} for e in zug_errors
+        ]
+        result["zugferd_ready"] = len(zug_errors) == 0
+    elif zugferd:
+        result["zugferd_errors"] = []
+        result["zugferd_ready"] = False  # can't be zugferd-ready if base validation failed
+
+    return result
 
 
 # Resolved once at import time — deterministic across local, test, and container.
@@ -85,6 +167,17 @@ def _build_font_paths(
     return result or None
 
 
+def _require_render():
+    """Raise a clear error if rendering dependencies are not installed."""
+    if not _HAS_RENDER:
+        raise TrustRenderError(
+            "Rendering requires additional dependencies. "
+            "Install with: pip install trustrender[render]",
+            code=ErrorCode.BACKEND_ERROR,
+            stage="import",
+        )
+
+
 def _render_document_pipeline(
     template_path: Path,
     data: dict,
@@ -94,7 +187,7 @@ def _render_document_pipeline(
     validate: bool = True,
     zugferd: str | None = None,
     provenance: bool = False,
-    backend: CompileBackend | None = None,
+    backend: "CompileBackend | None" = None,
     timeout: float | None = None,
     display_name: str | None = None,
 ) -> RenderResult:
@@ -117,6 +210,8 @@ def _render_document_pipeline(
     If ``TRUSTRENDER_HISTORY`` is set, a stage-by-stage RenderTrace is
     recorded to the trace store after each render (success or failure).
     """
+    _require_render()
+
     import hashlib
     import time
 

@@ -1,55 +1,53 @@
 # TrustRender
 
-Messy invoice data in. Canonical payload out. Bad input blocked. Deterministic PDF rendered.
+Validate and normalize billing data from Stripe, Shopify, and custom systems before Factur-X/ZUGFeRD embedding.
 
-**PyPI:** [pypi.org/project/trustrender](https://pypi.org/project/trustrender/)
-**GitHub:** [github.com/verityengine/trustrender](https://github.com/verityengine/trustrender)
+If you're bridging a non-compliant billing platform into EU e-invoicing, libraries like [factur-x](https://github.com/akretion/factur-x) and [drafthorse](https://github.com/pretix/python-drafthorse) assume your data is already correct. TrustRender catches arithmetic mismatches, field misalignment, missing required fields, and structural problems before compliant XML gets embedded.
+
+```
+pip install trustrender
+trustrender validate invoice.json
+```
 
 ## What it does
 
-TrustRender takes ugly, inconsistent invoice data from any source — QuickBooks exports, Stripe webhooks, Xero API responses, hand-rolled CSV — and turns it into a correct PDF. It resolves field aliases, coerces types, computes missing totals, and blocks unsafe payloads with explicit reasons before rendering.
+Takes invoice JSON from Stripe, Shopify, custom billing APIs, or legacy exports and tells you whether it's safe to embed as Factur-X/ZUGFeRD.
 
 ```
-pip install trustrender && trustrender quickstart
-```
+$ trustrender validate quickbooks_invoice.json
 
-This creates sample invoices from real-world formats, ingests them, shows what was resolved, blocks bad data, and renders a PDF. No server, no browser — just terminal output and a file on disk.
+Invoice:   INV-2026-5541
+From:      Summit Analytics Co.
+To:        Horizon Financial
+Items:     2
+Total:     $10,524.50
 
-## The pipeline
+Normalizations (25):
+  DocNumber → invoice_number        CompanyName → sender.name
+  TxnDate → invoice_date            customer.Name → recipient.name
+  Line → items                      SubTotal → subtotal
+  ... and 19 more
 
-```
-trustrender ingest quickbooks_invoice.json
-```
+PASS — invoice data is valid
 
-```
-  ✓ invoice_number ← DocNumber
-  ✓ invoice_date ← TxnDate
-  ✓ sender.name ← CompanyName
-  ✓ recipient ← customer
-  ✓ items[*].description ← Description
-  ✓ items[*].unit_price ← UnitPrice
-  ✓ items ← Line
-  ✓ subtotal ← SubTotal
-  ✓ total ← TotalAmt
-  ✓ 5 fields computed (line_total, subtotal, ...)
-
-  Status: ready (31 aliases, 1 coercion)
-```
-
-Pipe straight into render:
-
-```
-trustrender ingest invoice.json | trustrender render invoice.j2.typ - -o invoice.pdf
+Safe to embed in Factur-X/ZUGFeRD PDF.
 ```
 
 Bad data gets blocked:
 
 ```
-  ✗ BLOCKED: invoice_number is missing or empty
-  ✗ BLOCKED: items[0].line_total (500.0) != quantity * unit_price (1500.0)
-  ✗ BLOCKED: subtotal (1500.0) != sum of line totals (500.0)
+$ trustrender validate ocr_extracted_invoice.json
 
-  Status: blocked (3 errors)
+BLOCKED — 2 problem(s)
+
+  items[1] total is wrong
+    You entered $459.00 but math says $450.00
+    Fix the line total or the price/quantity.
+
+  Subtotal is wrong
+    Lines add up to $12,459.00 but you listed $12,450.00
+
+This invoice cannot be processed until the problems above are fixed.
 ```
 
 ## Install
@@ -58,180 +56,149 @@ Bad data gets blocked:
 pip install trustrender
 ```
 
-Requires Python 3.11+ and the Typst CLI (`brew install typst` on macOS, or [typst.app](https://typst.app/)).
+Core install requires only `drafthorse`. No Typst, no browser, no heavy deps.
 
-For e-invoice support: `pip install "trustrender[zugferd]"`
-
-### Development
-
+Optional extras:
 ```
-git clone https://github.com/verityengine/trustrender.git
-cd trustrender
-pip install -e ".[dev]"
-trustrender doctor --smoke
+pip install "trustrender[zugferd]"    # XSD/Schematron validation
+pip install "trustrender[render]"     # PDF rendering via Typst
+pip install "trustrender[all]"        # everything
 ```
+
+Requires Python 3.11+.
 
 ## Python API
 
 ```python
-from trustrender import render
-from trustrender.invoice_ingest import ingest_invoice
+from trustrender import validate_invoice
 
-# Ingest messy data
-report = ingest_invoice(raw_quickbooks_data)
-if report.render_ready:
-    pdf = render("invoice.j2.typ", report.template_payload, output="invoice.pdf")
+result = validate_invoice({
+    "invoiceNo": "INV-001",
+    "vendor": {"companyName": "Acme Corp"},
+    "customer": {"Name": "Client Inc"},
+    "LineItems": [{"desc": "Widget", "qty": 2, "unitPrice": 50, "amount": 100}],
+    "SubTotal": 100,
+    "tax": 8.50,
+    "TotalAmt": 108.50,
+}, zugferd=True)
+
+if result["render_ready"] and result.get("zugferd_ready"):
+    # safe to call factur-x / drafthorse
+    print("All checks passed")
+else:
+    for error in result["errors"]:
+        print(f"BLOCKED: {error['message']}")
 ```
 
-## What this is not
+`validate_invoice()` returns:
+- `status`: "ready" | "ready_with_warnings" | "blocked"
+- `render_ready`: bool
+- `canonical`: normalized invoice dict (all fields in canonical names)
+- `errors`: list of blocking issues with rule_id, path, expected/actual
+- `warnings`: advisory issues
+- `normalizations`: field-level provenance (what was renamed, coerced, computed)
+- `zugferd_ready`: bool (if `zugferd=True`)
 
-- Not generic HTML-to-PDF (use Gotenberg, WeasyPrint, or Puppeteer)
-- Not a visual editor or document builder
-- Not an AP/compliance workflow platform
-- Not a multi-format converter
+## What it normalizes
 
-TrustRender is infrastructure for deterministic document generation from structured data. It is useful when you have messy upstream data, need to normalize it, validate it, and produce a correct document — and you need to know exactly why a render was blocked.
+90+ vendor field aliases across QuickBooks, Xero, Stripe, and generic CSV/ERP formats:
 
-## Validated before render
+| Source field | Canonical field |
+|---|---|
+| `DocNumber`, `invoiceNo`, `inv_no`, `ref` | `invoice_number` |
+| `CompanyName`, `account_name`, `bill_from_name` | `sender.name` |
+| `customer`, `billTo`, `Contact` | `recipient` |
+| `Line`, `LineItems`, `entries`, `products` | `items` |
+| `UnitPrice`, `cost`, `rate`, `unitCost` | `unit_price` |
+| `Amount`, `LineAmount`, `line_total` | `line_total` |
+| `SubTotal`, `net_total`, `sub_total` | `subtotal` |
+| `TotalAmt`, `grand_total`, `amount_due` | `total` |
 
-Every `render()` call on a `.j2.typ` template validates data against the template's inferred contract by default. Missing fields, null values, and wrong structural types are rejected with specific field-level errors before Typst compilation starts.
+Plus: type coercion (`"$1,234.56"` → `1234.56`), date parsing (`"April 10, 2026"` → `2026-04-10`), computed defaults (missing `line_total` = `qty × price`), near-match typo detection (`invioce_number` → suggests `invoice_number`).
 
-```
-TrustRenderError: Data validation failed: 11 field errors in invoice.j2.typ
-  sender: missing required field (expected: object)
-  items: missing required field (expected: list[object])
-  invoice_date: missing required field
-```
+## What it checks
 
-`preflight()` goes further: structural validation, semantic checks, font verification, compliance eligibility, and text safety scanning — all without rendering.
+7 deterministic semantic checks, all arithmetic:
 
-### No browser dependency
+| Check | What it catches |
+|---|---|
+| `identity.invoice_number` | Missing or empty invoice number |
+| `identity.sender_name` | Missing vendor/sender name |
+| `identity.recipient_name` | Missing recipient/buyer name |
+| `items.non_empty` | No line items |
+| `arithmetic.line_total` | line_total ≠ qty × unit_price |
+| `arithmetic.subtotal` | subtotal ≠ sum of line_totals |
+| `arithmetic.total` | total ≠ subtotal + tax_amount |
 
-No Chromium, no Puppeteer, no headless browser. Typst compiles directly to PDF. The server runs renders as killable subprocesses with real timeout enforcement.
-
-Measured on Apple Silicon (macOS, Python 3.12, Typst 0.14): 1,000-row invoice renders in 211ms (33 pages). Server throughput: 53.8 RPS. Peak RSS: 69.5 MB.
-
-### EN 16931 e-invoicing (narrow scope)
-
-Supports a narrow subset of EN 16931 e-invoicing: **domestic German B2B invoices with standard VAT, in EUR, via SEPA payment only.** Reverse charge, cross-border, allowances/discounts, and non-EUR currencies are not supported. This is not full German e-invoicing mandate coverage. PDF/A-3b output with embedded CII XML. When the optional `facturx` library is installed (`pip install "trustrender[zugferd]"`), XSD and Schematron validation run before embedding; without it, field-level and arithmetic consistency validation still run but schema validation is skipped.
-
-```
-trustrender render einvoice.j2.typ data.json -o invoice.pdf --zugferd en16931
-```
-
-Supported: DE, EUR, standard VAT (single or mixed rates), invoices and credit notes.
-Not supported (fails loudly): reverse charge, cross-border, allowances/charges, non-EUR, zero/negative tax rates.
-
-See [docs/einvoice-scope.md](docs/einvoice-scope.md) for the full scope matrix.
-
-### Output provenance
-
-Embeds a cryptographic generation proof in the PDF: template hash, data hash, engine version, timestamp, and a combined proof hash. Verifiable without re-rendering.
-
-```python
-from trustrender.provenance import verify_provenance
-result = verify_provenance(pdf_bytes, "invoice.j2.typ", original_data)
-# result.verified → True if hashes match
-```
-
-Not a digital signature. A generation proof: "was this document produced from this data using this template?"
+No AI. No heuristics. Every check is deterministic and objectively verifiable.
 
 ## CLI
 
 ```
-trustrender ingest <data.json> [-o canonical.json] [--quiet]
-trustrender render <template> <data.json> -o <output.pdf> [--zugferd en16931] [--provenance] [--no-validate]
-trustrender preflight <template> <data.json> [--semantic] [--strict]
-trustrender check <template> [--data <data.json>]
-trustrender serve --templates <dir> [--port 8190] [--dashboard] [--history <path>]
-trustrender audit <template> <data.json> -o <output.pdf> [--baseline-dir <dir>]
+trustrender validate <data.json> [--zugferd] [--format text|json]
+trustrender ingest <data.json> [-o canonical.json]
+trustrender render <template> <data.json> -o <output.pdf> [--zugferd en16931]
+trustrender preflight <template> <data.json> [--zugferd en16931]
+trustrender serve --templates <dir> [--port 8190]
 trustrender doctor [--smoke]
 ```
 
-Full flag reference: `trustrender <command> --help`.
+## Integration with factur-x / drafthorse
 
-## HTTP server
+TrustRender validates and normalizes. You generate and embed with the library of your choice.
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| `POST` | `/render` | Render template to PDF |
-| `POST` | `/preflight` | Pre-render readiness check |
-| `GET` | `/health` | Health check |
-| `GET` | `/template-source?name=` | Raw template source |
-| `GET` | `/history` | Render trace list (requires `--history`) |
-| `GET` | `/dashboard` | Ops dashboard (requires `--dashboard`) |
+```python
+from trustrender import validate_invoice
 
-Backpressure: max 8 concurrent renders (configurable), 503 when at capacity.
-Max body: 10 MB (configurable). Timeout: 30s (subprocess killed on expiry).
+# Step 1: Validate with TrustRender
+result = validate_invoice(messy_data, zugferd=True)
+if not result["render_ready"] or not result["zugferd_ready"]:
+    raise ValueError(f"Invoice blocked: {result['errors']}")
 
-See [docs/server.md](docs/server.md) for full API detail, error model, and configuration.
-
-## Bundled templates
-
-| Template | File | Description |
-|----------|------|-------------|
-| Invoice | `examples/invoice.j2.typ` | Standard invoice with line items |
-| E-Invoice | `examples/einvoice.j2.typ` | ZUGFeRD EN 16931 compliant |
-| Statement | `examples/statement.j2.typ` | Account/transaction statement |
-| Receipt | `examples/receipt.j2.typ` | Point-of-sale receipt |
-| Letter | `examples/letter.j2.typ` | Business letter |
-| Report | `examples/report.j2.typ` | Executive report with metrics |
-
-Each has a matching `_data.json` file in `examples/`.
-
-## Docker
-
-```
-docker build -t trustrender .
-docker run -p 8190:8190 trustrender
+# Step 2: Use the canonical payload with drafthorse or factur-x
+canonical = result["canonical"]
+# ... your existing ZUGFeRD generation code here
 ```
 
-Mount custom templates or fonts:
+## EN 16931 e-invoicing (narrow scope)
+
+Catches many document-level and ZUGFeRD/EN 16931 readiness issues before embedding. Currently supports:
+
+- **Domestic German B2B invoices** with standard VAT, EUR, SEPA payment
+- Single or mixed VAT rates (7% + 19%)
+- Invoice type 380 and credit note 381
+- PDF/A-3b with embedded CII XML (requires `trustrender[render]`)
+
+Not supported (fails loudly): reverse charge, cross-border, allowances/charges, non-EUR currencies.
+
+See [docs/einvoice-scope.md](docs/einvoice-scope.md) for the full scope matrix.
+
+## Optional: PDF rendering
+
+If you also want TrustRender to generate PDFs (not just validate):
 
 ```
-docker run -p 8190:8190 \
-  -v /path/to/templates:/templates -e TRUSTRENDER_TEMPLATES_DIR=/templates \
-  -v /path/to/fonts:/fonts -e TRUSTRENDER_FONT_PATH=/fonts \
-  trustrender
+pip install "trustrender[render]"
+trustrender render invoice.j2.typ data.json -o invoice.pdf --zugferd en16931
 ```
 
-## Configuration
+Rendering uses Typst — no browser, no Chromium. Fast and deterministic.
 
-| Variable | Purpose | Default |
-|----------|---------|---------|
-| `TRUSTRENDER_BACKEND` | `typst-py` or `typst-cli` | Auto-detect |
-| `TRUSTRENDER_FONT_PATH` | Font directory | Bundled Inter fonts |
-| `TRUSTRENDER_TEMPLATES_DIR` | Template directory for `serve` | — |
-| `TRUSTRENDER_MAX_BODY_SIZE` | Max request body (bytes) | 10 MB |
+## What this is not
+
+- Not a full AP automation platform
+- Not an e-invoice compliance certification
+- Not an AI-powered data fixer (all corrections are deterministic)
+- Not a replacement for factur-x or drafthorse — it's the validation layer you run before them
 
 ## Development
 
 ```
-make dev                    # editable install + dev deps
-trustrender doctor --smoke  # verify environment
-make test                   # pytest
-make lint                   # ruff
-make docker                 # build image
-make help                   # all targets
+pip install -e ".[dev]"
+trustrender doctor --smoke
+pytest
 ```
 
-854 tests (unit, integration, contract, semantic, ZUGFeRD, provenance, ugly-data, font, pagination, text safety, Schematron).
+## License
 
-## Documentation
-
-| Topic | Link |
-|-------|------|
-| Validation & readiness | [docs/validation.md](docs/validation.md) |
-| E-invoice scope matrix | [docs/einvoice-scope.md](docs/einvoice-scope.md) |
-| HTTP server & error model | [docs/server.md](docs/server.md) |
-| Templates & escaping | [docs/templates.md](docs/templates.md) |
-| Fonts | [docs/fonts.md](docs/fonts.md) |
-| Provenance | [docs/provenance.md](docs/provenance.md) |
-| Known limits | [docs/known-limits.md](docs/known-limits.md) |
-
-## Caveats
-
-- Typst silently substitutes fonts when a declared font is missing — `preflight` and `doctor` catch this for configured font paths, but the render path itself does not error
-- Source mapping from generated Typst back to Jinja2 source is limited
-- `typst_markup()` intentionally bypasses escaping — template author's responsibility
-- Code/math mode contexts are not auto-escaped (text-interpolation only)
+MIT
