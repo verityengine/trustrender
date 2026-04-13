@@ -36,7 +36,7 @@ class RenderResult:
     trace_id: str | None = None
 
 
-__version__ = "0.3.3"
+__version__ = "0.3.4"
 
 __all__ = [
     # Core API (always available)
