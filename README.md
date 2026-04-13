@@ -2,7 +2,7 @@
 
 Validate and normalize billing data from Stripe, Shopify, and custom systems before Factur-X/ZUGFeRD embedding.
 
-If you're bridging a non-compliant billing platform into EU e-invoicing, libraries like [factur-x](https://github.com/akretion/factur-x) and [drafthorse](https://github.com/pretix/python-drafthorse) assume your data is already correct. TrustRender catches arithmetic mismatches, field misalignment, missing required fields, and structural problems before compliant XML gets embedded.
+If you're bridging a non-compliant billing platform into EU e-invoicing, TrustRender adds a validation and normalization layer before tools like [factur-x](https://github.com/akretion/factur-x) and [drafthorse](https://github.com/pretix/python-drafthorse) generate or embed compliant XML. It catches arithmetic mismatches, field misalignment, missing required fields, and structural problems before handoff.
 
 ```
 pip install trustrender
