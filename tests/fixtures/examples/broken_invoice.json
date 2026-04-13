@@ -1,0 +1,26 @@
+{
+  "invoice_date": "2026-03-15",
+  "due_date": "2026-04-14",
+  "sender": {
+    "name": "Acme Corp",
+    "address": "123 Main St",
+    "email": "billing@acme.com"
+  },
+  "recipient": {
+    "name": "Acme Corp",
+    "address": "123 Main St",
+    "email": "billing@acme.com"
+  },
+  "items": [
+    {
+      "description": "Consulting services",
+      "quantity": 10,
+      "unit_price": 150.00,
+      "line_total": 500.00
+    }
+  ],
+  "subtotal": 1500.00,
+  "tax_rate": 8.5,
+  "tax_amount": 127.50,
+  "total": 1627.50
+}

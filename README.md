@@ -1,29 +1,56 @@
 # TrustRender
 
-Structured business PDFs from code. Pre-render validated. No browser. No Chromium.
+Messy invoice data in. Canonical payload out. Bad input blocked. Deterministic PDF rendered.
 
-**Website:** [trustrender.dev](https://trustrender.dev)
 **PyPI:** [pypi.org/project/trustrender](https://pypi.org/project/trustrender/)
+**GitHub:** [github.com/verityengine/trustrender](https://github.com/verityengine/trustrender)
 
-## Why TrustRender
+## What it does
 
-- **Pre-render validation** — catches bad payloads before they reach the renderer
-- **Compliance support** — EN 16931 / ZUGFeRD for the supported e-invoice path
-- **Provenance and hashing** — records template, data, and output fingerprints for traceability
-- **Operationally lean** — no browser or Chromium dependency
+TrustRender takes ugly, inconsistent invoice data from any source — QuickBooks exports, Stripe webhooks, Xero API responses, hand-rolled CSV — and turns it into a correct PDF. It resolves field aliases, coerces types, computes missing totals, and blocks unsafe payloads with explicit reasons before rendering.
 
-TrustRender renders invoices, statements, receipts, and similar structured documents using [Typst](https://typst.app/) as the layout engine and Jinja2 for data binding. It ships as a Python library, CLI, and HTTP server.
+```
+pip install trustrender && trustrender quickstart
+```
 
-### Non-goals
+This creates sample invoices from real-world formats, ingests them, shows what was resolved, blocks bad data, and renders a PDF. No server, no browser — just terminal output and a file on disk.
 
-TrustRender is not:
+## The pipeline
 
-- arbitrary HTML-to-PDF conversion
-- a browser or headless renderer
-- a visual or WYSIWYG editor
-- a multi-format converter
+```
+trustrender ingest quickbooks_invoice.json
+```
 
-It does one thing: structured business PDFs from code.
+```
+  ✓ invoice_number ← DocNumber
+  ✓ invoice_date ← TxnDate
+  ✓ sender.name ← CompanyName
+  ✓ recipient ← customer
+  ✓ items[*].description ← Description
+  ✓ items[*].unit_price ← UnitPrice
+  ✓ items ← Line
+  ✓ subtotal ← SubTotal
+  ✓ total ← TotalAmt
+  ✓ 5 fields computed (line_total, subtotal, ...)
+
+  Status: ready (31 aliases, 1 coercion)
+```
+
+Pipe straight into render:
+
+```
+trustrender ingest invoice.json | trustrender render invoice.j2.typ - -o invoice.pdf
+```
+
+Bad data gets blocked:
+
+```
+  ✗ BLOCKED: invoice_number is missing or empty
+  ✗ BLOCKED: items[0].line_total (500.0) != quantity * unit_price (1500.0)
+  ✗ BLOCKED: subtotal (1500.0) != sum of line totals (500.0)
+
+  Status: blocked (3 errors)
+```
 
 ## Install
 
@@ -31,7 +58,7 @@ It does one thing: structured business PDFs from code.
 pip install trustrender
 ```
 
-Requires Python 3.11+ and the Typst CLI binary (`brew install typst` on macOS, or [typst.app](https://typst.app/)).
+Requires Python 3.11+ and the Typst CLI (`brew install typst` on macOS, or [typst.app](https://typst.app/)).
 
 For e-invoice support: `pip install "trustrender[zugferd]"`
 
@@ -41,61 +68,31 @@ For e-invoice support: `pip install "trustrender[zugferd]"`
 git clone https://github.com/verityengine/trustrender.git
 cd trustrender
 pip install -e ".[dev]"
-```
-
-### Verify
-
-```
 trustrender doctor --smoke
 ```
 
-Checks Python version, backends, fonts, and runs a real render + server health check.
-
-## Security
-
-**`trustrender serve` has no built-in authentication, authorization, TLS, or rate limiting.** It is designed to run as a backend service behind a reverse proxy. Do not expose the server port to the public internet.
-
-If you deploy TrustRender as an HTTP server:
-
-- Place it behind a reverse proxy (Nginx, Caddy, Traefik, cloud load balancer) that handles TLS termination and authentication.
-- The `/render` endpoint accepts template source code via the `template_source` field. Without authentication, any client that can reach the server can submit arbitrary templates for rendering.
-- The `/template-source` endpoint returns raw template file contents. Restrict access if templates contain business logic you consider sensitive.
-- Backpressure (503 when at concurrency limit) is the only built-in traffic control. It is not a substitute for rate limiting.
-- The server binds to `127.0.0.1` by default. Passing `--host 0.0.0.0` opens it to all interfaces — do this only behind a proxy.
-
-TrustRender is a rendering engine, not a security boundary. Treat it like a database: powerful, essential, and never internet-facing without a gateway.
-
-## Quick start
-
-```
-pip install trustrender && trustrender quickstart
-```
-
-Creates a sample invoice template, starts the server, and opens the app in your browser. Render your first PDF in under 30 seconds.
-
-**Python:**
+## Python API
 
 ```python
 from trustrender import render
+from trustrender.invoice_ingest import ingest_invoice
 
-pdf = render("invoice.j2.typ", "invoice_data.json", output="invoice.pdf")
+# Ingest messy data
+report = ingest_invoice(raw_quickbooks_data)
+if report.render_ready:
+    pdf = render("invoice.j2.typ", report.template_payload, output="invoice.pdf")
 ```
 
-**CLI:**
+## What this is not
 
-```
-trustrender render invoice.j2.typ invoice_data.json -o invoice.pdf
-```
+- Not generic HTML-to-PDF (use Gotenberg, WeasyPrint, or Puppeteer)
+- Not a visual editor or document builder
+- Not an AP/compliance workflow platform
+- Not a multi-format converter
 
-**Server:**
+TrustRender is infrastructure for deterministic document generation from structured data. It is useful when you have messy upstream data, need to normalize it, validate it, and produce a correct document — and you need to know exactly why a render was blocked.
 
-```
-trustrender serve --templates . --dashboard --port 8190
-```
-
-## Why TrustRender
-
-### Validated before render
+## Validated before render
 
 Every `render()` call on a `.j2.typ` template validates data against the template's inferred contract by default. Missing fields, null values, and wrong structural types are rejected with specific field-level errors before Typst compilation starts.
 
@@ -142,6 +139,7 @@ Not a digital signature. A generation proof: "was this document produced from th
 ## CLI
 
 ```
+trustrender ingest <data.json> [-o canonical.json] [--quiet]
 trustrender render <template> <data.json> -o <output.pdf> [--zugferd en16931] [--provenance] [--no-validate]
 trustrender preflight <template> <data.json> [--semantic] [--strict]
 trustrender check <template> [--data <data.json>]

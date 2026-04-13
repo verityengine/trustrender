@@ -61,7 +61,7 @@ def main(argv: list[str] | None = None) -> int:
 
     render_cmd = sub.add_parser("render", help="Render a template to PDF")
     render_cmd.add_argument("template", help="Path to template (.j2.typ or .typ)")
-    render_cmd.add_argument("data", help="Path to JSON data file")
+    render_cmd.add_argument("data", help="Path to JSON data file (use '-' for stdin)")
     render_cmd.add_argument("-o", "--output", required=True, help="Output PDF path")
     render_cmd.add_argument(
         "--debug",
@@ -221,7 +221,12 @@ def main(argv: list[str] | None = None) -> int:
         help="Run a quick render and server health smoke test",
     )
 
-    sub.add_parser("quickstart", help="Create and render a sample invoice PDF")
+    ingest_cmd = sub.add_parser("ingest", help="Normalize messy invoice JSON into canonical payload")
+    ingest_cmd.add_argument("data", help="Path to JSON data file")
+    ingest_cmd.add_argument("-o", "--output", help="Write canonical payload to file instead of stdout")
+    ingest_cmd.add_argument("--quiet", action="store_true", help="Suppress summary, output JSON only")
+
+    sub.add_parser("quickstart", help="Demo the ingest-to-render pipeline on real-world invoice data")
 
     args = parser.parse_args(argv)
 
@@ -234,6 +239,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "quickstart":
         return _run_quickstart()
+
+    if args.command == "ingest":
+        return _run_ingest(args)
 
     if args.command == "render":
         return _run_render(args)
@@ -267,120 +275,257 @@ def main(argv: list[str] | None = None) -> int:
     return 1
 
 
-def _run_quickstart() -> int:
-    """Scaffold a sample invoice template + data and render a PDF."""
+def _run_ingest(args: argparse.Namespace) -> int:
+    """Run the ingest pipeline on messy invoice JSON."""
     import json
+
+    from .invoice_ingest import ingest_invoice
+
+    try:
+        with open(args.data) as f:
+            raw = json.load(f)
+    except json.JSONDecodeError as exc:
+        print(f"error: invalid JSON: {exc}", file=sys.stderr)
+        return 1
+    except FileNotFoundError:
+        print(f"error: file not found: {args.data}", file=sys.stderr)
+        return 1
+
+    report = ingest_invoice(raw)
+
+    # Summary to stderr (unless --quiet)
+    if not args.quiet:
+        _print_ingest_summary(report, verbose=True)
+
+    # Output JSON to stdout or file
+    payload = report.template_payload if report.render_ready else report.canonical
+    output_json = json.dumps(payload, indent=2, ensure_ascii=False)
+
+    if args.output:
+        Path(args.output).write_text(output_json + "\n")
+        if not args.quiet:
+            print(f"\n  Wrote: {args.output}", file=sys.stderr)
+    else:
+        print(output_json)
+
+    return 0 if report.render_ready else 1
+
+
+def _print_ingest_summary(report, verbose: bool = False) -> None:
+    """Print a human-readable ingest summary to stderr."""
+    err = lambda s="": print(s, file=sys.stderr)
+
+    aliases = [n for n in report.normalizations if n.source == "alias"]
+    computed = [n for n in report.normalizations if n.source == "computed"]
+    coerced = [n for n in report.normalizations if n.source not in ("alias", "computed", "exact", "missing")]
+
+    if verbose:
+        # Full list — for standalone `trustrender ingest`
+        for n in aliases:
+            orig = n.original_key or "?"
+            err(f"  \u2713 {n.canonical_name} \u2190 {orig}")
+        for n in computed:
+            err(f"  \u2713 {n.canonical_name} (computed)")
+    else:
+        # Compact — show top-level aliases only, skip per-item repeats
+        seen_patterns = set()
+        for n in aliases:
+            # Collapse items[0].field, items[1].field into one line
+            canon = n.canonical_name
+            if "[" in canon:
+                pattern = canon.split("]", 1)[-1] if "]" in canon else canon
+                orig = n.original_key or "?"
+                key = (pattern, orig)
+                if key in seen_patterns:
+                    continue
+                seen_patterns.add(key)
+                err(f"  \u2713 items[*]{pattern} \u2190 {orig}")
+            else:
+                orig = n.original_key or "?"
+                err(f"  \u2713 {canon} \u2190 {orig}")
+        if computed:
+            err(f"  \u2713 {len(computed)} field{'s' if len(computed) != 1 else ''} computed (line_total, subtotal, ...)")
+
+    # Errors — always show in full
+    for e in report.errors:
+        severity = "BLOCKED" if e.severity == "blocked" else "ERROR"
+        err(f"  \u2717 {severity}: {e.message}")
+
+    for w in report.warnings:
+        err(f"  ! {w.message}")
+
+    # Status line
+    alias_count = len(aliases)
+    coerce_count = len(coerced)
+    computed_count = len(computed)
+    parts = []
+    if alias_count:
+        parts.append(f"{alias_count} alias{'es' if alias_count != 1 else ''}")
+    if coerce_count:
+        parts.append(f"{coerce_count} coercion{'s' if coerce_count != 1 else ''}")
+    if computed_count:
+        parts.append(f"{computed_count} computed")
+
+    detail = f" ({', '.join(parts)})" if parts else ""
+
+    if report.render_ready:
+        err(f"\n  Status: ready{detail}")
+    else:
+        err_count = len(report.errors)
+        err(f"\n  Status: blocked ({err_count} error{'s' if err_count != 1 else ''}){detail}")
+
+
+def _run_quickstart() -> int:
+    """Demo the ingest-to-render pipeline on real-world invoice data."""
+    import json
+    import shutil
+
+    from .invoice_ingest import ingest_invoice
 
     outdir = Path("trustrender-quickstart")
     if outdir.exists():
         print(f"error: {outdir}/ already exists. Remove it or use a different directory.", file=sys.stderr)
         return 1
 
-    template_content = r"""// Invoice layout
-#set page(paper: "us-letter", margin: (top: 0.8in, bottom: 0.8in, x: 0.9in))
-#set text(size: 10pt, font: "Inter")
+    # Copy sample data from fixtures
+    fixtures_dir = Path(__file__).parent.parent.parent / "tests" / "fixtures"
+    examples_dir = fixtures_dir / "examples"
+    real_dir = fixtures_dir / "real_invoices"
 
-#let accent = rgb("#C4622A")
-#let muted = rgb("#7A7670")
-
-#align(right, text(size: 24pt, weight: "bold", tracking: 0.5pt)[INVOICE])
-#v(4pt)
-#align(right, text(size: 9pt, fill: muted)[{{ invoice_number }} · {{ invoice_date }}])
-#v(16pt)
-
-#grid(columns: (1fr, 1fr),
-  [ #text(size: 7pt, fill: muted)[FROM] \ #strong[{{ sender.name }}] \ {{ sender.address }} \ {{ sender.email }} ],
-  [ #text(size: 7pt, fill: muted)[TO] \ #strong[{{ recipient.name }}] \ {{ recipient.address }} \ {{ recipient.email }} ],
-)
-#v(16pt)
-#line(length: 100%, stroke: 0.5pt + muted)
-#v(8pt)
-
-#table(
-  columns: (auto, 1fr, auto, auto, auto),
-  stroke: none,
-  inset: (x: 8pt, y: 6pt),
-  fill: (_, row) => if row == 0 { rgb("#F5F4F2") },
-  table.header[\#][Description][Qty][Price][Amount],
-  {% for item in items %}
-  [{{ item.num }}], [{{ item.description }}], [{{ item.qty }}], [{{ item.unit_price }}], [{{ item.amount }}],
-  {% endfor %}
-)
-#v(8pt)
-#line(length: 100%, stroke: 0.5pt + muted)
-#v(8pt)
-
-#align(right)[
-  #text(size: 9pt, fill: muted)[Subtotal: {{ subtotal }}] \
-  #text(size: 9pt, fill: muted)[Tax ({{ tax_rate }}): {{ tax_amount }}] \
-  #v(4pt)
-  #text(size: 14pt, weight: "bold", fill: accent)[Total: {{ total }}]
-]
-
-#v(24pt)
-#text(size: 8pt, fill: muted)[
-  Payment terms: {{ payment_terms }} \
-  {{ notes }}
-]
-"""
-
-    data_content = {
-        "invoice_number": "INV-2026-0001",
-        "invoice_date": "April 11, 2026",
-        "payment_terms": "Net 30",
-        "sender": {
-            "name": "Acme Corp",
-            "address": "123 Business Ave, San Francisco, CA 94105",
-            "email": "billing@acme.com",
-        },
-        "recipient": {
-            "name": "Contoso Ltd",
-            "address": "456 Enterprise Blvd, New York, NY 10001",
-            "email": "ap@contoso.com",
-        },
-        "items": [
-            {"num": 1, "description": "Website redesign", "qty": 1, "unit_price": "$4,500.00", "amount": "$4,500.00"},
-            {"num": 2, "description": "SEO audit and optimization", "qty": 1, "unit_price": "$1,200.00", "amount": "$1,200.00"},
-            {"num": 3, "description": "Monthly hosting (3 months)", "qty": 3, "unit_price": "$150.00", "amount": "$450.00"},
-        ],
-        "subtotal": "$6,150.00",
-        "tax_rate": "8.5%",
-        "tax_amount": "$522.75",
-        "total": "$6,672.75",
-        "notes": "Thank you for your business.",
-    }
-
+    # Build sample files — use embedded copies if fixture files aren't available (pip install case)
     outdir.mkdir()
-    template_path = outdir / "invoice.j2.typ"
-    data_path = outdir / "invoice_data.json"
-    output_path = outdir / "invoice.pdf"
 
-    template_path.write_text(template_content)
-    data_path.write_text(json.dumps(data_content, indent=2) + "\n")
+    qb_data = _load_sample(real_dir / "quickbooks_raw.json", _QUICKBOOKS_SAMPLE)
+    stripe_data = _load_sample(real_dir / "stripe_raw.json", _STRIPE_SAMPLE)
+    broken_data = _load_sample(examples_dir / "broken_invoice.json", _BROKEN_SAMPLE)
 
-    print()
-    print(f"  Created:")
-    print(f"    {template_path}")
-    print(f"    {data_path}")
-    print()
-    print(f"  Starting server at http://localhost:8190")
-    print(f"  Opening in your browser...")
-    print()
+    (outdir / "quickbooks_invoice.json").write_text(json.dumps(qb_data, indent=2) + "\n")
+    (outdir / "stripe_invoice.json").write_text(json.dumps(stripe_data, indent=2) + "\n")
+    (outdir / "broken_invoice.json").write_text(json.dumps(broken_data, indent=2) + "\n")
 
-    import threading
-    import webbrowser
+    err = lambda s="": print(s, file=sys.stderr)
 
-    threading.Timer(1.0, lambda: webbrowser.open("http://localhost:8190/#app")).start()
+    err()
+    err(f"  Created {outdir}/")
+    err(f"    quickbooks_invoice.json")
+    err(f"    stripe_invoice.json")
+    err(f"    broken_invoice.json")
 
-    import uvicorn
-    from .server import create_app
+    # --- Step 1: Ingest the QuickBooks sample ---
+    err()
+    err("  \u2500\u2500 Ingesting QuickBooks invoice \u2500\u2500")
+    err()
+    qb_report = ingest_invoice(qb_data)
+    _print_ingest_summary(qb_report)
 
-    app = create_app(
-        str(outdir),
-        dashboard=True,
-    )
-    uvicorn.run(app, host="127.0.0.1", port=8190, log_level="warning")
+    if qb_report.render_ready and qb_report.template_payload:
+        # Render to PDF
+        err()
+        err("  \u2500\u2500 Rendering invoice.pdf \u2500\u2500")
+        try:
+            from . import render
+
+            template_dir = Path(__file__).parent / "builtin_templates"
+            template_path = template_dir / "invoice.j2.typ"
+            output_path = outdir / "invoice.pdf"
+
+            pdf_bytes = render(
+                str(template_path),
+                qb_report.template_payload,
+                output=str(output_path),
+            )
+            err(f"  Rendered {len(pdf_bytes):,} bytes \u2192 {output_path}")
+        except Exception as exc:
+            err(f"  Render failed: {exc}")
+
+    # --- Step 2: Show the broken sample blocking ---
+    err()
+    err("  \u2500\u2500 Ingesting broken invoice (should block) \u2500\u2500")
+    err()
+    broken_report = ingest_invoice(broken_data)
+    _print_ingest_summary(broken_report)
+
+    # --- Done ---
+    err()
+    err(f"  Done.")
+    if (outdir / "invoice.pdf").exists():
+        err(f"  Open {outdir}/invoice.pdf to see the result.")
+    err(f"  Run: trustrender ingest {outdir}/stripe_invoice.json")
+    err()
+
     return 0
+
+
+def _load_sample(fixture_path: Path, fallback: dict) -> dict:
+    """Load from fixture file if available, otherwise use embedded fallback."""
+    import json
+
+    if fixture_path.exists():
+        with open(fixture_path) as f:
+            return json.load(f)
+    return fallback
+
+
+# Embedded sample data for pip-installed case (no test fixtures available)
+_QUICKBOOKS_SAMPLE = {
+    "DocNumber": "INV-1089",
+    "TxnDate": "2026-03-10",
+    "DueDate": "2026-04-09",
+    "CompanyName": "Redwood Digital LLC",
+    "CompanyEmail": "ar@redwood-digital.com",
+    "customer": {
+        "Name": "Pinnacle Group",
+        "EmailAddress": "billing@pinnaclegroup.com",
+        "BillingAddress": "200 Corporate Plaza, Chicago, IL 60601",
+    },
+    "Line": [
+        {"LineNum": 1, "Description": "UX/UI Design — Phase 1", "Quantity": 1, "UnitPrice": 3500.00, "Amount": 3500.00},
+        {"LineNum": 2, "Description": "Frontend Development", "Quantity": 40, "UnitPrice": 95.00, "Amount": 3800.00},
+        {"LineNum": 3, "Description": "Project Management", "Quantity": 8, "UnitPrice": 120.00, "Amount": 960.00},
+    ],
+    "SubTotal": 8260.00,
+    "TotalTax": 702.10,
+    "taxRate": "8.5%",
+    "TotalAmt": 8962.10,
+    "CustomerMemo": "Payment due within 30 days of invoice date.",
+    "paymentTerms": "Net 30",
+}
+
+_STRIPE_SAMPLE = {
+    "number": "INV-2026-00042",
+    "date": "2026-03-01",
+    "due_date": "2026-03-31",
+    "account_name": "Buildspace Labs Inc.",
+    "account_email": "billing@buildspace.so",
+    "customer_name": "Momentum Ventures",
+    "customer_email": "finance@momentum.vc",
+    "lines": {
+        "data": [
+            {"title": "Platform subscription (Pro)", "count": 1, "price": 399.00, "amount": 399.00},
+            {"title": "API calls overage (50K)", "count": 1, "price": 45.00, "amount": 45.00},
+            {"title": "Priority support (monthly)", "count": 1, "price": 149.00, "amount": 149.00},
+        ]
+    },
+    "sub_total": 593.00,
+    "tax": 50.41,
+    "taxRate": "8.5%",
+    "grand_total": 643.41,
+    "currency": "usd",
+}
+
+_BROKEN_SAMPLE = {
+    "invoice_date": "2026-03-15",
+    "due_date": "2026-04-14",
+    "sender": {"name": "Acme Corp", "address": "123 Main St", "email": "billing@acme.com"},
+    "recipient": {"name": "Acme Corp", "address": "123 Main St", "email": "billing@acme.com"},
+    "items": [
+        {"description": "Consulting services", "quantity": 10, "unit_price": 150.00, "line_total": 500.00},
+    ],
+    "subtotal": 1500.00,
+    "tax_rate": 8.5,
+    "tax_amount": 127.50,
+    "total": 1627.50,
+}
 
 
 def _run_history(args: argparse.Namespace) -> int:
@@ -813,9 +958,12 @@ def _run_check(args: argparse.Namespace) -> int:
 
 def _run_render(args: argparse.Namespace) -> int:
     try:
+        data = args.data
+        if data == "-":
+            data = sys.stdin.read()
         pdf_bytes = render(
             args.template,
-            args.data,
+            data,
             output=args.output,
             debug=args.debug,
             font_paths=args.font_paths,

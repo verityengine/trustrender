@@ -574,9 +574,12 @@ def _resolve_data(data: dict | str | os.PathLike) -> dict:
     path = Path(data) if not isinstance(data, str) else None
     if path is None:
         # Could be a JSON string or a file path string
-        candidate = Path(data)
-        if candidate.exists() and candidate.suffix == ".json":
-            path = candidate
+        try:
+            candidate = Path(data)
+            if candidate.exists() and candidate.suffix == ".json":
+                path = candidate
+        except OSError:
+            pass  # String too long to be a path — treat as JSON below
 
     if path is not None and path.exists():
         with open(path) as f:
