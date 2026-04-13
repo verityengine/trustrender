@@ -80,7 +80,16 @@ def from_stripe(raw: dict) -> dict:
     if raw.get("customer_email"):
         recipient["email"] = raw["customer_email"]
     if isinstance(raw.get("customer_address"), dict):
-        recipient["address"] = _flatten_address(raw["customer_address"])
+        addr = raw["customer_address"]
+        # Flatten to string for the canonical address field
+        recipient["address"] = _flatten_address(addr)
+        # Preserve structured fields for ZUGFeRD XML generation
+        if addr.get("city"):
+            recipient["city"] = addr["city"]
+        if addr.get("postal_code"):
+            recipient["postal_code"] = addr["postal_code"]
+        if addr.get("country"):
+            recipient["country"] = addr["country"]
 
     # Expanded customer object (if customer was expanded in the API call)
     if isinstance(raw.get("customer"), dict):

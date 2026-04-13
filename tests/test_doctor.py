@@ -31,7 +31,7 @@ class TestIndividualChecks:
     def test_trustrender_import(self):
         status, msg = check_trustrender_import()
         assert status == OK
-        assert "0.1.0" in msg
+        assert "importable" in msg
 
     def test_typst_py(self):
         status, msg = check_typst_py()

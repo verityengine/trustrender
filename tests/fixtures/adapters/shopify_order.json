@@ -1,0 +1,61 @@
+{
+  "id": 5678901234,
+  "order_number": 1047,
+  "name": "#1047",
+  "currency": "EUR",
+  "financial_status": "paid",
+  "created_at": "2026-04-08T14:30:00+02:00",
+  "subtotal_price": "1100.00",
+  "total_tax": "209.00",
+  "total_price": "1309.00",
+  "tax_lines": [
+    {"title": "MwSt.", "price": "209.00", "rate": 0.19}
+  ],
+  "customer": {
+    "id": 7890123,
+    "first_name": "Klaus",
+    "last_name": "Berger",
+    "email": "k.berger@maschinenbau-berger.de"
+  },
+  "billing_address": {
+    "name": "Klaus Berger",
+    "address1": "Werkstr. 15",
+    "city": "Düsseldorf",
+    "province": "NRW",
+    "zip": "40210",
+    "country": "Germany",
+    "country_code": "DE"
+  },
+  "line_items": [
+    {
+      "id": 1001,
+      "title": "Precision drill bit set (HSS, 25pc)",
+      "quantity": 5,
+      "price": "120.00",
+      "sku": "PDB-HSS-25",
+      "tax_lines": [
+        {"title": "MwSt.", "price": "114.00", "rate": 0.19}
+      ]
+    },
+    {
+      "id": 1002,
+      "title": "Cutting fluid (5L canister)",
+      "quantity": 10,
+      "price": "45.00",
+      "sku": "CF-5L",
+      "tax_lines": [
+        {"title": "MwSt.", "price": "85.50", "rate": 0.19}
+      ]
+    },
+    {
+      "id": 1003,
+      "title": "Express shipping (DE)",
+      "quantity": 1,
+      "price": "50.00",
+      "sku": null,
+      "tax_lines": [
+        {"title": "MwSt.", "price": "9.50", "rate": 0.19}
+      ]
+    }
+  ]
+}

@@ -10,5 +10,6 @@ catches what's wrong.
 """
 
 from .stripe import from_stripe
+from .shopify import from_shopify
 
-__all__ = ["from_stripe"]
+__all__ = ["from_stripe", "from_shopify"]

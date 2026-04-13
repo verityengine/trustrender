@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.2
+
+- Add `from_shopify()` adapter for raw Shopify Order API payloads
+- Add `--source shopify` flag to `trustrender validate`
+- Converts Shopify-specific formats: decimal strings to floats, split first/last name, order fields to invoice structure, structured address preservation
+- Fix Stripe adapter address handling: preserve structured fields (`city`, `postal_code`, `country`) alongside flattened address string for ZUGFeRD XML generation
+
 ## 0.3.1
 
 - Add `from_stripe()` adapter for raw Stripe Invoice API payloads

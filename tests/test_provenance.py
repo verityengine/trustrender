@@ -26,7 +26,7 @@ class TestCreateProvenance:
     def test_creates_record(self):
         record = create_provenance(EXAMPLES / "invoice.j2.typ", _load_invoice_data())
         assert record.engine == "trustrender"
-        assert record.engine_version == "0.1.0"
+        assert record.engine_version  # version string present
         assert record.template_name == "invoice.j2.typ"
         assert record.template_hash.startswith("sha256:")
         assert record.data_hash.startswith("sha256:")

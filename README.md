@@ -116,6 +116,23 @@ result = validate_invoice(from_stripe(raw_stripe_response), zugferd=True)
 
 The adapter converts cents to dollars, timestamps to dates, extracts line items from `lines.data[]`, and maps customer fields to recipient. Seller info is not included in Stripe invoices — TrustRender will flag it if required for ZUGFeRD compliance.
 
+## Shopify adapter
+
+Shopify orders use decimal strings, split customer names, and a different structure from invoices:
+
+```bash
+trustrender validate shopify_order.json --source shopify
+```
+
+```python
+from trustrender import validate_invoice
+from trustrender.adapters import from_shopify
+
+result = validate_invoice(from_shopify(raw_shopify_order))
+```
+
+The adapter parses string amounts to floats, combines first_name + last_name, maps order fields to invoice structure, and preserves structured address fields. Shopify orders have no seller info or due date — TrustRender handles both correctly.
+
 ## What it normalizes
 
 90+ vendor field aliases across QuickBooks, Xero, Stripe, and generic CSV/ERP formats:

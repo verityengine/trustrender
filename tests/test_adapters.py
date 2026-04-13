@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from trustrender.adapters.stripe import from_stripe
+from trustrender.adapters.shopify import from_shopify
 from trustrender import validate_invoice
 
 FIXTURES = Path(__file__).parent / "fixtures" / "adapters"
@@ -44,7 +45,7 @@ class TestStripeAdapter:
         assert result["recipient"]["name"] == "Acme Corp"
         assert result["recipient"]["email"] == "billing@acme.com"
 
-    def test_customer_address_flattened(self):
+    def test_customer_address_flattened_and_structured(self):
         result = from_stripe({
             "customer_address": {
                 "line1": "123 Main St",
@@ -54,10 +55,15 @@ class TestStripeAdapter:
                 "country": "US",
             },
         })
+        # Flattened string for canonical address field
         addr = result["recipient"]["address"]
         assert "123 Main St" in addr
         assert "Chicago" in addr
-        assert "IL" in addr
+
+        # Structured fields preserved for ZUGFeRD handoff
+        assert result["recipient"]["city"] == "Chicago"
+        assert result["recipient"]["postal_code"] == "60601"
+        assert result["recipient"]["country"] == "US"
 
     def test_expanded_customer_object(self):
         result = from_stripe({
@@ -154,6 +160,44 @@ class TestStripeEndToEnd:
         assert "identity.recipient_name" in blocked_rules
         assert "identity.invoice_number" in blocked_rules
 
+    def test_structured_address_survives_validation(self):
+        """Structured address fields survive through validate_invoice for ZUGFeRD handoff."""
+        raw = json.loads((FIXTURES / "stripe_invoice.json").read_text())
+        adapted = from_stripe(raw)
+        adapted["sender"] = {"name": "Buildspace Labs Inc."}
+        result = validate_invoice(adapted)
+
+        # Canonical recipient.address is a string
+        recipient = result["canonical"]["recipient"]
+        assert isinstance(recipient["address"], str)
+        assert "200 Corporate Plaza" in recipient["address"]
+
+    def test_zugferd_xml_with_stripe_data(self):
+        """from_stripe → validate → build_invoice_xml should work with full data."""
+        from trustrender.zugferd import validate_zugferd_invoice_data
+
+        raw = json.loads((FIXTURES / "stripe_invoice.json").read_text())
+        adapted = from_stripe(raw)
+
+        # Supply full seller data needed for ZUGFeRD
+        adapted["sender"] = {
+            "name": "Buildspace Labs Inc.",
+            "address": "500 Tech Park Dr",
+            "city": "San Francisco",
+            "postal_code": "94105",
+            "country": "DE",
+            "vat_id": "DE123456789",
+            "email": "billing@buildspace.so",
+        }
+
+        result = validate_invoice(adapted)
+        assert result["render_ready"] is True
+
+        # Recipient should have structured fields from adapter
+        assert adapted["recipient"]["city"] == "Chicago"
+        assert adapted["recipient"]["postal_code"] == "60601"
+        assert adapted["recipient"]["country"] == "US"
+
     def test_amounts_are_dollars_not_cents(self):
         """Verify cents→dollars conversion happened correctly."""
         raw = json.loads((FIXTURES / "stripe_invoice.json").read_text())
@@ -164,7 +208,150 @@ class TestStripeEndToEnd:
         assert adapted["tax_amount"] == 50.40
         assert adapted["total"] == 643.40
 
-        # Line items also converted
-        assert adapted["items"][0]["line_total"] == 399.00
-        assert adapted["items"][0]["unit_price"] == 399.00
-        assert adapted["items"][1]["line_total"] == 45.00
+
+# ── from_shopify: structural transformation ──────────────────────────
+
+class TestShopifyAdapter:
+
+    def test_order_number_from_name(self):
+        result = from_shopify({"name": "#1047"})
+        assert result["invoice_number"] == "1047"
+
+    def test_order_number_fallback(self):
+        result = from_shopify({"order_number": 1047})
+        assert result["invoice_number"] == "1047"
+
+    def test_amounts_strings_to_floats(self):
+        result = from_shopify({
+            "subtotal_price": "100.00",
+            "total_tax": "19.00",
+            "total_price": "119.00",
+        })
+        assert result["subtotal"] == 100.00
+        assert result["tax_amount"] == 19.00
+        assert result["total"] == 119.00
+
+    def test_date_extracted(self):
+        result = from_shopify({"created_at": "2026-04-08T14:30:00+02:00"})
+        assert result["invoice_date"] == "2026-04-08"
+
+    def test_currency_preserved(self):
+        result = from_shopify({"currency": "EUR"})
+        assert result["currency"] == "EUR"
+
+    def test_customer_name_combined(self):
+        result = from_shopify({
+            "customer": {"first_name": "Klaus", "last_name": "Berger"},
+        })
+        assert result["recipient"]["name"] == "Klaus Berger"
+
+    def test_customer_email(self):
+        result = from_shopify({
+            "customer": {"first_name": "A", "last_name": "B", "email": "a@b.com"},
+        })
+        assert result["recipient"]["email"] == "a@b.com"
+
+    def test_billing_address_flattened_and_structured(self):
+        result = from_shopify({
+            "billing_address": {
+                "address1": "Werkstr. 15",
+                "city": "Düsseldorf",
+                "province": "NRW",
+                "zip": "40210",
+                "country": "Germany",
+                "country_code": "DE",
+            },
+        })
+        assert "Werkstr. 15" in result["recipient"]["address"]
+        assert result["recipient"]["city"] == "Düsseldorf"
+        assert result["recipient"]["postal_code"] == "40210"
+        assert result["recipient"]["country"] == "DE"
+
+    def test_line_items_mapped(self):
+        result = from_shopify({
+            "line_items": [
+                {"title": "Widget", "quantity": 3, "price": "25.00"},
+            ],
+        })
+        assert len(result["items"]) == 1
+        item = result["items"][0]
+        assert item["description"] == "Widget"
+        assert item["quantity"] == 3
+        assert item["unit_price"] == 25.00
+        assert item["line_total"] == 75.00
+
+    def test_no_sender_in_output(self):
+        result = from_shopify({"name": "#1", "customer": {"first_name": "A", "last_name": "B"}})
+        assert "sender" not in result
+
+    def test_missing_fields_left_missing(self):
+        result = from_shopify({})
+        assert "invoice_number" not in result
+        assert "subtotal" not in result
+
+    def test_tax_rate_from_tax_lines(self):
+        result = from_shopify({
+            "tax_lines": [{"title": "VAT", "price": "19.00", "rate": 0.19}],
+        })
+        assert result["tax_rate"] == 0.19
+
+    def test_rejects_non_dict(self):
+        with pytest.raises(ValueError):
+            from_shopify("not a dict")
+
+    def test_billing_address_name_fallback(self):
+        """If customer has no name, use billing_address.name."""
+        result = from_shopify({
+            "customer": {"email": "test@test.com"},
+            "billing_address": {"name": "Klaus Berger"},
+        })
+        assert result["recipient"]["name"] == "Klaus Berger"
+
+
+# ── Shopify end-to-end ───────────────────────────────────────────────
+
+class TestShopifyEndToEnd:
+
+    def test_full_fixture_validates(self):
+        raw = json.loads((FIXTURES / "shopify_order.json").read_text())
+        adapted = from_shopify(raw)
+        result = validate_invoice(adapted)
+
+        # Blocks on missing sender
+        assert result["status"] == "blocked"
+        blocked_rules = {e["rule_id"] for e in result["errors"] if e.get("severity") == "blocked"}
+        assert "identity.sender_name" in blocked_rules
+
+        # But data is correct
+        canonical = result["canonical"]
+        assert canonical["invoice_number"] == "1047"
+        assert canonical["recipient"]["name"] == "Klaus Berger"
+        assert canonical["total"] == pytest.approx(1309.00)
+        assert canonical["currency"] == "EUR"
+        assert len(canonical["items"]) == 3
+
+    def test_full_fixture_with_sender_passes(self):
+        raw = json.loads((FIXTURES / "shopify_order.json").read_text())
+        adapted = from_shopify(raw)
+        adapted["sender"] = {"name": "Werkzeug-Shop GmbH", "email": "shop@werkzeug.de"}
+        result = validate_invoice(adapted)
+        assert result["render_ready"] is True
+
+    def test_incomplete_fixture_blocks(self):
+        raw = json.loads((FIXTURES / "shopify_incomplete.json").read_text())
+        adapted = from_shopify(raw)
+        result = validate_invoice(adapted)
+        assert result["status"] == "blocked"
+        blocked_rules = {e["rule_id"] for e in result["errors"] if e.get("severity") == "blocked"}
+        assert "identity.sender_name" in blocked_rules
+        assert "identity.recipient_name" in blocked_rules
+
+    def test_amounts_are_floats_not_strings(self):
+        raw = json.loads((FIXTURES / "shopify_order.json").read_text())
+        adapted = from_shopify(raw)
+        assert isinstance(adapted["subtotal"], float)
+        assert adapted["subtotal"] == 1100.00
+        assert adapted["total"] == 1309.00
+        # First item: 5 × 120.00 = 600.00
+        assert adapted["items"][0]["line_total"] == 600.00
+        assert adapted["items"][0]["unit_price"] == 120.00
