@@ -576,3 +576,71 @@ class TestTemplatePayloadShape:
         tp = report.template_payload
         assert tp["invoice_date"] == "April 10, 2026"
         assert tp["due_date"] == "May 10, 2026"
+
+
+# ---------------------------------------------------------------------------
+# Data-source tests for guided correction frontend
+# ---------------------------------------------------------------------------
+
+class TestGuidedCorrectionDataSources:
+    """Validate that the backend produces the exact data structures
+    the frontend guided correction system relies on."""
+
+    def test_typo_payload_produces_near_match_with_suggestion(self):
+        """Tier A requires unknown_fields with classification='near_match'
+        and a suggestion that matches the blocked path."""
+        report = ingest_invoice({
+            "invioce_number": "INV-001",
+            "invoice_date": "2026-04-10",
+            "sender": {"name": "Acme"},
+            "recipeint": {"name": "Target", "email": "t@t.com"},
+            "items": [{"description": "X", "quantity": 1, "unit_price": 100}],
+        })
+        # Must be blocked on invoice_number
+        assert not report.render_ready
+        blocked_rules = {e.rule_id for e in report.errors if e.severity == "blocked"}
+        assert "identity.invoice_number" in blocked_rules
+
+        # Must have near_match for invioce_number -> invoice_number
+        near_matches = {u.path: u for u in report.unknown_fields if u.classification == "near_match"}
+        assert "invioce_number" in near_matches
+        assert near_matches["invioce_number"].suggestion == "invoice_number"
+
+        # Must have near_match for recipeint -> recipient
+        assert "recipeint" in near_matches
+        assert near_matches["recipeint"].suggestion == "recipient"
+
+    def test_missing_sender_no_near_match(self):
+        """Tier B: blocked on sender.name with NO near_match in unknown_fields."""
+        report = ingest_invoice({
+            "invoice_number": "INV-002",
+            "invoice_date": "2026-04-10",
+            "recipient": {"name": "Client"},
+            "items": [{"description": "X", "quantity": 1, "unit_price": 100}],
+        })
+        assert not report.render_ready
+        blocked_rules = {e.rule_id for e in report.errors if e.severity == "blocked"}
+        assert "identity.sender_name" in blocked_rules
+
+        # No near-match for sender — nothing to rename
+        sender_matches = [u for u in report.unknown_fields
+                         if u.classification == "near_match" and u.suggestion in ("sender", "sender.name")]
+        assert len(sender_matches) == 0
+
+    def test_typo_plus_missing_sender_produces_both(self):
+        """Mixed Tier A + Tier B: both near_match unknown_field AND blocked error."""
+        report = ingest_invoice({
+            "invioce_number": "INV-003",
+            "invoice_date": "2026-04-10",
+            "recipient": {"name": "Client"},
+            "items": [{"description": "X", "quantity": 1, "unit_price": 100}],
+        })
+        assert not report.render_ready
+
+        blocked_rules = {e.rule_id for e in report.errors if e.severity == "blocked"}
+        assert "identity.invoice_number" in blocked_rules
+        assert "identity.sender_name" in blocked_rules
+
+        near_matches = {u.path: u for u in report.unknown_fields if u.classification == "near_match"}
+        assert "invioce_number" in near_matches
+        assert near_matches["invioce_number"].suggestion == "invoice_number"

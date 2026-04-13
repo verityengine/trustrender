@@ -5,6 +5,8 @@ import JSZip from 'jszip'
 import CodeEditor from './CodeEditor.jsx'
 import { buildPathIndex } from './json-path-index.js'
 import { resolveErrorLocation } from './error-resolver.js'
+import { generatePatches, applyPatches, computePatchDiff } from './patchUtils.js'
+import { ISSUE_REGISTRY } from './issueRegistry.js'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
@@ -1559,8 +1561,16 @@ function AppWorkspace() {
   const [ingestResultStale, setIngestResultStale] = useState(false) // true when rawJson changed after last run
   const [ingesting, setIngesting] = useState(false)
   const [ingestTraceTab, setIngestTraceTab] = useState('aliases')
-  const [ingestViewMode, setIngestViewMode] = useState('canonical')
+  const [ingestViewMode, setIngestViewMode] = useState('summary')
+  const [ingestTraceOpen, setIngestTraceOpen] = useState(false)
   const [ingestSampleKey, setIngestSampleKey] = useState('')
+  const prevIngestRef = useRef(null) // previous ingest result for recovery detection
+
+  // Guided correction state
+  const [pendingPatches, setPendingPatches] = useState([])
+  const [patchInputValues, setPatchInputValues] = useState({})
+  const [patchPreviewOpen, setPatchPreviewOpen] = useState(false)
+  const [activePatchId, setActivePatchId] = useState(null) // single open fix panel
 
   // Probe /dashboard availability once (local dev only — production API
   // host never mounts /dashboard, so skip the wasted request)
@@ -1680,6 +1690,13 @@ function AppWorkspace() {
     setIngestResultStale(false)
     setIngesting(false)
     setIngestSampleKey('')
+    setIngestViewMode('summary')
+    setIngestTraceOpen(false)
+    prevIngestRef.current = null // new session — no recovery context
+    setPendingPatches([])
+    setPatchInputValues({})
+    setPatchPreviewOpen(false)
+    setActivePatchId(null)
     setTab('ingest')
   }
 
@@ -1688,6 +1705,7 @@ function AppWorkspace() {
     let data
     try { data = JSON.parse(rawJson) } catch { return }
     setIngesting(true)
+    prevIngestRef.current = ingestResult // capture for recovery detection
     setIngestResult(null)
     setIngestResultStale(false)
     try {
@@ -1698,12 +1716,49 @@ function AppWorkspace() {
       })
       const result = await res.json()
       setIngestResult(result)
-      setIngestTraceTab('aliases')
-      setIngestViewMode('canonical')
+      setIngestViewMode('summary')
+      // Blocked: auto-open trace on the Blocked tab so errors are immediately visible
+      // Ready: trace collapsed by default — decision first, evidence on demand
+      setIngestTraceTab(result.render_ready ? 'aliases' : 'blocked')
+      setIngestTraceOpen(!result.render_ready)
     } catch {
       setIngestResult({ status: 'blocked', render_ready: false, canonical: {}, template_payload: null, errors: [{ rule_id: 'network', severity: 'blocked', passed: false, message: 'Server unreachable' }], warnings: [], normalizations: [], computed_fields: [], unknown_fields: [] })
     }
     setIngesting(false)
+  }
+
+  // Ingest: run with explicit JSON override (avoids stale closure after setRawJson)
+  const runIngestWith = async (jsonOverride) => {
+    let data
+    try { data = JSON.parse(jsonOverride) } catch { return }
+    setIngesting(true)
+    prevIngestRef.current = ingestResult
+    setIngestResult(null)
+    setIngestResultStale(false)
+    try {
+      const res = await fetch(apiUrl('/ingest'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data }),
+      })
+      const result = await res.json()
+      setIngestResult(result)
+      setIngestViewMode('summary')
+      setIngestTraceTab(result.render_ready ? 'aliases' : 'blocked')
+      setIngestTraceOpen(!result.render_ready)
+    } catch {
+      setIngestResult({ status: 'blocked', render_ready: false, canonical: {}, template_payload: null, errors: [{ rule_id: 'network', severity: 'blocked', passed: false, message: 'Server unreachable' }], warnings: [], normalizations: [], computed_fields: [], unknown_fields: [] })
+    }
+    setIngesting(false)
+  }
+
+  // Guided correction: apply accepted patches to rawJson and rerun ingest
+  const applyAndRerun = async () => {
+    const accepted = pendingPatches.filter(p => p.status === 'accepted')
+    if (!accepted.length) return
+    const newJson = applyPatches(rawJson, accepted)
+    setRawJson(newJson)
+    await runIngestWith(newJson)
   }
 
   // Ingest: load a sample payload into the raw editor
@@ -1716,6 +1771,13 @@ function AppWorkspace() {
     }
     setIngestResult(null)
     setIngestResultStale(false)
+    setIngestViewMode('summary')
+    setIngestTraceOpen(false)
+    prevIngestRef.current = null // new session — no recovery context
+    setPendingPatches([])
+    setPatchInputValues({})
+    setPatchPreviewOpen(false)
+    setActivePatchId(null)
   }
 
   // Ingest → Preflight: copy template_payload into the preflight editor and switch tabs.
@@ -1771,6 +1833,20 @@ function AppWorkspace() {
   useEffect(() => {
     if (ingestResult && !ingesting) setIngestResultStale(true)
   }, [rawJson])
+
+  // Generate patches for blocked ingest results
+  useEffect(() => {
+    if (ingestResult && !ingestResult.render_ready) {
+      setPendingPatches(generatePatches(ingestResult, rawJson))
+      setPatchInputValues({})
+      setPatchPreviewOpen(false)
+      setActivePatchId(null)
+    } else {
+      setPendingPatches([])
+      setPatchPreviewOpen(false)
+      setActivePatchId(null)
+    }
+  }, [ingestResult])
 
   // JSON parse check + path index build
   useEffect(() => {
@@ -2100,12 +2176,16 @@ function AppWorkspace() {
               <span className="text-[11px] text-muted">
                 {rawParseError ? 'Fix JSON errors to continue' : ingestSampleKey ? `${WORKSPACE_INGEST_SAMPLES[ingestSampleKey]?.label} payload loaded` : 'Paste raw JSON from any source'}
               </span>
-              <button
-                onClick={runIngest}
-                disabled={!!rawParseError || ingesting}
-                className="text-[13px] px-5 py-2 rounded-full font-semibold bg-ink text-panel hover:bg-ink-2 transition-all cursor-pointer shadow-sm hover:shadow-md disabled:opacity-40 disabled:cursor-default">
-                {ingesting ? 'Running…' : 'Run ingest →'}
-              </button>
+              {ingestResultStale ? (
+                <span className="text-[11px] text-muted italic">Result is stale — use Re-run ingest above</span>
+              ) : (
+                <button
+                  onClick={runIngest}
+                  disabled={!!rawParseError || ingesting}
+                  className="text-[13px] px-5 py-2 rounded-full font-semibold bg-ink text-panel hover:bg-ink-2 transition-all cursor-pointer shadow-sm hover:shadow-md disabled:opacity-40 disabled:cursor-default">
+                  {ingesting ? 'Running…' : 'Run ingest →'}
+                </button>
+              )}
             </div>
           </div>
           ) : !template ? (
@@ -2251,167 +2331,427 @@ function AppWorkspace() {
                   const unknown = ingestResult.unknown_fields || []
                   const blocked = ingestResult.errors?.filter(e => e.severity === 'blocked') || []
                   const warnings = ingestResult.warnings || []
+                  const inferredTpl = inferTemplateFromCanonical(ingestResult.canonical)
+                  const canonical = ingestResult.canonical || {}
+                  const payload = ingestResult.template_payload || {}
+                  const topAliases = aliases.slice(0, 3)
+
+                  // Human-friendly labels for blocked error paths
+                  const blockedHumanLabel = {
+                    'sender.name': 'Missing sender name',
+                    'recipient.name': 'Missing recipient name',
+                    'invoice_number': 'Missing invoice number',
+                    'items': 'No line items',
+                  }
+                  const blockedInputHints = {
+                    'sender.name': ['CompanyName', 'account_name', 'bill_from_name', 'sender.name'],
+                    'recipient.name': ['customer_name', 'bill_to_name', 'recipient.name'],
+                    'invoice_number': ['InvoiceNumber', 'DocNumber', 'invoice_no', 'invoice_number'],
+                    'items': ['LineItems', 'Line', 'lines', 'items'],
+                  }
+
+                  // Recovery detection: previous was blocked, current is ready
+                  const prev = prevIngestRef.current
+                  const isRecovery = ingestResult.render_ready && prev && !prev.render_ready
+                  const resolvedPaths = isRecovery
+                    ? (prev.errors || []).filter(e => e.severity === 'blocked').map(e => e.path || e.rule_id).filter(Boolean)
+                    : []
+                  // Map blocked paths to Summary row labels for highlight
+                  const pathToSummaryLabel = { 'sender.name': 'Sender', 'recipient.name': 'Recipient', 'invoice_number': 'Invoice #', 'due_date': 'Due', 'items': 'Items', 'total': 'Total', 'subtotal': 'Total' }
+                  const recoveryHighlights = new Set(resolvedPaths.map(p => pathToSummaryLabel[p]).filter(Boolean))
+
                   return (
-                    <div className="space-y-4">
-                      {/* Status pill */}
-                      <div className={`flex items-center gap-4 px-5 py-4 rounded-lg border ${stale ? 'bg-surface border-rule-light opacity-60' : ingestResult.render_ready ? 'bg-sage/[0.06] border-sage/20' : ingestResult.status === 'ready_with_warnings' ? 'bg-rust/[0.04] border-rust/20' : 'bg-wine/[0.04] border-wine/20'}`}>
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${stale ? 'bg-rule/20' : ingestResult.render_ready ? 'bg-sage/15' : 'bg-wine/10'}`}>
-                          {stale
-                            ? <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
-                            : ingestResult.render_ready
-                            ? <svg className="w-4.5 h-4.5 text-sage" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                            : <svg className="w-4.5 h-4.5 text-wine" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                          }
+                    <div className="space-y-3">
+
+                      {/* ── Card 1: Outcome ── */}
+                      <div className={`rounded-xl border overflow-hidden ${stale ? 'border-amber-400/40 bg-amber-50/[0.06]' : ingestResult.render_ready ? 'border-sage/25 bg-sage/[0.04]' : 'border-wine/25 bg-wine/[0.03]'}`} style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
+                        <div className="px-5 py-4">
+                          {stale ? (
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="text-[13px] font-semibold text-ink">Input changed. Re-run ingest to refresh results.</div>
+                                <div className="text-[11px] text-muted/70 mt-0.5">Showing previous result until rerun.</div>
+                              </div>
+                              <button onClick={runIngest} className="text-[13px] px-5 py-2 rounded-full font-semibold bg-ink text-panel hover:bg-ink-2 transition-all cursor-pointer shadow-sm hover:shadow-md">
+                                Re-run ingest →
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              {/* Status + detection row */}
+                              <div className="flex items-start gap-4">
+                                <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${ingestResult.render_ready ? 'bg-sage/15' : 'bg-wine/10'}`}>
+                                  {ingestResult.render_ready
+                                    ? <svg className="w-4.5 h-4.5 text-sage" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                    : <svg className="w-4.5 h-4.5 text-wine" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                  }
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className={`font-semibold ${ingestResult.render_ready ? 'text-[17px] text-sage' : 'text-[17px] text-wine'}`}>
+                                    {ingestResult.render_ready ? 'Render-ready' : `Blocked — ${blocked.length} render-blocking issue${blocked.length !== 1 ? 's' : ''}`}
+                                  </div>
+                                  {isRecovery && resolvedPaths.length > 0 && (
+                                    <div className="text-[11px] text-sage/80 mt-0.5">
+                                      {resolvedPaths.length === 1
+                                        ? `Previously blocked issue resolved: ${resolvedPaths[0]}`
+                                        : `${resolvedPaths.length} blocking issues resolved: ${resolvedPaths.join(', ')}`}
+                                    </div>
+                                  )}
+                                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[11px] text-muted">
+                                    <span>Invoice detected</span>
+                                    {inferredTpl && <span className="font-mono">Template: {inferredTpl}</span>}
+                                    <span className="font-mono text-[10px]">
+                                      {[
+                                        aliases.length > 0 && `${aliases.length} alias${aliases.length !== 1 ? 'es' : ''}`,
+                                        ingestResult.computed_fields?.length > 0 && `${ingestResult.computed_fields.length} computed`,
+                                        blocked.length > 0 && `${blocked.length} blocked`,
+                                        warnings.length > 0 && `${warnings.length} warnings`,
+                                      ].filter(Boolean).join(' · ')}
+                                    </span>
+                                  </div>
+                                  {/* Resolved fields */}
+                                  {topAliases.length > 0 && (
+                                    <div className="mt-2.5">
+                                      <div className="text-[10px] text-muted font-medium tracking-wide uppercase mb-1">Resolved fields</div>
+                                      <div className="flex flex-wrap gap-1.5">
+                                      {topAliases.map((a, i) => (
+                                        <span key={i} className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-surface border border-rule-light">
+                                          <span className="text-wine">{a.original_key}</span>
+                                          <span className="text-muted/50"> → </span>
+                                          <span className="text-sage">{a.canonical_name}</span>
+                                        </span>
+                                      ))}
+                                      {aliases.length > 3 && <span className="text-[10px] text-muted self-center">+{aliases.length - 3} more</span>}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                                <span className={`text-[10px] font-mono px-2.5 py-1 rounded-full border flex-shrink-0 ${ingestResult.render_ready ? 'text-sage border-sage/30 bg-sage/[0.08]' : ingestResult.status === 'ready_with_warnings' ? 'text-rust border-rust/30 bg-rust/[0.08]' : 'text-wine border-wine/30 bg-wine/[0.08]'}`}>
+                                  {ingestResult.status}
+                                </span>
+                              </div>
+
+                              {/* CTA row */}
+                              <div className="flex items-center justify-between mt-4 pt-3.5 border-t border-rule-light/60">
+                                <button onClick={() => setIngestTraceOpen(o => !o)}
+                                  className="text-[11px] text-muted hover:text-ink transition-colors cursor-pointer flex items-center gap-1">
+                                  {ingestTraceOpen ? '↑ Hide mappings' : '↓ Inspect mappings'}
+                                </button>
+                                {ingestResult.render_ready ? (
+                                  <div className="flex flex-col items-end gap-1.5">
+                                    <span className="text-[11px] text-muted">Canonical invoice complete. Continue to validation.</span>
+                                    <button onClick={continueToPreFlight}
+                                      className="text-[13px] px-5 py-2 rounded-full font-semibold bg-ink text-panel hover:bg-ink-2 transition-all cursor-pointer shadow-sm hover:shadow-md">
+                                      Continue to preflight →
+                                    </button>
+                                  </div>
+                                ) : (() => {
+                                  const acceptedCount = pendingPatches.filter(p => p.status === 'accepted').length
+                                  return acceptedCount > 0 ? (
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sage/10 text-sage border border-sage/20">{acceptedCount} fix{acceptedCount !== 1 ? 'es' : ''} ready</span>
+                                      <button
+                                        onClick={() => setPatchPreviewOpen(o => !o)}
+                                        className="text-[11px] text-muted hover:text-ink cursor-pointer transition-colors">
+                                        {patchPreviewOpen ? 'Hide preview' : 'Preview changes'}
+                                      </button>
+                                      <button
+                                        onClick={applyAndRerun}
+                                        className="text-[13px] px-5 py-2 rounded-full font-semibold bg-ink text-panel hover:bg-ink-2 transition-all cursor-pointer shadow-sm hover:shadow-md">
+                                        Apply &amp; re-run ingest →
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-[12px] text-wine font-medium">Fix {blocked.length} render-blocking issue{blocked.length !== 1 ? 's' : ''} to continue</span>
+                                  )
+                                })()}
+                              </div>
+                            </>
+                          )}
                         </div>
-                        <div className="flex-1">
-                          <div className={`font-semibold ${stale ? 'text-[14px] text-muted' : ingestResult.render_ready ? 'text-[17px] text-sage' : 'text-[14px] text-wine'}`}>
-                            {stale ? 'Input changed — re-run ingest' : ingestResult.render_ready ? 'Render-ready' : `Blocked — ${blocked.length} issue${blocked.length !== 1 ? 's' : ''}`}
-                          </div>
-                          <div className="text-[11px] text-muted mt-0.5 flex items-center gap-2.5">
-                            {!stale && aliases.length > 0 && <span>{aliases.length} alias{aliases.length !== 1 ? 'es' : ''}</span>}
-                            {!stale && ingestResult.computed_fields?.length > 0 && <span>{ingestResult.computed_fields.length} computed</span>}
-                            {!stale && unknown.length > 0 && <span>{unknown.length} unknown</span>}
-                            {!stale && warnings.length > 0 && <span>{warnings.length} warning{warnings.length !== 1 ? 's' : ''}</span>}
-                            {stale && <span className="text-[10px] font-mono">result from previous run</span>}
-                          </div>
-                        </div>
-                        {!stale && <span className={`text-[10px] font-mono px-2.5 py-1 rounded-full border flex-shrink-0 ${ingestResult.render_ready ? 'text-sage border-sage/30 bg-sage/8' : ingestResult.status === 'ready_with_warnings' ? 'text-rust border-rust/30 bg-rust/8' : 'text-wine border-wine/30 bg-wine/8'}`}>
-                          {ingestResult.status}
-                        </span>}
                       </div>
 
-                      {/* Canonical output (hero) */}
-                      <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
+                      {/* ── Patch diff preview ── */}
+                      {patchPreviewOpen && pendingPatches.some(p => p.status === 'accepted') && (() => {
+                        const accepted = pendingPatches.filter(p => p.status === 'accepted')
+                        const patchedJson = applyPatches(rawJson, accepted)
+                        const diffLines = computePatchDiff(rawJson, patchedJson)
+                        return (
+                          <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
+                            <div className="px-4 py-2.5 border-b border-rule-light flex items-center justify-between">
+                              <span className="text-[12px] font-semibold text-ink">Patch preview</span>
+                              <span className="text-[10px] text-muted font-mono">{accepted.length} change{accepted.length !== 1 ? 's' : ''}</span>
+                            </div>
+                            <pre className="p-4 text-[11px] font-mono leading-relaxed overflow-x-auto max-h-[280px] overflow-y-auto">
+                              {diffLines.map((line, idx) => (
+                                <div key={idx} className={
+                                  line.type === 'added' ? 'text-sage bg-sage/[0.06]' :
+                                  line.type === 'removed' ? 'text-wine bg-wine/[0.04] line-through opacity-60' :
+                                  'text-muted/50'
+                                }>
+                                  <span className="inline-block w-4 text-right mr-3 text-muted/30 select-none">{line.type === 'added' ? '+' : line.type === 'removed' ? '-' : ' '}</span>
+                                  {line.text}
+                                </div>
+                              ))}
+                            </pre>
+                          </div>
+                        )
+                      })()}
+
+                      {/* ── Card 2: Canonical document ── */}
+                      <div className={`bg-panel rounded-xl border border-rule-light overflow-hidden ${stale ? 'opacity-50' : ''}`} style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
                         <div className="px-4 py-2.5 border-b border-rule-light flex items-center justify-between">
-                          <div className="flex items-center gap-1 rounded-md border border-rule overflow-hidden">
-                            {['canonical', 'raw'].map(mode => (
+                          <div className="flex items-center gap-0.5 rounded-md border border-rule overflow-hidden">
+                            {[['summary', 'Summary'], ['canonical', 'Canonical JSON'], ['raw', 'Raw JSON']].map(([mode, label]) => (
                               <button key={mode} onClick={() => setIngestViewMode(mode)}
                                 className={`text-[10px] font-mono px-2.5 py-1 cursor-pointer transition-colors
                                   ${ingestViewMode === mode ? 'bg-surface text-ink font-semibold' : 'text-muted hover:text-mid'}`}>
-                                {mode === 'canonical' ? 'Canonical' : 'Raw'}
+                                {label}
                               </button>
                             ))}
                           </div>
                           <span className="text-[10px] font-mono text-muted">
-                            {ingestViewMode === 'canonical' ? 'normalized invoice payload' : 'original input'}
+                            {ingestViewMode === 'summary' ? 'canonical fields' : ingestViewMode === 'canonical' ? 'normalized payload' : 'original input'}
                           </span>
                         </div>
-                        <pre className="font-mono text-[11px] text-ink-2 leading-relaxed p-4 overflow-auto max-h-[360px] whitespace-pre-wrap">
-                          {JSON.stringify(ingestViewMode === 'canonical' ? ingestResult.canonical : JSON.parse(rawJson), null, 2)}
-                        </pre>
-                      </div>
-
-                      {/* Trace tabs */}
-                      <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-                        <div className="px-3 py-1.5 border-b border-rule-light flex items-center gap-0.5">
-                          {[
-                            ['aliases', 'Aliases', aliases.length],
-                            ['computed', 'Computed', computed.length + (ingestResult.computed_fields?.length || 0)],
-                            ['unknown', 'Unknown', unknown.length],
-                            ['blocked', 'Blocked', blocked.length],
-                          ].map(([key, label, count]) => (
-                            <button key={key} onClick={() => setIngestTraceTab(key)}
-                              className={`text-[11px] px-3 py-1.5 rounded-md font-medium transition-colors cursor-pointer flex items-center gap-1.5
-                                ${ingestTraceTab === key ? 'bg-surface text-ink' : 'text-muted hover:text-mid'}`}>
-                              {label}
-                              {count > 0 && (
-                                <span className={`text-[9px] font-mono px-1 rounded ${ingestTraceTab === key ? 'text-mid' : 'text-muted/60'} ${key === 'blocked' && count > 0 ? 'text-wine' : ''}`}>{count}</span>
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="p-4 min-h-[120px]">
-                          {/* Aliases tab */}
-                          {ingestTraceTab === 'aliases' && (
-                            aliases.length === 0
-                              ? <p className="text-[12px] text-muted">No aliases applied — all fields were already canonical.</p>
-                              : <div className="space-y-2">
-                                  {aliases.map((n, i) => (
-                                    <div key={i} className="flex items-start gap-3 py-1.5 border-b border-rule-light/50 last:border-0">
-                                      <code className="text-[11px] text-wine font-mono flex-shrink-0">{n.original_key}</code>
-                                      <svg className="w-3 h-3 text-muted mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
-                                      <code className="text-[11px] text-sage font-mono flex-shrink-0">{n.canonical_name}</code>
-                                      {n.message && <span className="text-[10px] text-muted flex-1 leading-relaxed">{n.message}</span>}
-                                    </div>
-                                  ))}
-                                </div>
-                          )}
-                          {/* Computed tab */}
-                          {ingestTraceTab === 'computed' && (
-                            computed.length === 0 && !ingestResult.computed_fields?.length
-                              ? <p className="text-[12px] text-muted">No fields were computed or defaulted.</p>
-                              : <div className="space-y-2">
-                                  {ingestResult.computed_fields?.map((f, i) => (
-                                    <div key={`cf-${i}`} className="flex items-center gap-3 py-1 border-b border-rule-light/50 last:border-0">
-                                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-sage/10 text-sage border border-sage/20">computed</span>
-                                      <code className="text-[11px] font-mono text-ink">{f}</code>
-                                    </div>
-                                  ))}
-                                  {computed.map((n, i) => (
-                                    <div key={`cn-${i}`} className="flex items-start gap-3 py-1 border-b border-rule-light/50 last:border-0">
-                                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-rust/10 text-rust border border-rust/20">{n.source}</span>
-                                      <code className="text-[11px] font-mono text-ink">{n.canonical_name}</code>
-                                      {n.message && <span className="text-[10px] text-muted leading-relaxed">{n.message}</span>}
-                                    </div>
-                                  ))}
-                                </div>
-                          )}
-                          {/* Unknown tab */}
-                          {ingestTraceTab === 'unknown' && (
-                            unknown.length === 0
-                              ? <p className="text-[12px] text-muted">No unrecognized fields.</p>
-                              : <div className="space-y-2">
-                                  {unknown.map((u, i) => (
-                                    <div key={i} className="flex items-start gap-3 py-1.5 border-b border-rule-light/50 last:border-0">
-                                      <code className="text-[11px] font-mono text-ink flex-shrink-0">{u.path}</code>
-                                      <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded flex-shrink-0 ${u.classification === 'suspicious' ? 'bg-rust/10 text-rust border border-rust/20' : u.classification === 'near_match' ? 'bg-sage/10 text-sage border border-sage/20' : 'bg-surface text-muted border border-rule'}`}>
-                                        {u.classification}
-                                      </span>
-                                      {u.suggestion && <span className="text-[10px] text-muted">→ did you mean <code className="font-mono text-sage">{u.suggestion}</code>?</span>}
-                                    </div>
-                                  ))}
-                                </div>
-                          )}
-                          {/* Blocked tab */}
-                          {ingestTraceTab === 'blocked' && (
-                            blocked.length === 0
-                              ? <p className="text-[12px] text-muted">No blocking issues.</p>
-                              : <div className="space-y-2">
-                                  {blocked.map((e, i) => (
-                                    <div key={i} className="border-l-[3px] border-wine/30 pl-3 py-2 rounded-r-sm bg-wine/[0.03]">
-                                      <div className="font-mono text-[11px] font-semibold text-wine">{e.rule_id}</div>
-                                      <div className="text-[11px] text-mid mt-0.5">{e.message}</div>
-                                      {e.path && <div className="text-[10px] text-muted font-mono mt-0.5">path: {e.path}</div>}
-                                    </div>
-                                  ))}
-                                </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* CTA footer */}
-                      <div className="flex items-center justify-between">
-                        <div className="text-[11px] text-muted">
-                          {stale
-                            ? 'Re-run ingest to get a fresh result.'
-                            : ingestResult.render_ready
-                            ? `Template: ${inferTemplateFromCanonical(ingestResult.canonical) ?? 'unknown — pick manually'}`
-                            : 'Resolve blocking issues before continuing.'}
-                        </div>
-                        {!stale && ingestResult.render_ready ? (
-                          <button onClick={continueToPreFlight}
-                            className="text-[13px] px-5 py-2 rounded-full font-semibold bg-ink text-panel hover:bg-ink-2 transition-all cursor-pointer shadow-sm hover:shadow-md">
-                            Continue to preflight →
-                          </button>
-                        ) : stale ? (
-                          <button onClick={runIngest}
-                            className="text-[13px] px-5 py-2 rounded-full font-semibold border border-rule text-muted hover:text-ink hover:border-ink transition-all cursor-pointer">
-                            Re-run ingest →
-                          </button>
+                        {ingestViewMode === 'summary' ? (
+                          <div className="p-4 space-y-0">
+                            {[
+                              ['Invoice #', payload.invoice_number || canonical.invoice_number],
+                              ['Date', payload.invoice_date || canonical.invoice_date],
+                              ['Due', payload.due_date || canonical.due_date],
+                              ['Terms', payload.payment_terms || canonical.payment_terms],
+                              ['Sender', payload.sender?.name || canonical.sender?.name],
+                              ['Recipient', payload.recipient?.name || canonical.recipient?.name],
+                              ['Items', (payload.items ?? canonical.items) != null ? `${(payload.items ?? canonical.items).length} line item${(payload.items ?? canonical.items).length !== 1 ? 's' : ''}` : null],
+                              ['Total', payload.total || (canonical.total ? `${canonical.total}` : null)],
+                              ['Notes', payload.notes || canonical.notes],
+                            ].filter(([, v]) => v).map(([label, value]) => (
+                              <div key={label} className={`flex items-baseline gap-3 py-1.5 border-b border-rule-light/40 last:border-0 ${isRecovery && recoveryHighlights.has(label) ? 'bg-sage/[0.06] -mx-1 px-1 rounded' : ''}`}>
+                                <span className="text-[10px] text-muted font-mono w-20 flex-shrink-0">{label}</span>
+                                <span className="text-[12px] text-ink leading-snug">{value}</span>
+                              </div>
+                            ))}
+                          </div>
                         ) : (
-                          <span className="text-[12px] text-wine font-medium">Blocked — fix to continue</span>
+                          <pre className="font-mono text-[11px] text-ink-2 leading-relaxed p-4 overflow-auto max-h-[360px] whitespace-pre-wrap">
+                            {JSON.stringify(ingestViewMode === 'canonical' ? ingestResult.canonical : JSON.parse(rawJson), null, 2)}
+                          </pre>
                         )}
                       </div>
+
+                      {/* ── Card 3: Trace (collapsible) ── */}
+                      {ingestTraceOpen && (
+                        <div className={`bg-panel rounded-xl border border-rule-light overflow-hidden ${stale ? 'opacity-50' : ''}`} style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
+                          <div className="px-3 py-1.5 border-b border-rule-light flex items-center gap-0.5">
+                            {[
+                              ['aliases', 'Aliases', aliases.length],
+                              ['computed', 'Computed', computed.length + (ingestResult.computed_fields?.length || 0)],
+                              ['unknown', 'Unknown', unknown.length],
+                              ['blocked', 'Blocked', blocked.length],
+                            ].map(([key, label, count]) => (
+                              <button key={key} onClick={() => setIngestTraceTab(key)}
+                                className={`text-[11px] px-3 py-1.5 rounded-md font-medium transition-colors cursor-pointer flex items-center gap-1.5
+                                  ${ingestTraceTab === key ? 'bg-surface text-ink' : 'text-muted hover:text-mid'}`}>
+                                {label}
+                                {count > 0 && (
+                                  <span className={`text-[9px] font-mono px-1 rounded ${ingestTraceTab === key ? 'text-mid' : 'text-muted/60'} ${key === 'blocked' && count > 0 ? 'text-wine' : ''}`}>{count}</span>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="p-4 min-h-[120px]">
+                            {/* Aliases tab */}
+                            {ingestTraceTab === 'aliases' && (
+                              aliases.length === 0
+                                ? <p className="text-[12px] text-muted">No aliases applied — all fields were already canonical.</p>
+                                : <div className="space-y-2">
+                                    {aliases.map((n, i) => (
+                                      <div key={i} className="flex items-start gap-3 py-1.5 border-b border-rule-light/50 last:border-0">
+                                        <code className="text-[11px] text-wine font-mono flex-shrink-0">{n.original_key}</code>
+                                        <svg className="w-3 h-3 text-muted mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+                                        <code className="text-[11px] text-sage font-mono flex-shrink-0">{n.canonical_name}</code>
+                                        {n.message && <span className="text-[10px] text-muted flex-1 leading-relaxed">{n.message}</span>}
+                                      </div>
+                                    ))}
+                                  </div>
+                            )}
+                            {/* Computed tab */}
+                            {ingestTraceTab === 'computed' && (
+                              computed.length === 0 && !ingestResult.computed_fields?.length
+                                ? <p className="text-[12px] text-muted">No fields were computed or defaulted.</p>
+                                : <div className="space-y-2">
+                                    {ingestResult.computed_fields?.map((f, i) => (
+                                      <div key={`cf-${i}`} className="flex items-center gap-3 py-1 border-b border-rule-light/50 last:border-0">
+                                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-sage/10 text-sage border border-sage/20">computed</span>
+                                        <code className="text-[11px] font-mono text-ink">{f}</code>
+                                      </div>
+                                    ))}
+                                    {computed.map((n, i) => (
+                                      <div key={`cn-${i}`} className="flex items-start gap-3 py-1 border-b border-rule-light/50 last:border-0">
+                                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-rust/10 text-rust border border-rust/20">{n.source}</span>
+                                        <code className="text-[11px] font-mono text-ink">{n.canonical_name}</code>
+                                        {n.message && <span className="text-[10px] text-muted leading-relaxed">{n.message}</span>}
+                                      </div>
+                                    ))}
+                                  </div>
+                            )}
+                            {/* Unknown tab */}
+                            {ingestTraceTab === 'unknown' && (
+                              unknown.length === 0
+                                ? <p className="text-[12px] text-muted">No unrecognized fields.</p>
+                                : <div className="space-y-2">
+                                    {unknown.map((u, i) => (
+                                      <div key={i} className="flex items-start gap-3 py-1.5 border-b border-rule-light/50 last:border-0">
+                                        <code className="text-[11px] font-mono text-ink flex-shrink-0">{u.path}</code>
+                                        <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded flex-shrink-0 ${u.classification === 'suspicious' ? 'bg-rust/10 text-rust border border-rust/20' : u.classification === 'near_match' ? 'bg-sage/10 text-sage border border-sage/20' : 'bg-surface text-muted border border-rule'}`}>
+                                          {u.classification}
+                                        </span>
+                                        {u.suggestion && <span className="text-[10px] text-muted">→ did you mean <code className="font-mono text-sage">{u.suggestion}</code>?</span>}
+                                      </div>
+                                    ))}
+                                  </div>
+                            )}
+                            {/* Blocked tab — tiered fix UI */}
+                            {ingestTraceTab === 'blocked' && (
+                              blocked.length === 0
+                                ? <p className="text-[12px] text-muted">No blocking issues.</p>
+                                : <div className="space-y-2">
+                                    {blocked.map((e, i) => {
+                                      const entry = ISSUE_REGISTRY[e.rule_id]
+                                      const humanLabel = entry?.label || (e.path && blockedHumanLabel[e.path])
+                                      const hints = e.path && blockedInputHints[e.path]
+                                      const patch = pendingPatches.find(p => p.ruleId === e.rule_id)
+                                      const isActive = patch && activePatchId === patch.id
+                                      const isAccepted = patch?.status === 'accepted'
+
+                                      return (
+                                        <div key={i} className="border-l-[3px] border-wine/30 pl-3 py-2 rounded-r-sm bg-wine/[0.03]">
+                                          {/* Error heading */}
+                                          <div className="text-[12px] font-semibold text-wine">{humanLabel || e.message}</div>
+                                          {humanLabel && <div className="text-[10px] text-muted font-mono mt-1">{e.rule_id} · {e.path}</div>}
+                                          {!humanLabel && e.path && <div className="text-[10px] text-muted font-mono mt-1">path: {e.path}</div>}
+
+                                          {/* Tier A: deterministic safe fix */}
+                                          {patch?.tier === 'A' && (
+                                            <div className="mt-2 rounded-md bg-sage/[0.06] border border-sage/20 p-3">
+                                              {isAccepted ? (
+                                                <div className="flex items-center justify-between">
+                                                  <div className="flex items-center gap-2">
+                                                    <span className="text-sage text-[14px]">✓</span>
+                                                    <span className="text-[11px] text-sage font-medium">{patch.label}</span>
+                                                  </div>
+                                                  <button
+                                                    onClick={() => setPendingPatches(prev => prev.map(p => p.id === patch.id ? { ...p, status: 'suggested' } : p))}
+                                                    className="text-[10px] text-muted hover:text-ink cursor-pointer">Undo</button>
+                                                </div>
+                                              ) : (
+                                                <>
+                                                  <div className="text-[11px] text-ink font-medium">Safe fix: {patch.label}</div>
+                                                  {patch.value !== undefined && patch.value !== null && (
+                                                    <div className="text-[10px] text-muted mt-1">
+                                                      Value: <code className="font-mono text-ink/80">{typeof patch.value === 'object' ? JSON.stringify(patch.value) : String(patch.value)}</code>
+                                                      <span className="text-muted/60"> (from your input)</span>
+                                                    </div>
+                                                  )}
+                                                  <div className="text-[10px] text-muted/70 mt-0.5">{patch.detail}</div>
+                                                  <div className="flex gap-2 mt-2">
+                                                    <button
+                                                      onClick={() => {
+                                                        setPendingPatches(prev => prev.map(p => p.id === patch.id ? { ...p, status: 'accepted' } : p))
+                                                        setActivePatchId(null)
+                                                      }}
+                                                      className="text-[11px] px-3 py-1 rounded-md bg-sage/20 text-sage font-medium hover:bg-sage/30 cursor-pointer transition-colors">
+                                                      Accept fix
+                                                    </button>
+                                                    <button
+                                                      onClick={() => setActivePatchId(null)}
+                                                      className="text-[11px] px-3 py-1 rounded-md text-muted hover:text-ink cursor-pointer transition-colors">
+                                                      Skip
+                                                    </button>
+                                                  </div>
+                                                </>
+                                              )}
+                                            </div>
+                                          )}
+
+                                          {/* Tier B: guided user fix */}
+                                          {patch?.tier === 'B' && (
+                                            <div className="mt-2 rounded-md bg-surface border border-rule-light p-3">
+                                              {isAccepted ? (
+                                                <div className="flex items-center justify-between">
+                                                  <div className="flex items-center gap-2">
+                                                    <span className="text-sage text-[14px]">✓</span>
+                                                    <span className="text-[11px] text-ink font-medium">{patch.targetPath} = <code className="font-mono text-sage">{patch.value}</code></span>
+                                                  </div>
+                                                  <button
+                                                    onClick={() => setPendingPatches(prev => prev.map(p => p.id === patch.id ? { ...p, status: 'suggested', value: null } : p))}
+                                                    className="text-[10px] text-muted hover:text-ink cursor-pointer">Undo</button>
+                                                </div>
+                                              ) : isActive ? (
+                                                <>
+                                                  <label className="text-[11px] text-ink font-medium block mb-1.5">{patch.label}:</label>
+                                                  <div className="flex gap-2">
+                                                    <input
+                                                      type="text"
+                                                      value={patchInputValues[patch.id] || ''}
+                                                      onChange={(ev) => setPatchInputValues(prev => ({ ...prev, [patch.id]: ev.target.value }))}
+                                                      onKeyDown={(ev) => {
+                                                        if (ev.key === 'Enter' && patchInputValues[patch.id]?.trim()) {
+                                                          setPendingPatches(prev => prev.map(p => p.id === patch.id ? { ...p, value: patchInputValues[patch.id].trim(), status: 'accepted' } : p))
+                                                          setActivePatchId(null)
+                                                        }
+                                                      }}
+                                                      placeholder={patch.targetPath}
+                                                      className="flex-1 text-[11px] px-2.5 py-1.5 rounded-md border border-rule bg-panel font-mono focus:outline-none focus:border-ink/40"
+                                                      autoFocus
+                                                    />
+                                                    <button
+                                                      onClick={() => {
+                                                        const val = patchInputValues[patch.id]?.trim()
+                                                        if (!val) return
+                                                        setPendingPatches(prev => prev.map(p => p.id === patch.id ? { ...p, value: val, status: 'accepted' } : p))
+                                                        setActivePatchId(null)
+                                                      }}
+                                                      disabled={!patchInputValues[patch.id]?.trim()}
+                                                      className="text-[11px] px-3 py-1 rounded-md bg-ink text-panel font-medium hover:bg-ink-2 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                                                      Accept
+                                                    </button>
+                                                  </div>
+                                                </>
+                                              ) : (
+                                                <button
+                                                  onClick={() => setActivePatchId(patch.id)}
+                                                  className="text-[11px] text-ink/70 hover:text-ink cursor-pointer transition-colors">
+                                                  {patch.label} →
+                                                </button>
+                                              )}
+                                            </div>
+                                          )}
+
+                                          {/* Tier C: diagnostic only */}
+                                          {entry?.diagnosticOnly && (
+                                            <div className="mt-2 rounded-md bg-surface/50 border border-rule-light/60 p-3">
+                                              <div className="text-[11px] text-muted">{entry.diagnosticMessage}</div>
+                                              {e.message && <div className="text-[10px] font-mono text-muted/70 mt-1">{e.message}</div>}
+                                            </div>
+                                          )}
+
+                                          {/* Fallback: no patch and no registry entry */}
+                                          {!patch && !entry?.diagnosticOnly && hints && (
+                                            <div className="text-[11px] text-mid mt-1">
+                                              Add {hints.map((h, j) => <span key={j}>{j > 0 && ', '}<span className="font-mono text-ink/70">{h}</span></span>)} to continue
+                                            </div>
+                                          )}
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                     </div>
                   )
                 })()}

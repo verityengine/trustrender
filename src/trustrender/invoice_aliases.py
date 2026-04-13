@@ -27,6 +27,8 @@ TOP_LEVEL_ALIASES: dict[str, str] = {
     "number": "invoice_number",
     "ref": "invoice_number",
     "reference": "invoice_number",
+    "InvoiceRef": "invoice_number",      # ERP/generic PascalCase
+    "invoice_ref": "invoice_number",
     "doc_number": "invoice_number",
     "DocNumber": "invoice_number",    # QuickBooks
     # invoice_date
