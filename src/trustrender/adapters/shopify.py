@@ -120,8 +120,15 @@ def from_shopify(raw: dict) -> dict:
     if recipient:
         out["recipient"] = recipient
 
-    # Seller is NOT available in Shopify order objects.
-    # The validation pipeline will flag this as blocked if sender.name is required.
+    # ── Seller passthrough ────────────────────────────────────────
+    # Shopify orders never include seller info. If the user has enriched
+    # the source payload with sender/vendor/seller metadata, preserve it.
+
+    if not isinstance(out.get("sender"), dict):
+        for key in ("sender", "vendor", "seller"):
+            if isinstance(raw.get(key), dict):
+                out["sender"] = raw[key]
+                break
 
     # ── Line items ───────────────────────────────────────────────
 

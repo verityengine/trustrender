@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "trustrender"
-version = "0.3.2"
+version = "0.3.3"
 description = "Validate and normalize Stripe, Shopify, and custom billing data for Factur-X/ZUGFeRD"
 license = "MIT"
 classifiers = [

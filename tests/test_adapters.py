@@ -100,6 +100,35 @@ class TestStripeAdapter:
         result = from_stripe({"number": "INV-001", "customer_name": "Buyer"})
         assert "sender" not in result
 
+    def test_sender_passthrough(self):
+        """If user enriches source with sender dict, adapter preserves it."""
+        result = from_stripe({"number": "INV-001", "sender": {"name": "Acme GmbH"}})
+        assert result["sender"] == {"name": "Acme GmbH"}
+
+    def test_vendor_passthrough_as_sender(self):
+        """vendor dict maps to sender if sender absent."""
+        result = from_stripe({"number": "INV-001", "vendor": {"name": "Acme GmbH"}})
+        assert result["sender"] == {"name": "Acme GmbH"}
+
+    def test_seller_passthrough_as_sender(self):
+        """seller dict maps to sender if sender and vendor absent."""
+        result = from_stripe({"number": "INV-001", "seller": {"name": "Acme GmbH"}})
+        assert result["sender"] == {"name": "Acme GmbH"}
+
+    def test_sender_takes_priority_over_vendor(self):
+        """First valid dict wins: sender > vendor > seller."""
+        result = from_stripe({
+            "number": "INV-001",
+            "sender": {"name": "Sender"},
+            "vendor": {"name": "Vendor"},
+        })
+        assert result["sender"]["name"] == "Sender"
+
+    def test_non_dict_sender_ignored(self):
+        """String sender is not a valid enrichment — ignored."""
+        result = from_stripe({"number": "INV-001", "sender": "Acme GmbH"})
+        assert "sender" not in result
+
     def test_missing_fields_left_missing(self):
         """Adapter does not guess. Missing data stays missing."""
         result = from_stripe({})
@@ -282,6 +311,18 @@ class TestShopifyAdapter:
 
     def test_no_sender_in_output(self):
         result = from_shopify({"name": "#1", "customer": {"first_name": "A", "last_name": "B"}})
+        assert "sender" not in result
+
+    def test_sender_passthrough(self):
+        result = from_shopify({"name": "#1", "sender": {"name": "Werkzeug GmbH"}})
+        assert result["sender"] == {"name": "Werkzeug GmbH"}
+
+    def test_vendor_passthrough_as_sender(self):
+        result = from_shopify({"name": "#1", "vendor": {"name": "Werkzeug GmbH"}})
+        assert result["sender"] == {"name": "Werkzeug GmbH"}
+
+    def test_non_dict_sender_ignored(self):
+        result = from_shopify({"name": "#1", "sender": "Werkzeug GmbH"})
         assert "sender" not in result
 
     def test_missing_fields_left_missing(self):

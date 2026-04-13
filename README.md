@@ -1,54 +1,88 @@
 # TrustRender
 
-Validate and normalize billing data from Stripe, Shopify, and custom systems before Factur-X/ZUGFeRD embedding.
+Validate and normalize billing data before Factur-X/ZUGFeRD embedding.
 
-If you're bridging a non-compliant billing platform into EU e-invoicing, TrustRender adds a validation and normalization layer before tools like [factur-x](https://github.com/akretion/factur-x) and [drafthorse](https://github.com/pretix/python-drafthorse) generate or embed compliant XML. It catches arithmetic mismatches, field misalignment, missing required fields, and structural problems before handoff.
+## Quick start
 
 ```
 pip install trustrender
-trustrender validate invoice.json
 ```
 
-## What it does
-
-Takes invoice JSON from Stripe, Shopify, custom billing APIs, or legacy exports and tells you whether it's safe to embed as Factur-X/ZUGFeRD.
+Stripe and Shopify billing exports don't include the seller fields required for compliant invoices. TrustRender catches this:
 
 ```
-$ trustrender validate quickbooks_invoice.json
+$ trustrender validate examples/demo_stripe.json --source stripe
 
-Invoice:   INV-2026-5541
-From:      Summit Analytics Co.
-To:        Horizon Financial
-Items:     2
-Total:     $10,524.50
+Invoice:   INV-2026-0187
+From:
+To:        Rheingold Maschinenbau GmbH
+Items:     3
+Total:     $2,685.37
 
-Normalizations (25):
-  DocNumber → invoice_number        CompanyName → sender.name
-  TxnDate → invoice_date            customer.Name → recipient.name
-  Line → items                      SubTotal → subtotal
-  ... and 19 more
+BLOCKED — 1 problem(s)
+
+  Missing vendor/sender name
+    Add a sender.name field to your invoice data.
+
+This invoice cannot be processed until the problems above are fixed.
+```
+
+```
+$ trustrender validate examples/demo_shopify.json --source shopify
+
+Invoice:   1047
+From:
+To:        Klaus Berger
+Items:     3
+Total:     $1,309.00
+
+BLOCKED — 1 problem(s)
+
+  Missing vendor/sender name
+    Add a sender.name field to your invoice data.
+
+This invoice cannot be processed until the problems above are fixed.
+```
+
+Add your seller identity to the source payload and it passes:
+
+```
+$ trustrender validate examples/demo_stripe_ready.json --source stripe
+
+Invoice:   INV-2026-0187
+From:      NovaTech Solutions GmbH
+To:        Rheingold Maschinenbau GmbH
+Items:     3
+Total:     $2,685.37
 
 PASS — invoice data is valid
 
 Safe to embed in Factur-X/ZUGFeRD PDF.
 ```
 
-Bad data gets blocked:
-
 ```
-$ trustrender validate ocr_extracted_invoice.json
+$ trustrender validate examples/demo_shopify_ready.json --source shopify
 
-BLOCKED — 2 problem(s)
+Invoice:   1047
+From:      Werkzeug-Kontor GmbH
+To:        Klaus Berger
+Items:     3
+Total:     $1,309.00
 
-  items[1] total is wrong
-    You entered $459.00 but math says $450.00
-    Fix the line total or the price/quantity.
+PASS — invoice data is valid
 
-  Subtotal is wrong
-    Lines add up to $12,459.00 but you listed $12,450.00
-
-This invoice cannot be processed until the problems above are fixed.
+Safe to embed in Factur-X/ZUGFeRD PDF.
 ```
+
+The only difference between the blocked and passing files is one added field:
+
+```json
+"sender": { "name": "NovaTech Solutions GmbH" }
+```
+
+## Why this exists
+
+Stripe and Shopify billing exports are missing seller fields, use platform-specific formats (cents, Unix timestamps, decimal strings), and have no concept of tax compliance. [factur-x](https://github.com/akretion/factur-x) and [drafthorse](https://github.com/pretix/python-drafthorse) generate compliant Factur-X/ZUGFeRD XML, but they assume clean input. TrustRender validates and normalizes source billing data before handoff — it catches arithmetic mismatches, missing required fields, and structural problems so they don't silently produce non-compliant documents.
 
 ## Install
 
@@ -71,20 +105,14 @@ Requires Python 3.11+.
 
 ```python
 from trustrender import validate_invoice
+from trustrender.adapters import from_stripe
 
-result = validate_invoice({
-    "invoiceNo": "INV-001",
-    "vendor": {"companyName": "Acme Corp"},
-    "customer": {"Name": "Client Inc"},
-    "LineItems": [{"desc": "Widget", "qty": 2, "unitPrice": 50, "amount": 100}],
-    "SubTotal": 100,
-    "tax": 8.50,
-    "TotalAmt": 108.50,
-}, zugferd=True)
+# Raw Stripe API response → validated canonical invoice
+result = validate_invoice(from_stripe(raw_stripe_response), zugferd=True)
 
 if result["render_ready"] and result.get("zugferd_ready"):
-    # safe to call factur-x / drafthorse
-    print("All checks passed")
+    canonical = result["canonical"]
+    # safe to hand off to factur-x / drafthorse
 else:
     for error in result["errors"]:
         print(f"BLOCKED: {error['message']}")
@@ -99,6 +127,20 @@ else:
 - `normalizations`: field-level provenance (what was renamed, coerced, computed)
 - `zugferd_ready`: bool (if `zugferd=True`)
 
+Also works with messy data from any source:
+
+```python
+result = validate_invoice({
+    "invoiceNo": "INV-001",
+    "vendor": {"companyName": "Acme Corp"},
+    "customer": {"Name": "Client Inc"},
+    "LineItems": [{"desc": "Widget", "qty": 2, "unitPrice": 50, "amount": 100}],
+    "SubTotal": 100,
+    "tax": 8.50,
+    "TotalAmt": 108.50,
+}, zugferd=True)
+```
+
 ## Stripe adapter
 
 Raw Stripe Invoice API responses use cents, Unix timestamps, and nested structures. The adapter handles all of it:
@@ -108,13 +150,11 @@ trustrender validate stripe_invoice.json --source stripe --zugferd
 ```
 
 ```python
-from trustrender import validate_invoice
 from trustrender.adapters import from_stripe
-
 result = validate_invoice(from_stripe(raw_stripe_response), zugferd=True)
 ```
 
-The adapter converts cents to dollars, timestamps to dates, extracts line items from `lines.data[]`, and maps customer fields to recipient. Seller info is not included in Stripe invoices — TrustRender will flag it if required for ZUGFeRD compliance.
+Converts cents to dollars, timestamps to dates, extracts line items from `lines.data[]`, maps customer fields to recipient. If you enrich the source payload with `sender`, `vendor`, or `seller`, the adapter passes it through.
 
 ## Shopify adapter
 
@@ -125,13 +165,11 @@ trustrender validate shopify_order.json --source shopify
 ```
 
 ```python
-from trustrender import validate_invoice
 from trustrender.adapters import from_shopify
-
 result = validate_invoice(from_shopify(raw_shopify_order))
 ```
 
-The adapter parses string amounts to floats, combines first_name + last_name, maps order fields to invoice structure, and preserves structured address fields. Shopify orders have no seller info or due date — TrustRender handles both correctly.
+Parses string amounts to floats, combines first_name + last_name, maps order fields to invoice structure, preserves structured address fields. Shopify orders have no seller info or due date — TrustRender flags the missing seller and handles the absent due date correctly.
 
 ## What it normalizes
 

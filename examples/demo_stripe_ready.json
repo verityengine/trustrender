@@ -1,0 +1,52 @@
+{
+  "id": "in_1RExNkLkdIwHu7ixQ9v2mB4K",
+  "object": "invoice",
+  "number": "INV-2026-0187",
+  "status": "open",
+  "currency": "usd",
+  "created": 1775779200,
+  "due_date": 1778371200,
+  "subtotal": 247500,
+  "tax": 21037,
+  "total": 268537,
+  "customer_name": "Rheingold Maschinenbau GmbH",
+  "customer_email": "einkauf@rheingold-maschinenbau.de",
+  "customer_address": {
+    "line1": "Industriestr. 42",
+    "city": "Stuttgart",
+    "state": "Baden-Württemberg",
+    "postal_code": "70173",
+    "country": "DE"
+  },
+  "sender": {
+    "name": "NovaTech Solutions GmbH"
+  },
+  "lines": {
+    "object": "list",
+    "data": [
+      {
+        "id": "il_1RExNk001",
+        "description": "Cloud infrastructure (Q2 2026)",
+        "quantity": 1,
+        "amount": 189000,
+        "price": { "unit_amount": 189000, "currency": "usd" }
+      },
+      {
+        "id": "il_1RExNk002",
+        "description": "Premium support plan",
+        "quantity": 1,
+        "amount": 45000,
+        "price": { "unit_amount": 45000, "currency": "usd" }
+      },
+      {
+        "id": "il_1RExNk003",
+        "description": "Data egress overage (2.1 TB)",
+        "quantity": 1,
+        "amount": 13500,
+        "price": { "unit_amount": 13500, "currency": "usd" }
+      }
+    ],
+    "has_more": false
+  },
+  "metadata": {}
+}

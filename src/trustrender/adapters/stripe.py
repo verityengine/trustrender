@@ -138,6 +138,16 @@ def from_stripe(raw: dict) -> dict:
         if items:
             out["items"] = items
 
+    # ── Seller passthrough ───────────────────────────────────────
+    # Stripe invoices never include seller info. If the user has enriched
+    # the source payload with sender/vendor/seller metadata, preserve it.
+
+    if not isinstance(out.get("sender"), dict):
+        for key in ("sender", "vendor", "seller"):
+            if isinstance(raw.get(key), dict):
+                out["sender"] = raw[key]
+                break
+
     # ── Metadata passthrough ─────────────────────────────────────
 
     if isinstance(raw.get("metadata"), dict) and raw["metadata"]:
