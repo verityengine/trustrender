@@ -1,0 +1,25 @@
+{
+  "id": "in_1RDx3kLkdIwHu7ixMissingFields",
+  "object": "invoice",
+  "status": "open",
+  "currency": "usd",
+  "created": 1775779200,
+  "subtotal": 25000,
+  "total": 25000,
+  "lines": {
+    "object": "list",
+    "data": [
+      {
+        "id": "il_incomplete_1",
+        "description": "Consulting (10 hours)",
+        "quantity": 10,
+        "amount": 25000,
+        "price": {
+          "unit_amount": 2500,
+          "currency": "usd"
+        }
+      }
+    ],
+    "has_more": false
+  }
+}

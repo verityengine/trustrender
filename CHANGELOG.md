@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.1
+
+- Add `from_stripe()` adapter for raw Stripe Invoice API payloads
+- Add `--source stripe` flag to `trustrender validate`
+- Converts Stripe-specific formats: cents to dollars, Unix timestamps to dates, nested `lines.data[]` to flat items, `price.unit_amount` extraction
+- Stripe example: `examples/validate_stripe.py`
+
 ## 0.3.0
 
 Validation-first repositioning. TrustRender is now usable as a lightweight invoice validation library without rendering dependencies.

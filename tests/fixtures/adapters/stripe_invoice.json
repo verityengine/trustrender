@@ -1,0 +1,79 @@
+{
+  "id": "in_1RDx2kLkdIwHu7ixYjKXE9bG",
+  "object": "invoice",
+  "number": "INV-2026-0042",
+  "status": "paid",
+  "currency": "usd",
+  "created": 1775779200,
+  "due_date": 1778371200,
+  "subtotal": 59300,
+  "tax": 5040,
+  "total": 64340,
+  "amount_due": 64340,
+  "amount_paid": 64340,
+  "customer": "cus_PxM4kLjNQr2vYz",
+  "customer_name": "Momentum Ventures LLC",
+  "customer_email": "finance@momentum.vc",
+  "customer_address": {
+    "line1": "200 Corporate Plaza",
+    "line2": "Suite 400",
+    "city": "Chicago",
+    "state": "IL",
+    "postal_code": "60601",
+    "country": "US"
+  },
+  "lines": {
+    "object": "list",
+    "data": [
+      {
+        "id": "il_1RDx2kLkdIwHu7ixZaBcDeF1",
+        "object": "line_item",
+        "description": "Platform subscription (Pro) — Jan 2026",
+        "quantity": 1,
+        "amount": 39900,
+        "price": {
+          "id": "price_1RBxNkLkdIwHu7ixABC123",
+          "unit_amount": 39900,
+          "currency": "usd",
+          "recurring": {"interval": "month"}
+        },
+        "tax_amounts": [
+          {"amount": 3392, "tax_rate": "txr_1R0xNkLkdIwHu7ixTAX01"}
+        ]
+      },
+      {
+        "id": "il_1RDx2kLkdIwHu7ixZaBcDeF2",
+        "object": "line_item",
+        "description": "API calls overage (62,400 calls)",
+        "quantity": 1,
+        "amount": 4500,
+        "price": {
+          "id": "price_1RBxNkLkdIwHu7ixDEF456",
+          "unit_amount": 4500,
+          "currency": "usd"
+        },
+        "tax_amounts": [
+          {"amount": 383, "tax_rate": "txr_1R0xNkLkdIwHu7ixTAX01"}
+        ]
+      },
+      {
+        "id": "il_1RDx2kLkdIwHu7ixZaBcDeF3",
+        "object": "line_item",
+        "description": "Priority support (monthly)",
+        "quantity": 1,
+        "amount": 14900,
+        "price": {
+          "id": "price_1RBxNkLkdIwHu7ixGHI789",
+          "unit_amount": 14900,
+          "currency": "usd"
+        },
+        "tax_amounts": [
+          {"amount": 1266, "tax_rate": "txr_1R0xNkLkdIwHu7ixTAX01"}
+        ]
+      }
+    ],
+    "has_more": false,
+    "url": "/v1/invoices/in_1RDx2kLkdIwHu7ixYjKXE9bG/lines"
+  },
+  "metadata": {}
+}

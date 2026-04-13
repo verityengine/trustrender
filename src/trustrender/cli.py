@@ -62,6 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     # ── Core: validation (no render deps required) ──
     validate_cmd = sub.add_parser("validate", help="Validate invoice data before Factur-X/ZUGFeRD embedding")
     validate_cmd.add_argument("data", help="Path to JSON invoice data (use '-' for stdin)")
+    validate_cmd.add_argument("--source", choices=["stripe"], help="Apply source adapter before validation (e.g. --source stripe)")
     validate_cmd.add_argument("--zugferd", action="store_true", help="Run ZUGFeRD EN 16931 readiness checks")
     validate_cmd.add_argument("--format", choices=["text", "json"], default="text", dest="output_format", help="Output format (default: text)")
 
@@ -301,6 +302,12 @@ def _run_validate(args: argparse.Namespace) -> int:
     except FileNotFoundError:
         print(f"error: file not found: {args.data}", file=sys.stderr)
         return 1
+
+    # Apply source adapter if specified
+    if getattr(args, "source", None):
+        if args.source == "stripe":
+            from .adapters.stripe import from_stripe
+            raw = from_stripe(raw)
 
     result = validate_invoice(raw, zugferd=args.zugferd)
 

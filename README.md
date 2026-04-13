@@ -99,6 +99,23 @@ else:
 - `normalizations`: field-level provenance (what was renamed, coerced, computed)
 - `zugferd_ready`: bool (if `zugferd=True`)
 
+## Stripe adapter
+
+Raw Stripe Invoice API responses use cents, Unix timestamps, and nested structures. The adapter handles all of it:
+
+```bash
+trustrender validate stripe_invoice.json --source stripe --zugferd
+```
+
+```python
+from trustrender import validate_invoice
+from trustrender.adapters import from_stripe
+
+result = validate_invoice(from_stripe(raw_stripe_response), zugferd=True)
+```
+
+The adapter converts cents to dollars, timestamps to dates, extracts line items from `lines.data[]`, and maps customer fields to recipient. Seller info is not included in Stripe invoices — TrustRender will flag it if required for ZUGFeRD compliance.
+
 ## What it normalizes
 
 90+ vendor field aliases across QuickBooks, Xero, Stripe, and generic CSV/ERP formats:
