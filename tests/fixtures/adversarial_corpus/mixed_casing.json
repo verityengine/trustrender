@@ -1,0 +1,20 @@
+{
+  "DocNumber": "CASE-2026-MIX",
+  "TxnDate": "2026-04-08",
+  "DueDate": "2026-05-08",
+  "CompanyName": "cAsInG Nightmares Ltd",
+  "CompanyEmail": "ar@casing.biz",
+  "Contact": {
+    "Name": "LOUD CLIENT CO",
+    "EmailAddress": "SHOUTING@client.org"
+  },
+  "LineItems": [
+    { "Description": "camelCase service", "Quantity": 2, "UnitAmount": 750.00, "LineAmount": 1500.00 },
+    { "desc": "snake_case_item", "qty": 10, "rate": 30.00, "amount": 300.00 }
+  ],
+  "SubTotal": 1800.00,
+  "TotalTax": 153.00,
+  "TotalAmt": 1953.00,
+  "paymentTerms": "Net 15",
+  "CustomerMemo": "Mixed casing should not matter."
+}

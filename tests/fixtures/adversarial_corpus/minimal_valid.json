@@ -1,0 +1,8 @@
+{
+  "invoice_number": "MIN-001",
+  "sender": { "name": "Alice Test Co" },
+  "recipient": { "name": "Bob Receiving Inc" },
+  "items": [
+    { "description": "Consulting", "quantity": 5, "unit_price": 200.00 }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "invoice_no": "FB-90221",
+  "date": "2026-03-15",
+  "due": "2026-04-14",
+  "bill_from_name": "Coastal Web Studios",
+  "bill_from_address": "42 Oceanview Dr, Santa Cruz, CA 95060",
+  "bill_from_email": "invoices@coastalweb.io",
+  "bill_to_name": "Evergreen Health Partners",
+  "bill_to_address": "1500 Medical Center Pkwy, Nashville, TN 37215",
+  "bill_to_email": "finance@evergreen-health.org",
+  "line_items": [
+    { "title": "Website redesign (Phase 2)", "qty": 1, "price": 8500.00, "ext_price": 8500.00 },
+    { "title": "Accessibility audit & remediation", "qty": 1, "price": 2200.00, "ext_price": 2200.00 },
+    { "title": "Hosting migration (1yr prepaid)", "qty": 12, "price": 45.00, "ext_price": 540.00 }
+  ],
+  "sub_total": 11240.00,
+  "tax_percent": "0%",
+  "tax": 0.00,
+  "total_amount": 11240.00,
+  "terms": "Net 30",
+  "footer": "Thank you for your business."
+}

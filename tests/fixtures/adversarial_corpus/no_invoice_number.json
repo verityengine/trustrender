@@ -1,0 +1,10 @@
+{
+  "sender": { "name": "No Number Inc" },
+  "recipient": { "name": "Needs Invoice Number Corp" },
+  "invoice_date": "2026-04-10",
+  "items": [
+    { "description": "Service A", "quantity": 1, "unit_price": 100.00, "line_total": 100.00 }
+  ],
+  "total": 100.00,
+  "notes": "This payload has no invoice number at all."
+}

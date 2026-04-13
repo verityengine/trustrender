@@ -1,0 +1,22 @@
+{
+  "invoice_number": "JUNK-777",
+  "invoice_date": "2026-04-05",
+  "sender": { "name": "Legit Business Co", "email": "real@legit.com" },
+  "recipient": { "name": "Also Legit LLC", "address": "123 Real St" },
+  "items": [
+    { "description": "Actual service", "quantity": 1, "unit_price": 500.00, "line_total": 500.00 }
+  ],
+  "subtotal": 500.00,
+  "total": 500.00,
+
+  "internal_tracking_id": "TRK-99281",
+  "salesforce_opportunity_id": "OPP-2026-8832",
+  "approval_chain": ["manager", "director", "vp"],
+  "department_code": "ENG-042",
+  "created_by_user": "jsmith@internal.com",
+  "last_modified": "2026-04-05T14:22:00Z",
+  "export_batch": 441,
+  "erp_sync_status": "pending",
+  "custom_field_1": "alpha",
+  "custom_field_2": 42
+}

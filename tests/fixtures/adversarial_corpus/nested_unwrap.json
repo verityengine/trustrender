@@ -1,0 +1,28 @@
+{
+  "invoice": {
+    "number": "WRAP-5501",
+    "date": "2026-04-02",
+    "due_date": "2026-05-02",
+    "seller": {
+      "company_name": "Deeply Nested Corp",
+      "street": "99 Recursive Lane",
+      "mail": "billing@nested.io"
+    },
+    "buyer": {
+      "organization": "Flat Receiver LLC",
+      "address_line": "1 Simple Street",
+      "email_address": "pay@flat-receiver.com"
+    },
+    "lines": {
+      "data": [
+        { "title": "API Integration (Phase 1)", "count": 1, "price_per_unit": 6000.00, "line_amount": 6000.00 },
+        { "title": "Load testing suite", "count": 1, "price_per_unit": 2500.00, "line_amount": 2500.00 }
+      ]
+    },
+    "net_amount": 8500.00,
+    "vat": 0.00,
+    "amount_due": 8500.00,
+    "currency": "USD",
+    "memo": "Root unwrap + nested lines.data[] pattern"
+  }
+}

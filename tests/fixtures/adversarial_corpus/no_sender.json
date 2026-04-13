@@ -1,0 +1,9 @@
+{
+  "invoice_number": "BLK-001",
+  "invoice_date": "2026-04-01",
+  "recipient": { "name": "Someone LLC", "email": "someone@example.com" },
+  "items": [
+    { "description": "Widget", "quantity": 10, "unit_price": 5.00, "line_total": 50.00 }
+  ],
+  "total": 50.00
+}

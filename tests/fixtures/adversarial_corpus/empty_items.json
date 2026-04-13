@@ -1,0 +1,7 @@
+{
+  "invoice_number": "BLK-002",
+  "sender": { "name": "Acme Corp" },
+  "recipient": { "name": "Beta LLC" },
+  "items": [],
+  "total": 0
+}

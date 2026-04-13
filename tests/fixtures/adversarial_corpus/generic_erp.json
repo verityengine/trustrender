@@ -1,0 +1,26 @@
+{
+  "InvoiceRef": "ERP-2026-4401",
+  "issued": "2026-04-01",
+  "payment_due": "2026-05-01",
+  "vendor": {
+    "organization": "Nordic Manufacturing AG",
+    "street_address": "Industriestrasse 14, Zurich 8005",
+    "mail": "billing@nordic-mfg.ch"
+  },
+  "client": {
+    "business_name": "Pacific Distributors Ltd",
+    "address1": "800 Harbor Blvd, Long Beach, CA 90802",
+    "email_address": "ap@pacific-dist.com"
+  },
+  "entries": [
+    { "desc": "CNC Milling (batch 4401-A)", "units": 120, "rate": 18.50, "lineTotal": 2220.00 },
+    { "desc": "Quality inspection", "units": 1, "rate": 450.00, "lineTotal": 450.00 },
+    { "desc": "Freight & packaging", "qty": 1, "cost": 380.00, "amount": 380.00 }
+  ],
+  "net_total": 3050.00,
+  "vat_rate": "7.7%",
+  "vat_amount": 234.85,
+  "grand_total": 3284.85,
+  "currency_code": "CHF",
+  "remarks": "Wire transfer to UBS account ending 4412. 30 days net."
+}
