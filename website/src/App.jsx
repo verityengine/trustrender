@@ -1,970 +1,253 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import * as pdfjsLib from 'pdfjs-dist'
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
-import JSZip from 'jszip'
-import CodeEditor from './CodeEditor.jsx'
-import { buildPathIndex } from './json-path-index.js'
-import { resolveErrorLocation } from './error-resolver.js'
-import { generatePatches, applyPatches, computePatchDiff } from './patchUtils.js'
-import { ISSUE_REGISTRY } from './issueRegistry.js'
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
-
-const API_BASE = import.meta.env.VITE_API_BASE || ''
-const apiUrl = (path) => `${API_BASE}${path}`
+import { useState, useEffect, useRef } from 'react'
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    TRUSTRENDER — Product site
-   Art direction: editorial charcoal meets document precision
-   Display: DM Serif Display / Body: Inter / Code: JetBrains Mono
+   Validate Stripe / Shopify / custom billing data before
+   Factur-X / ZUGFeRD embedding.
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
-/* ── Animated SVG: Document Particle Field (hero background) ──────── */
-function DocumentField() {
-  const canvasRef = useRef(null)
+const REPO = 'https://github.com/verityengine/trustrender'
+const PYPI = 'https://pypi.org/project/trustrender/'
+
+/* ── Scroll reveal wrapper ─────────────────────────────────────── */
+function FadeUp({ children, delay = 0, className = '' }) {
+  const ref = useRef(null)
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    let raf
-    let particles = []
-    const resize = () => { canvas.width = canvas.offsetWidth * 2; canvas.height = canvas.offsetHeight * 2; ctx.scale(2, 2) }
-    resize()
-    window.addEventListener('resize', resize)
-
-    // Generate particles: tiny document fragments, data points, and connection lines
-    for (let i = 0; i < 60; i++) {
-      particles.push({
-        x: Math.random() * canvas.offsetWidth,
-        y: Math.random() * canvas.offsetHeight,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.2,
-        size: Math.random() * 3 + 1,
-        type: Math.random() > 0.7 ? 'doc' : Math.random() > 0.5 ? 'check' : 'dot',
-        opacity: Math.random() * 0.15 + 0.05,
-        phase: Math.random() * Math.PI * 2,
-        speed: Math.random() * 0.005 + 0.002,
-      })
-    }
-
-    const w = () => canvas.offsetWidth
-    const h = () => canvas.offsetHeight
-
-    function draw(t) {
-      ctx.clearRect(0, 0, w(), h())
-
-      // Draw connections between nearby particles
-      for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-          const dx = particles[i].x - particles[j].x
-          const dy = particles[i].y - particles[j].y
-          const dist = Math.sqrt(dx * dx + dy * dy)
-          if (dist < 120) {
-            ctx.beginPath()
-            ctx.moveTo(particles[i].x, particles[i].y)
-            ctx.lineTo(particles[j].x, particles[j].y)
-            ctx.strokeStyle = `rgba(250,248,245,${0.03 * (1 - dist / 120)})`
-            ctx.lineWidth = 0.5
-            ctx.stroke()
+    const el = ref.current
+    if (!el) return
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            setTimeout(() => el.classList.add('vis'), delay)
+            io.unobserve(el)
           }
-        }
-      }
-
-      particles.forEach(p => {
-        p.x += p.vx
-        p.y += p.vy
-        p.phase += p.speed
-        const pulse = Math.sin(p.phase) * 0.5 + 0.5
-        const alpha = p.opacity * (0.6 + pulse * 0.4)
-
-        if (p.x < -10) p.x = w() + 10
-        if (p.x > w() + 10) p.x = -10
-        if (p.y < -10) p.y = h() + 10
-        if (p.y > h() + 10) p.y = -10
-
-        ctx.save()
-        ctx.globalAlpha = alpha
-        ctx.translate(p.x, p.y)
-
-        if (p.type === 'doc') {
-          // Tiny document icon
-          ctx.strokeStyle = 'rgba(250,248,245,0.6)'
-          ctx.lineWidth = 0.8
-          ctx.strokeRect(-3, -4, 6, 8)
-          ctx.beginPath()
-          ctx.moveTo(-1.5, -1); ctx.lineTo(1.5, -1)
-          ctx.moveTo(-1.5, 1); ctx.lineTo(1.5, 1)
-          ctx.stroke()
-        } else if (p.type === 'check') {
-          // Tiny checkmark
-          ctx.strokeStyle = 'rgba(47,110,138,0.7)'
-          ctx.lineWidth = 1
-          ctx.beginPath()
-          ctx.moveTo(-2, 0); ctx.lineTo(-0.5, 1.5); ctx.lineTo(2.5, -2)
-          ctx.stroke()
-        } else {
-          // Data dot
-          ctx.fillStyle = `rgba(250,248,245,${0.4 + pulse * 0.3})`
-          ctx.beginPath()
-          ctx.arc(0, 0, p.size * 0.5, 0, Math.PI * 2)
-          ctx.fill()
-        }
-        ctx.restore()
-      })
-
-      raf = requestAnimationFrame(draw)
-    }
-    raf = requestAnimationFrame(draw)
-    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize) }
-  }, [])
-
-  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.6 }} />
-}
-
-/* ── Animated Logo ────────────────────────────────────────────────── */
-function AnimatedLogo({ size = 'default', animate = false }) {
-  const checkRef = useRef(null)
-  const lineRefs = [useRef(null), useRef(null), useRef(null)]
-
-  useEffect(() => {
-    if (!animate) return
-    // Animate data lines drawing in
-    lineRefs.forEach((ref, i) => {
-      const el = ref.current
-      if (!el) return
-      const len = el.getTotalLength()
-      el.style.strokeDasharray = len
-      el.style.strokeDashoffset = len
-      el.getBoundingClientRect()
-      el.style.transition = `stroke-dashoffset ${0.3}s ease-out ${0.3 + i * 0.15}s`
-      el.style.strokeDashoffset = '0'
-    })
-    // Animate check mark
-    if (checkRef.current) {
-      const el = checkRef.current
-      const len = el.getTotalLength()
-      el.style.strokeDasharray = len
-      el.style.strokeDashoffset = len
-      el.getBoundingClientRect()
-      el.style.transition = `stroke-dashoffset 0.35s ease-out 0.85s`
-      el.style.strokeDashoffset = '0'
-    }
-  }, [animate])
-
-  const s = size === 'small' ? 'h-7' : 'h-9'
-  return (
-    <div className="flex items-center gap-2.5">
-      <svg className={`${s} aspect-square`} viewBox="0 0 36 36" fill="none">
-        {/* Document body */}
-        <rect x="4" y="2" width="22" height="28" rx="2.5" stroke="currentColor" strokeWidth="1.8" opacity="0.5" />
-        {/* Dog ear fold */}
-        <path d="M20 2v6h6" stroke="currentColor" strokeWidth="1.5" opacity="0.3" strokeLinecap="round" strokeLinejoin="round" />
-        {/* Data lines */}
-        <line ref={lineRefs[0]} x1="9" y1="13" x2="21" y2="13" stroke="currentColor" strokeWidth="1.8" opacity="0.6" strokeLinecap="round" />
-        <line ref={lineRefs[1]} x1="9" y1="17.5" x2="18" y2="17.5" stroke="currentColor" strokeWidth="1.5" opacity="0.35" strokeLinecap="round" />
-        <line ref={lineRefs[2]} x1="9" y1="22" x2="19.5" y2="22" stroke="currentColor" strokeWidth="1.5" opacity="0.35" strokeLinecap="round" />
-        {/* Verification badge circle */}
-        <circle cx="26" cy="26" r="8.5" fill="#c4622a" opacity="0.95" />
-        {/* Check mark */}
-        <path ref={checkRef} d="M22.5 26l2.5 2.5L29.5 24" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      </svg>
-      <span className={`font-display tracking-[-0.02em] ${size === 'small' ? 'text-[18px]' : 'text-[24px]'}`}>TrustRender</span>
-    </div>
-  )
-}
-
-/* ── Trust Layer Flourish: Readiness (canvas-rendered) ────────────── */
-function ReadinessFlourish() {
-  const canvasRef = useRef(null)
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    const dpr = window.devicePixelRatio || 1
-    const W = 560, H = 360
-    canvas.width = W * dpr; canvas.height = H * dpr
-    canvas.style.width = W + 'px'; canvas.style.height = H + 'px'
-    ctx.scale(dpr, dpr)
-    let raf, t = 0
-
-    const fields = ['sender.name','sender.email','recipient.name','items[]','items[].qty','items[].amount','subtotal','tax_rate','total','notes']
-    const gateX = 420
-
-    function draw() {
-      t += 0.012
-      ctx.clearRect(0, 0, W, H)
-
-      // Gate line with glow
-      ctx.save()
-      ctx.strokeStyle = 'rgba(196,98,42,0.15)'
-      ctx.lineWidth = 1
-      ctx.setLineDash([6, 4])
-      ctx.beginPath(); ctx.moveTo(gateX, 0); ctx.lineTo(gateX, H); ctx.stroke()
-      ctx.setLineDash([])
-      // Gate glow
-      const gateGlow = ctx.createLinearGradient(gateX - 20, 0, gateX + 20, 0)
-      gateGlow.addColorStop(0, 'rgba(196,98,42,0)')
-      gateGlow.addColorStop(0.5, 'rgba(196,98,42,0.04)')
-      gateGlow.addColorStop(1, 'rgba(196,98,42,0)')
-      ctx.fillStyle = gateGlow
-      ctx.fillRect(gateX - 20, 0, 40, H)
-      ctx.restore()
-
-      // Fields streaming through
-      fields.forEach((name, i) => {
-        const cycleT = (t + i * 0.15) % 3
-        const y = 20 + i * 33
-        const progress = Math.min(cycleT / 0.8, 1)
-        const passed = name !== 'tax_rate' || Math.sin(t * 2) > -0.3
-
-        if (progress <= 0) return
-
-        // Streaming line
-        const lineEnd = 20 + (gateX - 20) * progress
-        const lineAlpha = progress < 1 ? 0.6 : 0.25
-        ctx.save()
-        ctx.strokeStyle = passed ? `rgba(45,110,86,${lineAlpha * 0.5})` : `rgba(158,51,32,${lineAlpha * 0.5})`
-        ctx.lineWidth = 1.5
-        ctx.beginPath(); ctx.moveTo(20, y); ctx.lineTo(lineEnd, y); ctx.stroke()
-
-        // Moving dot on the line
-        if (progress < 1) {
-          ctx.beginPath()
-          ctx.arc(lineEnd, y, 3, 0, Math.PI * 2)
-          ctx.fillStyle = passed ? 'rgba(45,110,86,0.8)' : 'rgba(158,51,32,0.8)'
-          ctx.fill()
-          // Glow
-          ctx.beginPath()
-          ctx.arc(lineEnd, y, 8, 0, Math.PI * 2)
-          ctx.fillStyle = passed ? 'rgba(45,110,86,0.1)' : 'rgba(158,51,32,0.1)'
-          ctx.fill()
-        }
-
-        // Field label
-        ctx.font = '500 11px "JetBrains Mono", monospace'
-        ctx.fillStyle = `rgba(28,27,25,${0.5 * Math.min(progress * 3, 1)})`
-        ctx.fillText(name, 22, y - 6)
-
-        // Result indicator (after gate)
-        if (progress >= 1) {
-          const resultX = gateX + 50
-          const fadeIn = Math.min((cycleT - 0.8) * 3, 1)
-          if (passed) {
-            ctx.strokeStyle = `rgba(45,110,86,${0.7 * fadeIn})`
-            ctx.lineWidth = 2.5
-            ctx.lineCap = 'round'
-            ctx.beginPath()
-            ctx.moveTo(resultX - 5, y); ctx.lineTo(resultX - 1, y + 4); ctx.lineTo(resultX + 7, y - 5)
-            ctx.stroke()
-          } else {
-            ctx.strokeStyle = `rgba(158,51,32,${0.7 * fadeIn})`
-            ctx.lineWidth = 2.5
-            ctx.lineCap = 'round'
-            ctx.beginPath()
-            ctx.moveTo(resultX - 4, y - 4); ctx.lineTo(resultX + 4, y + 4)
-            ctx.moveTo(resultX - 4, y + 4); ctx.lineTo(resultX + 4, y - 4)
-            ctx.stroke()
-          }
-        }
-        ctx.restore()
-      })
-
-      // Gate label
-      ctx.save()
-      ctx.font = '600 9px "JetBrains Mono", monospace'
-      ctx.fillStyle = 'rgba(196,98,42,0.35)'
-      ctx.textAlign = 'center'
-      ctx.fillText('CONTRACT', gateX, H - 8)
-      ctx.restore()
-
-      raf = requestAnimationFrame(draw)
-    }
-    raf = requestAnimationFrame(draw)
-    return () => cancelAnimationFrame(raf)
-  }, [])
-  return <canvas ref={canvasRef} className="w-full" style={{ aspectRatio: '560/360' }} />
-}
-
-/* ── Trust Layer Flourish: Compliance (canvas-rendered) ───────────── */
-function ComplianceFlourish() {
-  return (
-    <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-      <div className="grid grid-cols-2 divide-x divide-rule-light">
-        {/* JSON input */}
-        <div>
-          <div className="px-3 py-2 border-b border-rule-light flex items-center gap-2">
-            <span className="text-[9px] font-mono text-muted">your data</span>
-            <span className="text-[8px] px-1.5 py-0.5 rounded bg-surface text-muted font-mono">.json</span>
-          </div>
-          <pre className="p-3 font-mono text-[9px] leading-[1.8] text-ink-2 overflow-hidden">{`{
-  "seller": {
-    "name": "Muster GmbH",
-    "vat_id": "DE123456789"
-  },
-  "buyer": {
-    "name": "Kunde AG",
-    "vat_id": "DE987654321"
-  },
-  "items": [{
-    "description": "Consulting",
-    "unit_price": 4500.00,
-    "tax_rate": 19
-  }],
-  "payment": {
-    "iban": "DE8937...013000"
-  }
-}`}</pre>
-        </div>
-        {/* CII XML output */}
-        <div>
-          <div className="px-3 py-2 border-b border-rule-light flex items-center gap-2">
-            <span className="text-[9px] font-mono text-sage">embedded XML</span>
-            <span className="text-[8px] px-1.5 py-0.5 rounded bg-sage/10 text-sage font-mono">CII</span>
-          </div>
-          <pre className="p-3 font-mono text-[9px] leading-[1.8] text-ink-2 overflow-hidden">{`<CrossIndustryInvoice>
-  <ExchangedDocument>
-    <ID>RE-2026-0042</ID>
-    <TypeCode>380</TypeCode>
-  </ExchangedDocument>
-  <SellerTradeParty>
-    <Name>Muster GmbH</Name>
-    <SpecifiedTaxRegistration>
-      <ID>DE123456789</ID>
-    </SpecifiedTaxRegistration>
-  </SellerTradeParty>
-  <ApplicableTradeTax>
-    <TypeCode>VAT</TypeCode>
-    <CategoryCode>S</CategoryCode>
-    <RateApplicablePercent>
-      19
-    </RateApplicablePercent>
-  </ApplicableTradeTax>
-</CrossIndustryInvoice>`}</pre>
-        </div>
-      </div>
-      <div className="px-3 py-2 border-t border-rule-light flex items-center justify-between">
-        <span className="text-[9px] text-muted italic">XSD + Schematron validated, embedded in PDF/A-3b</span>
-        <span className="text-[8px] px-2 py-0.5 rounded-full bg-sage/10 text-sage font-semibold">EN 16931</span>
-      </div>
-    </div>
-  )
-}
-
-/* ── Trust Layer Flourish: Provenance (canvas-rendered) ───────────── */
-function ProvenanceFlourish() {
-  const canvasRef = useRef(null)
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    const dpr = window.devicePixelRatio || 1
-    const W = 520, H = 300
-    canvas.width = W * dpr; canvas.height = H * dpr
-    canvas.style.width = W + 'px'; canvas.style.height = H + 'px'
-    ctx.scale(dpr, dpr)
-    let raf, t = 0
-
-    const rows = [
-      { label: 'data', file: 'invoice_data.json', hash: 'sha256:a7f3e2c1', icon: '{ }' },
-      { label: 'template', file: 'invoice.j2.typ', hash: 'sha256:c2e1b809', icon: '< >' },
-      { label: 'assets', file: 'Inter-Bold.ttf, logo.png', hash: 'sha256:d4f09188', icon: 'A a' },
-      { label: 'output', file: 'invoice.pdf  (3 pages)', hash: 'sha256:9b4d7a52', icon: 'PDF' },
-    ]
-
-    const rowH = 52, startY = 32, leftX = 28, hashX = 370
-
-    function draw() {
-      t += 0.005
-      ctx.clearRect(0, 0, W, H)
-
-      const cycleT = (t * 0.6) % 3.5
-      const activeCount = Math.min(Math.floor(cycleT / 0.6), 4)
-      const verifying = activeCount > 0 && activeCount <= 4 ? Math.floor(cycleT / 0.6) - 1 : -1
-
-      // Timeline spine
-      const spineX = leftX + 14
-      ctx.beginPath()
-      ctx.moveTo(spineX, startY + 16)
-      ctx.lineTo(spineX, startY + (rows.length - 1) * rowH + 16)
-      ctx.strokeStyle = 'rgba(28,27,25,0.1)'
-      ctx.lineWidth = 1.5
-      ctx.stroke()
-
-      // Active spine
-      if (activeCount > 0) {
-        const endY = startY + Math.min(activeCount - 1, 3) * rowH + 16
-        ctx.beginPath()
-        ctx.moveTo(spineX, startY + 16)
-        ctx.lineTo(spineX, endY)
-        ctx.strokeStyle = 'rgba(196,98,42,0.5)'
-        ctx.lineWidth = 2
-        ctx.stroke()
-      }
-
-      rows.forEach((row, i) => {
-        const y = startY + i * rowH
-        const active = i < activeCount
-        const current = i === verifying
-        const pulse = current ? Math.sin(t * 8) * 0.12 + 0.88 : 1
-
-        // Timeline dot
-        ctx.beginPath()
-        ctx.arc(spineX, y + 16, active ? 5 : 3.5, 0, Math.PI * 2)
-        ctx.fillStyle = active ? `rgba(196,98,42,${0.85 * pulse})` : 'rgba(28,27,25,0.15)'
-        ctx.fill()
-        if (current) {
-          ctx.beginPath()
-          ctx.arc(spineX, y + 16, 10, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(196,98,42,${0.12 * pulse})`
-          ctx.fill()
-        }
-
-        // Icon circle
-        const iconX = leftX + 44
-        ctx.beginPath()
-        ctx.arc(iconX, y + 16, 13, 0, Math.PI * 2)
-        ctx.fillStyle = active ? 'rgba(196,98,42,0.1)' : 'rgba(28,27,25,0.04)'
-        ctx.strokeStyle = active ? `rgba(196,98,42,${0.4 * pulse})` : 'rgba(28,27,25,0.12)'
-        ctx.lineWidth = 1.2
-        ctx.fill(); ctx.stroke()
-
-        ctx.font = `600 8px "JetBrains Mono", monospace`
-        ctx.textAlign = 'center'
-        ctx.fillStyle = active ? `rgba(196,98,42,${0.8 * pulse})` : 'rgba(28,27,25,0.3)'
-        ctx.fillText(row.icon, iconX, y + 19)
-
-        // Stage label
-        ctx.font = `${active ? '600' : '400'} 12px "JetBrains Mono", monospace`
-        ctx.textAlign = 'left'
-        ctx.fillStyle = `rgba(28,27,25,${active ? 0.85 : 0.3})`
-        ctx.fillText(row.label, leftX + 66, y + 13)
-
-        // File name
-        ctx.font = '400 9px "JetBrains Mono", monospace'
-        ctx.fillStyle = `rgba(28,27,25,${active ? 0.45 : 0.15})`
-        ctx.fillText(row.file, leftX + 66, y + 28)
-
-        // Hash value — appears with typing animation for current
-        ctx.textAlign = 'right'
-        if (active) {
-          let displayHash = row.hash
-          if (current) {
-            const charCount = Math.floor(((cycleT / 0.6) % 1) * (row.hash.length + 4))
-            displayHash = row.hash.slice(0, Math.min(charCount, row.hash.length))
-            // Blinking cursor
-            if (Math.sin(t * 12) > 0) displayHash += '_'
-          }
-          ctx.font = '500 10px "JetBrains Mono", monospace'
-          ctx.fillStyle = current ? `rgba(196,98,42,${0.9 * pulse})` : 'rgba(196,98,42,0.55)'
-          ctx.fillText(displayHash, W - 28, y + 13)
-
-          // Checkmark for completed (not current)
-          if (!current) {
-            ctx.font = '500 12px system-ui'
-            ctx.fillStyle = 'rgba(107,142,95,0.8)'
-            ctx.fillText('\u2713', W - 18, y + 29)
-            ctx.font = '400 8px "JetBrains Mono", monospace'
-            ctx.fillStyle = 'rgba(28,27,25,0.3)'
-            ctx.fillText('verified', W - 32, y + 29)
-          }
-        } else {
-          ctx.font = '500 10px "JetBrains Mono", monospace'
-          ctx.fillStyle = 'rgba(28,27,25,0.1)'
-          ctx.fillText('- - - - - -', W - 28, y + 13)
-        }
-
-        // Horizontal connector from icon to hash area
-        if (active) {
-          ctx.beginPath()
-          ctx.moveTo(leftX + 66 + ctx.measureText(row.label).width + 8, y + 9)
-          ctx.textAlign = 'left'
-          ctx.font = '600 12px "JetBrains Mono", monospace'
-          const labelW = ctx.measureText(row.label).width
-          const lineStartX = leftX + 66 + labelW + 10
-          const lineEndX = hashX - 10
-          if (lineEndX > lineStartX) {
-            ctx.beginPath()
-            ctx.moveTo(lineStartX, y + 10)
-            ctx.lineTo(lineEndX, y + 10)
-            ctx.strokeStyle = `rgba(196,98,42,${0.15 * pulse})`
-            ctx.lineWidth = 1
-            ctx.setLineDash([3, 4])
-            ctx.stroke()
-            ctx.setLineDash([])
-          }
-        }
-      })
-
-      // Final combined fingerprint at bottom
-      const bottomY = startY + rows.length * rowH + 8
-      if (activeCount >= 4) {
-        const allDone = cycleT > 2.8
-        const fadeIn = Math.min((cycleT - 2.4) / 0.4, 1)
-        if (fadeIn > 0) {
-          ctx.globalAlpha = fadeIn
-          // Separator line
-          ctx.beginPath()
-          ctx.moveTo(leftX, bottomY - 4)
-          ctx.lineTo(W - 28, bottomY - 4)
-          ctx.strokeStyle = 'rgba(196,98,42,0.2)'
-          ctx.lineWidth = 1
-          ctx.stroke()
-
-          ctx.font = '600 11px "JetBrains Mono", monospace'
-          ctx.textAlign = 'left'
-          ctx.fillStyle = `rgba(196,98,42,${allDone ? 0.9 : 0.6})`
-          ctx.fillText('render fingerprint', leftX + 14, bottomY + 16)
-
-          ctx.font = '500 10px "JetBrains Mono", monospace'
-          ctx.textAlign = 'right'
-          ctx.fillStyle = 'rgba(196,98,42,0.7)'
-          ctx.fillText('sha256:e83b...f41a', W - 28, bottomY + 16)
-
-          if (allDone) {
-            ctx.font = '600 9px system-ui'
-            ctx.fillStyle = 'rgba(107,142,95,0.85)'
-            ctx.textAlign = 'left'
-            ctx.fillText('\u2713  all inputs tracked', leftX + 14, bottomY + 34)
-          }
-          ctx.globalAlpha = 1
-        }
-      }
-
-      raf = requestAnimationFrame(draw)
-    }
-    raf = requestAnimationFrame(draw)
-    return () => cancelAnimationFrame(raf)
-  }, [])
-  return <canvas ref={canvasRef} className="w-full" style={{ aspectRatio: '520/300' }} />
-}
-
-/* ── Utilities ────────────────────────────────────────────────────── */
-function FadeUp({ children, className = '', delay = 0 }) {
-  const r = useRef(null)
-  useEffect(() => {
-    const el = r.current; if (!el) return
-    const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) { setTimeout(() => el.classList.add('vis'), delay); obs.unobserve(el) }
-    }, { threshold: 0.08 })
-    obs.observe(el)
-    return () => obs.disconnect()
+        })
+      },
+      { threshold: 0.12 }
+    )
+    io.observe(el)
+    return () => io.disconnect()
   }, [delay])
-  return <div ref={r} className={`fade-up ${className}`}>{children}</div>
+  return (
+    <div ref={ref} className={`fade-up ${className}`}>
+      {children}
+    </div>
+  )
 }
 
-/* ── Logo mark ────────────────────────────────────────────────────── */
-function Logo({ size = 'default' }) {
-  const s = size === 'small' ? 'h-6' : 'h-8'
+/* ── Copy-to-clipboard pill ────────────────────────────────────── */
+function CopyPill({ text, dark = false }) {
+  const [copied, setCopied] = useState(false)
+  const onClick = () => {
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1400)
+  }
+  const cls = dark
+    ? 'border-panel/15 hover:border-panel/30 bg-panel/[0.05] hover:bg-panel/[0.08] text-panel/80'
+    : 'border-rule-light hover:border-mid/40 bg-panel hover:bg-white text-ink-2'
   return (
-    <div className="flex items-center gap-2.5">
-      {/* Symbol: structured document seal / imprint */}
-      <svg className={`${s} aspect-square`} viewBox="0 0 32 32" fill="none">
-        <rect x="2" y="2" width="28" height="28" rx="4" stroke="currentColor" strokeWidth="2" />
-        <rect x="7" y="7" width="18" height="3" rx="1" fill="currentColor" opacity="0.9" />
-        <rect x="7" y="13" width="18" height="1.5" rx="0.75" fill="currentColor" opacity="0.3" />
-        <rect x="7" y="17" width="14" height="1.5" rx="0.75" fill="currentColor" opacity="0.3" />
-        <rect x="7" y="21" width="16" height="1.5" rx="0.75" fill="currentColor" opacity="0.3" />
-        <path d="M20 22.5l2.5 2.5L27 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.8" />
-      </svg>
-      <span className={`font-display tracking-tight ${size === 'small' ? 'text-[18px]' : 'text-[22px]'}`}>
-        TrustRender
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-3 px-5 py-2.5 rounded-full border transition-colors cursor-pointer group ${cls}`}
+    >
+      <code className="font-mono text-[13px]">{text}</code>
+      <span
+        className={`text-[10px] uppercase tracking-wider transition-colors ${
+          dark ? 'text-panel/30 group-hover:text-panel/60' : 'text-muted group-hover:text-ink-2'
+        }`}
+      >
+        {copied ? 'copied' : 'copy'}
       </span>
+    </button>
+  )
+}
+
+/* ── Terminal-style block (for static demo outputs) ────────────── */
+function Terminal({ filename, children, status = null }) {
+  return (
+    <div className="bg-ink-3 rounded-xl border border-panel/10 overflow-hidden shadow-sm">
+      <div className="px-4 py-2.5 border-b border-panel/10 flex items-center gap-2">
+        <div className="flex gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-panel/15" />
+          <div className="w-2.5 h-2.5 rounded-full bg-panel/15" />
+          <div className="w-2.5 h-2.5 rounded-full bg-panel/15" />
+        </div>
+        {filename && (
+          <span className="text-[11px] font-mono text-panel/50 ml-2">{filename}</span>
+        )}
+        {status && (
+          <span
+            className={`ml-auto text-[10px] uppercase tracking-wider font-mono ${
+              status === 'pass'
+                ? 'text-sage-light'
+                : status === 'block'
+                  ? 'text-rust-light'
+                  : 'text-panel/40'
+            }`}
+          >
+            {status === 'pass' ? '● PASS' : status === 'block' ? '● BLOCKED' : status}
+          </span>
+        )}
+      </div>
+      <pre className="px-5 py-4 text-[12.5px] font-mono leading-[1.6] text-panel/85 overflow-x-auto whitespace-pre">
+        {children}
+      </pre>
     </div>
   )
 }
 
-/* ── Data ──────────────────────────────────────────────────────────── */
-const VALID = {
-  invoice_number: "INV-2026-0042",
-  invoice_date: "April 10, 2026",
-  due_date: "May 10, 2026",
-  payment_terms: "Net 30",
-  sender: { name: "Acme Corp", address: "123 Business Ave, SF 94105", email: "billing@acme.com" },
-  recipient: { name: "Contoso Ltd", address: "456 Enterprise Blvd, NY 10001", email: "ap@contoso.com" },
-  items: [
-    { num: 1, description: "Website redesign", qty: 1, unit_price: "$4,500", amount: "$4,500" },
-    { num: 2, description: "Logo and brand identity", qty: 1, unit_price: "$2,200", amount: "$2,200" },
-    { num: 3, description: "SEO optimization", qty: 1, unit_price: "$1,800", amount: "$1,800" },
-    { num: 4, description: "Social media content", qty: 3, unit_price: "$750", amount: "$2,250" },
-    { num: 5, description: "Email campaign setup", qty: 1, unit_price: "$1,200", amount: "$1,200" },
-    { num: 6, description: "Analytics config", qty: 1, unit_price: "$950", amount: "$950" },
-    { num: 7, description: "Blog posts", qty: 5, unit_price: "$300", amount: "$1,500" },
-  ],
-  subtotal: "$14,400",
-  tax_rate: "8.5%",
-  tax_amount: "$1,224",
-  total: "$15,624",
-  notes: "Payment due within 30 days."
-}
-
-const INVALID = {
-  invoice_number: "INV-2026-0042",
-  invoice_date: "April 10, 2026",
-  due_date: "May 10, 2026",
-  payment_terms: "Net 30",
-  sender: { name: "Acme Corp", address: "123 Business Ave, SF 94105" },
-  recipient: { address: "456 Enterprise Blvd, NY 10001", email: "ap@contoso.com" },
-  items: [
-    { num: 1, description: "Website redesign", qty: 1, unit_price: "$4,500", amount: "$4,500" },
-    { num: 2, qty: 1, unit_price: "$2,200", amount: "$2,200" },
-    { num: 3, description: "SEO optimization", qty: 1, unit_price: "$1,800", amount: "$1,800" },
-  ],
-  subtotal: "$8,500",
-  tax_rate: "8.5%",
-  tax_amount: "$722",
-  total: "$8,500",
-  notes: "Payment due within 30 days."
-}
-
-const ERRORS = [
-  { path: 'sender.email', expected: 'scalar', got: 'missing' },
-  { path: 'recipient.name', expected: 'scalar', got: 'missing' },
-  { path: 'items[1].description', expected: 'scalar', got: 'missing' },
-]
-
-/* ── JSON syntax coloring ─────────────────────────────────────────── */
-function Json({ data, marks = {} }) {
-  const lines = JSON.stringify(data, null, 2).split('\n')
+/* ── Section wrapper ───────────────────────────────────────────── */
+function Section({ id, kicker, title, lede, children, light = true, narrow = false }) {
   return (
-    <pre className="font-mono text-[11px] leading-[1.85] text-ink-2 whitespace-pre">
-      {lines.map((line, i) => {
-        const mk = Object.keys(marks).find(k => line.includes(`"${k}"`))
-        const h = line
-          .replace(/"([^"]+)"(\s*:)/g, '<span style="color:#8a8278">"$1"</span>$2')
-          .replace(/:\s*"([^"]*?)"/g, (_, v) => `: <span style="color:#141210">"${v}"</span>`)
-          .replace(/:\s*(\d[\d.]*)/g, ': <span style="color:#8b3a2a">$1</span>')
-          .replace(/:\s*(null)\b/g, ': <span style="color:#6e2517;font-weight:600">null</span>')
-          .replace(/([{}[\],])/g, '<span style="color:#c9c2b6">$1</span>')
-        return (
-          <div key={i}
-            className={mk ? 'border-l-[3px] border-wine/50 bg-wine/[0.05] pl-2.5 -ml-2.5 rounded-r-sm' : ''}
-            dangerouslySetInnerHTML={{ __html: h || '\u00A0' }}
-          />
-        )
-      })}
-    </pre>
-  )
-}
-
-/* ── JSON dark (for hero on dark bg) ──────────────────────────────── */
-function JsonDark({ data, marks = {} }) {
-  const lines = JSON.stringify(data, null, 2).split('\n')
-  return (
-    <pre className="font-mono text-[11px] leading-[1.85] whitespace-pre">
-      {lines.map((line, i) => {
-        const mk = Object.keys(marks).find(k => line.includes(`"${k}"`))
-        // Build colored spans token by token instead of chained regexes
-        const parts = []
-        let rest = line
-        // Match key: value patterns safely
-        const keyMatch = rest.match(/^(\s*)"([^"]+)"(\s*:\s*)(.*)$/)
-        if (keyMatch) {
-          const [, indent, key, colon, val] = keyMatch
-          parts.push(<span key="i" style={{ color: 'transparent' }}>{indent}</span>)
-          parts.push(<span key="k" style={{ color: 'rgba(250,248,245,0.35)' }}>"{key}"</span>)
-          parts.push(<span key="c" style={{ color: 'rgba(250,248,245,0.15)' }}>{colon}</span>)
-          // Parse value
-          if (val === 'null' || val === 'null,') {
-            const comma = val.endsWith(',') ? ',' : ''
-            parts.push(<span key="v" style={{ color: '#e55', fontWeight: 600 }}>null</span>)
-            if (comma) parts.push(<span key="cm" style={{ color: 'rgba(250,248,245,0.12)' }}>,</span>)
-          } else if (val.match(/^".*"[,]?$/)) {
-            const comma = val.endsWith(',') ? ',' : ''
-            const str = comma ? val.slice(0, -1) : val
-            parts.push(<span key="v" style={{ color: 'rgba(250,248,245,0.75)' }}>{str}</span>)
-            if (comma) parts.push(<span key="cm" style={{ color: 'rgba(250,248,245,0.12)' }}>,</span>)
-          } else if (val.match(/^\d/)) {
-            const comma = val.endsWith(',') ? ',' : ''
-            const num = comma ? val.slice(0, -1) : val
-            parts.push(<span key="v" style={{ color: '#a34d3a' }}>{num}</span>)
-            if (comma) parts.push(<span key="cm" style={{ color: 'rgba(250,248,245,0.12)' }}>,</span>)
-          } else {
-            // brackets, braces, arrays
-            parts.push(<span key="v" style={{ color: 'rgba(250,248,245,0.15)' }}>{val}</span>)
-          }
-        } else {
-          // Structural lines: braces, brackets
-          parts.push(<span key="s" style={{ color: 'rgba(250,248,245,0.15)' }}>{rest}</span>)
-        }
-        return (
-          <div key={i} className={mk ? 'border-l-[3px] border-red-400/40 bg-red-400/[0.06] pl-2.5 -ml-2.5 rounded-r-sm' : ''}>
-            {/* Re-render indent visibly */}
-            <span style={{ color: 'transparent', userSelect: 'none' }}>{''}</span>
-            {line.match(/^\s*/)[0].split('').map((_, ci) => <span key={ci}>&nbsp;</span>)}
-            {parts}
-          </div>
-        )
-      })}
-    </pre>
-  )
-}
-
-/* ── Invoice document artifact ────────────────────────────────────── */
-function Invoice({ data }) {
-  return (
-    <div className="bg-white rounded-lg overflow-hidden text-ink"
-      style={{ boxShadow: '0 12px 40px rgba(20,18,16,0.12), 0 2px 8px rgba(20,18,16,0.06)' }}>
-      <div className="p-8 pb-7">
-        <div className="flex justify-between items-start mb-8">
-          <div>
-            <div className="text-[16px] font-bold tracking-[-0.02em]">{data.sender.name}</div>
-            <div className="text-[10px] text-muted mt-1.5 leading-relaxed">{data.sender.address}</div>
-            <div className="text-[10px] text-muted mt-0.5">{data.sender.email}</div>
-          </div>
-          <div className="text-right">
-            <div className="text-[24px] font-display tracking-tight text-ink/70">INVOICE</div>
-            <div className="text-[10px] text-muted mt-1 font-mono">{data.invoice_number}</div>
-            <div className="text-[10px] text-muted">{data.invoice_date}</div>
-          </div>
-        </div>
-        <div className="h-px bg-ink/10 mb-7" />
-        <div className="grid grid-cols-3 gap-6 mb-7">
-          <div>
-            <div className="text-[8px] uppercase tracking-[0.14em] text-muted mb-1.5 font-semibold">Bill to</div>
-            <div className="text-[11px] font-semibold">{data.recipient.name}</div>
-            <div className="text-[10px] text-muted leading-relaxed mt-0.5">{data.recipient.address}</div>
-          </div>
-          <div>
-            <div className="text-[8px] uppercase tracking-[0.14em] text-muted mb-1.5 font-semibold">Due date</div>
-            <div className="text-[11px] font-semibold">{data.due_date}</div>
-            <div className="text-[10px] text-muted">{data.payment_terms}</div>
-          </div>
-          <div>
-            <div className="text-[8px] uppercase tracking-[0.14em] text-muted mb-1.5 font-semibold">Amount due</div>
-            <div className="text-[18px] font-bold tracking-tight">{data.total}</div>
-          </div>
-        </div>
-        <table className="w-full text-[10px] mb-7">
-          <thead>
-            <tr className="border-b-2 border-ink/10">
-              {['#', 'Description', 'Qty', 'Price', 'Amount'].map((h, i) => (
-                <th key={h} className={`py-2.5 font-semibold text-[8px] uppercase tracking-[0.1em] text-muted ${i > 1 ? 'text-right' : 'text-left'} ${i === 0 ? 'w-7' : i > 2 ? 'w-20' : i === 2 ? 'w-10' : ''}`}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.items.map((item, i) => (
-              <tr key={i} className="border-b border-ink/[0.04]">
-                <td className="py-2 text-muted tabular-nums">{item.num}</td>
-                <td className="py-2 text-ink-2">{item.description}</td>
-                <td className="py-2 text-right text-muted tabular-nums">{item.qty}</td>
-                <td className="py-2 text-right text-muted tabular-nums">{item.unit_price}</td>
-                <td className="py-2 text-right font-medium tabular-nums">{item.amount}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <div className="flex justify-end mb-7">
-          <div className="w-52">
-            <div className="flex justify-between py-1 text-[10px]"><span className="text-muted">Subtotal</span><span className="font-medium tabular-nums">{data.subtotal}</span></div>
-            <div className="flex justify-between py-1 text-[10px] text-muted"><span>Tax ({data.tax_rate})</span><span className="tabular-nums">{data.tax_amount}</span></div>
-            <div className="h-px bg-ink/15 my-1.5" />
-            <div className="flex justify-between py-1.5 text-[14px] font-bold"><span>Total</span><span className="tabular-nums">{data.total}</span></div>
-          </div>
-        </div>
-        <div className="border-t border-ink/[0.06] pt-4">
-          <div className="text-[8px] uppercase tracking-[0.14em] text-muted mb-1 font-semibold">Notes</div>
-          <div className="text-[9px] text-muted leading-relaxed max-w-sm">{data.notes}</div>
-        </div>
+    <section
+      id={id}
+      className={`py-20 md:py-28 ${light ? 'bg-bg' : 'bg-ink text-panel'}`}
+    >
+      <div className={`mx-auto px-6 md:px-10 ${narrow ? 'max-w-4xl' : 'max-w-[1200px]'}`}>
+        <FadeUp>
+          {kicker && (
+            <p
+              className={`text-[11px] tracking-[0.22em] uppercase mb-4 font-semibold ${
+                light ? 'text-rust' : 'text-rust-light'
+              }`}
+            >
+              {kicker}
+            </p>
+          )}
+          <h2
+            className={`font-display font-extrabold text-[28px] md:text-[40px] tracking-[-0.03em] leading-[1.08] mb-5 max-w-3xl ${
+              light ? 'text-ink' : 'text-panel'
+            }`}
+          >
+            {title}
+          </h2>
+          {lede && (
+            <p
+              className={`text-[16px] md:text-[17px] leading-relaxed max-w-2xl mb-12 ${
+                light ? 'text-mid' : 'text-panel/65'
+              }`}
+            >
+              {lede}
+            </p>
+          )}
+        </FadeUp>
+        {children}
       </div>
-      <div className="px-8 py-2.5 bg-surface/40 border-t border-ink/[0.04] flex justify-between text-[8px] text-muted">
-        <span>Generated by TrustRender</span>
-        <span className="tabular-nums">Page 1 of 1</span>
-      </div>
-    </div>
+    </section>
   )
-}
-
-/* ── Pipeline stage ───────────────────────────────────────────────── */
-function Stage({ label, status, sub }) {
-  const isPass = status === 'pass', isFail = status === 'fail', isRun = status === 'running', isBlocked = status === 'blocked'
-  return (
-    <div className={`flex items-center gap-3.5 transition-opacity duration-300 ${isBlocked ? 'opacity-15' : ''}`}>
-      <div className="relative shrink-0">
-        {status === 'waiting' && <div className="w-9 h-9 rounded-full border-2 border-rule" />}
-        {isRun && <div className="w-9 h-9 rounded-full border-2 border-muted pulse-ring flex items-center justify-center text-muted"><div className="w-2.5 h-2.5 rounded-full bg-muted/50 contract-pulse" /></div>}
-        {isPass && <div className="w-9 h-9 rounded-full bg-sage flex items-center justify-center anim-check"><svg className="w-4.5 h-4.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg></div>}
-        {isFail && <div className="w-9 h-9 rounded-full bg-wine flex items-center justify-center anim-x"><svg className="w-4.5 h-4.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></div>}
-        {isBlocked && <div className="w-9 h-9 rounded-full border-2 border-rule/30" />}
-      </div>
-      <div>
-        <div className={`text-[14px] font-semibold leading-tight ${isFail ? 'text-wine' : isPass ? 'text-sage' : isBlocked ? 'text-muted/30' : 'text-ink'}`}>{label}</div>
-        {sub && <div className={`text-[11px] mt-0.5 ${isFail ? 'text-wine/60' : isPass ? 'text-sage/50' : 'text-muted'}`}>{sub}</div>}
-      </div>
-    </div>
-  )
-}
-
-function Connector({ active, blocked }) {
-  return <div className="flex justify-start pl-[17px]"><div className={`w-px h-7 transition-all duration-300 ${blocked ? 'bg-rule/15' : active ? 'bg-sage/30' : 'bg-rule/60'}`} /></div>
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   SECTION 1: HERO = PRODUCT REVEAL
+   HEADER
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function HeroReveal() {
-  const [mode, setMode] = useState(null) // null = no selection yet
-  const [phase, setPhase] = useState('idle')
-  const [run, setRun] = useState(0)
-
-  useEffect(() => {
-    if (mode === null) return // don't auto-run on mount
-    setPhase('idle')
-    const t = []
-    t.push(setTimeout(() => setPhase('validate'), 250))
-    t.push(setTimeout(() => setPhase(mode === 'valid' ? 'render' : 'fail'), 1000))
-    t.push(setTimeout(() => { if (mode === 'valid') setPhase('done') }, 1800))
-    return () => t.forEach(clearTimeout)
-  }, [mode, run])
-
-  const toggle = (m) => { setMode(m); setRun(r => r + 1) }
-
-  const vSt = phase === 'idle' ? 'waiting' : phase === 'validate' ? 'running' : phase === 'fail' ? 'fail' : 'pass'
-  const rSt = phase === 'idle' || phase === 'validate' ? 'waiting' : phase === 'fail' ? 'blocked' : phase === 'render' ? 'running' : 'pass'
-  const oSt = phase === 'done' ? 'pass' : phase === 'fail' ? 'blocked' : 'waiting'
-  const showDoc = phase === 'done' && mode === 'valid'
-  const showErrors = phase === 'fail' && mode === 'invalid'
-
+function Header() {
   return (
-    <section className="text-panel relative overflow-hidden" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 30%, rgba(179,108,57,0.10) 0%, transparent 70%), linear-gradient(180deg, #141618 0%, #111214 40%, #0f1012 100%)' }}>
-      {/* Animated particle background */}
-      <DocumentField />
+    <header className="absolute top-0 left-0 right-0 z-50 bg-ink/80 backdrop-blur-md border-b border-panel/5">
+      <div className="max-w-[1280px] mx-auto px-6 md:px-10 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-md bg-rust/20 border border-rust/30 flex items-center justify-center">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M3 3h7l3 3v7H3V3z" stroke="#d4783e" strokeWidth="1.4" strokeLinejoin="round" />
+              <path d="M5.5 9l1.5 1.5L10 7.5" stroke="#d4783e" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <span className="font-display font-bold text-panel text-[18px] tracking-tight">TrustRender</span>
+        </div>
+        <nav className="flex items-center gap-2">
+          <a
+            href={PYPI}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden md:inline-flex text-[13px] text-panel/70 hover:text-panel px-3 py-2 transition-colors"
+          >
+            PyPI
+          </a>
+          <a
+            href={REPO}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[13px] text-panel border border-panel/20 hover:border-panel/40 hover:bg-panel/[0.06] px-4 py-2 rounded-full transition-colors"
+          >
+            GitHub
+          </a>
+        </nav>
+      </div>
+    </header>
+  )
+}
 
-      {/* Hero content */}
-      <div className="max-w-[1280px] mx-auto px-6 md:px-10 pt-16 md:pt-24 pb-12 md:pb-16 relative z-10">
-        <div className="text-center max-w-4xl mx-auto mb-8 hero-stagger">
-          <h1 className="font-display font-extrabold text-[44px] md:text-[72px] lg:text-[88px] leading-[0.95] tracking-[-0.04em] gradient-text pb-2">
-            Bad payloads never become broken documents.
-          </h1>
-          <p className="text-[16px] md:text-[18px] text-panel/45 max-w-xl mx-auto mt-6 leading-relaxed">
-            Validate document data before render. Catch missing fields, broken paths, and structural errors before a bad invoice reaches a customer.
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   HERO
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function Hero() {
+  return (
+    <section
+      className="text-panel relative overflow-hidden pt-28 md:pt-32 pb-16 md:pb-24"
+      style={{
+        background:
+          'radial-gradient(ellipse 80% 60% at 50% 30%, rgba(196,98,42,0.12) 0%, transparent 70%), linear-gradient(180deg, #141618 0%, #111214 40%, #0f1012 100%)',
+      }}
+    >
+      <div className="max-w-[1200px] mx-auto px-6 md:px-10 relative z-10">
+        <div className="text-center max-w-4xl mx-auto hero-stagger">
+          <p className="text-[11px] tracking-[0.22em] uppercase text-rust-light font-semibold mb-6">
+            Stripe · Shopify · Custom billing  →  Factur-X / ZUGFeRD
           </p>
-          <div className="mt-6 inline-flex flex-col items-center gap-2">
-            <button onClick={() => navigator.clipboard.writeText('pip install trustrender && trustrender quickstart')}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-panel/15 hover:border-panel/30 bg-panel/[0.05] hover:bg-panel/[0.08] transition-colors cursor-pointer group">
-              <code className="font-mono text-[13px] text-panel/60 group-hover:text-panel/80">pip install trustrender && trustrender quickstart</code>
-              <span className="text-[9px] text-panel/25 group-hover:text-panel/50 transition-colors">copy</span>
-            </button>
-          </div>
-          {/* Scroll indicator */}
-          <div className="mt-8 flex justify-center">
-            <div className="w-6 h-10 rounded-full border border-panel/20 flex items-start justify-center pt-2">
-              <div className="w-1 h-2 rounded-full bg-panel/50 scroll-dot" />
-            </div>
-          </div>
-        </div>
-
-        {/* Toggle */}
-        <div className="hero-stagger">
-          <div className="flex items-center justify-center gap-3 mb-8">
-            <button onClick={() => toggle('valid')}
-              className={`text-[13px] px-6 py-2.5 rounded-full border-2 transition-all font-medium cursor-pointer
-                ${mode === 'valid' ? 'bg-rust text-white border-rust' : 'text-panel/70 border-panel/30 hover:border-panel/50 hover:text-panel/90 bg-panel/[0.06]'}`}>
-              See it pass
-            </button>
-            <button onClick={() => toggle('invalid')}
-              className={`text-[13px] px-6 py-2.5 rounded-full border-2 transition-all font-medium cursor-pointer
-                ${mode === 'invalid' ? 'bg-wine text-white border-wine' : 'text-panel/70 border-panel/30 hover:border-panel/50 hover:text-panel/90 bg-panel/[0.06]'}`}>
-              See what gets caught
-            </button>
-            <span className="ml-3 text-[11px] text-panel/50 font-mono hidden md:inline">
-              {mode === null ? 'pick a scenario' : mode === 'valid' ? 'invoice_data.json' : 'bad_data.json'}{mode !== null ? ' \u2192 invoice.j2.typ' : ''}
-            </span>
+          <h1 className="font-display font-extrabold text-[40px] md:text-[64px] lg:text-[78px] leading-[0.98] tracking-[-0.04em] gradient-text pb-2">
+            Validate billing data before it becomes a non&#8209;compliant invoice.
+          </h1>
+          <p className="text-[16px] md:text-[18px] text-panel/55 max-w-2xl mx-auto mt-6 leading-relaxed">
+            TrustRender catches missing seller fields, arithmetic mismatches, and
+            structural problems in Stripe and Shopify exports — before
+            <code className="mx-1 px-1.5 py-0.5 rounded bg-panel/[0.08] text-panel/80 font-mono text-[13px]">factur-x</code>
+            or
+            <code className="mx-1 px-1.5 py-0.5 rounded bg-panel/[0.08] text-panel/80 font-mono text-[13px]">drafthorse</code>
+            embed them as compliant XML.
+          </p>
+          <div className="mt-8 flex flex-col items-center gap-3">
+            <CopyPill text="pip install trustrender" dark />
+            <p className="text-[12px] text-panel/35 font-mono">v0.3.4 · MIT · Python 3.11+</p>
           </div>
         </div>
 
-        {/* The Pipeline — the centerpiece */}
-        <FadeUp delay={350}>
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.9fr)_180px_minmax(0,1.2fr)] gap-6 lg:gap-10 items-start" key={run}>
+        {/* The proof: blocked → pass terminal flow */}
+        <FadeUp delay={400}>
+          <div className="mt-14 md:mt-20 grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
+            <Terminal filename="$ trustrender validate demo_stripe.json --source stripe" status="block">
+{`Invoice:   INV-2026-0187
+From:
+To:        Rheingold Maschinenbau GmbH
+Items:     3
+Total:     €2,945.25
 
-            {/* LEFT: payload */}
-            <div className="bg-ink-3 rounded-xl border border-panel/8 overflow-hidden relative">
-              <div className="px-4 py-2.5 border-b border-panel/8 flex items-center gap-2">
-                <div className="flex gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-panel/15" />
-                  <div className="w-2 h-2 rounded-full bg-panel/15" />
-                  <div className="w-2 h-2 rounded-full bg-panel/15" />
-                </div>
-                <span className="text-[10px] font-mono text-panel/50 ml-2">{mode === 'invalid' ? 'bad_data.json' : 'invoice_data.json'}</span>
-              </div>
-              <div className="p-4 max-h-[520px] overflow-y-auto overflow-x-auto" style={{ colorScheme: 'dark' }}>
-                <JsonDark data={mode === 'invalid' ? INVALID : VALID} marks={mode === 'invalid' ? { recipient: 1 } : {}} />
-              </div>
-              <div className="absolute top-10 bottom-0 right-0 w-6 pointer-events-none" style={{ background: 'linear-gradient(to right, transparent, #282724)' }} />
-            </div>
+BLOCKED — 1 problem(s)
 
-            {/* MIDDLE: pipeline */}
-            <div className="flex flex-row lg:flex-col items-center lg:items-stretch gap-3 lg:gap-0 lg:pt-16 justify-center">
-              <Stage label="Contract" status={vSt} sub={vSt === 'pass' ? 'all fields valid' : vSt === 'fail' ? '3 errors \u2014 stopped' : vSt === 'running' ? 'checking\u2026' : null} />
-              <Connector active={vSt === 'pass'} blocked={rSt === 'blocked'} />
-              <Stage label="Render" status={rSt} sub={rSt === 'pass' ? '41 ms \u00B7 typst' : rSt === 'running' ? 'typst\u2026' : rSt === 'blocked' ? 'not invoked' : null} />
-              <Connector active={rSt === 'pass'} blocked={oSt === 'blocked'} />
-              <Stage label="Output" status={oSt} sub={oSt === 'pass' ? 'PDF delivered' : oSt === 'blocked' ? 'not generated' : null} />
-            </div>
+  Missing vendor/sender name
+    Add a sender.name field to your invoice data.
 
-            {/* RIGHT: result */}
-            <div className="min-h-[520px] flex flex-col">
-              {showDoc && <div className="anim-doc"><Invoice data={VALID} /></div>}
+This invoice cannot be processed
+until the problems above are fixed.`}
+            </Terminal>
+            <Terminal filename="$ trustrender validate demo_stripe_ready.json --source stripe" status="pass">
+{`Invoice:   INV-2026-0187
+From:      NovaTech Solutions GmbH
+To:        Rheingold Maschinenbau GmbH
+Items:     3
+Total:     €2,945.25
 
-              {showErrors && (
-                <div>
-                  <div className="mb-6">
-                    <div className="text-[16px] font-display text-red-300 mb-2">Payload intercepted before render</div>
-                    <div className="text-[13px] text-panel/50">3 field errors caught at the data layer. The renderer was never invoked.</div>
-                    <div className="text-[13px] text-panel/40 mt-2 border-l-2 border-panel/10 pl-3">No PDF was generated. No broken invoice was produced.</div>
-                  </div>
-                  <div className="space-y-1.5">
-                    {ERRORS.map((err, i) => (
-                      <div key={err.path} className="anim-error border-l-[3px] border-red-400/40 pl-4 py-3 rounded-r-sm bg-red-400/[0.04]"
-                        style={{ animationDelay: `${i * 140}ms`, animationFillMode: 'both' }}>
-                        <div className="font-mono text-[13px] font-semibold text-panel/90">{err.path}</div>
-                        <div className="text-[11px] text-panel/40 mt-0.5">
-                          expected <span className="font-mono font-semibold text-panel/60">{err.expected}</span>
-                          <span className="mx-1.5 text-panel/15">&rarr;</span>
-                          got <span className="font-mono font-semibold text-red-300">{err.got}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-8 relative">
-                    <div className="absolute inset-0 z-10 flex items-center justify-center">
-                      <div className="bg-ink/95 backdrop-blur-sm rounded-lg px-7 py-5 border border-red-400/20 anim-stamp"
-                        style={{ animationDelay: '500ms', animationFillMode: 'both' }}>
-                        <div className="text-[14px] font-display text-red-300 text-center">Not generated</div>
-                        <div className="text-[11px] text-panel/40 text-center mt-1.5 max-w-[200px]">This invoice was blocked before output, not after.</div>
-                      </div>
-                    </div>
-                    <div className="opacity-[0.03] pointer-events-none scale-[0.93] origin-top blur-[1px]"><Invoice data={VALID} /></div>
-                  </div>
-                </div>
-              )}
+PASS — invoice data is valid
 
-              {!showDoc && !showErrors && (
-                <div className="flex-1 flex items-center justify-center min-h-[400px]">
-                  <div className="text-center">
-                    {phase === 'validate' && (
-                      <>
-                        <div className="w-12 h-12 mx-auto mb-5 rounded-full border-2 border-panel/20 relative pulse-ring flex items-center justify-center text-panel/20"><div className="w-3 h-3 rounded-full bg-panel/15 contract-pulse" /></div>
-                        <p className="text-[13px] text-panel/40 font-medium">Checking data contract&hellip;</p>
-                      </>
-                    )}
-                    {phase === 'render' && (
-                      <>
-                        <div className="w-56 h-1.5 bg-panel/10 rounded-full overflow-hidden mx-auto mb-5"><div className="h-full bg-panel/20 rounded-full shimmer-bar" /></div>
-                        <p className="text-[13px] text-panel/40 font-medium">Rendering via Typst&hellip;</p>
-                      </>
-                    )}
-                    {phase === 'idle' && (
-                      <>
-                        <div className="w-12 h-12 mx-auto mb-5 rounded-full border-2 border-panel/10 flex items-center justify-center"><div className="w-3 h-3 rounded-full border-2 border-panel/10" /></div>
-                        <p className="text-[13px] text-panel/50">Awaiting input</p>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+Safe to embed in Factur-X/ZUGFeRD PDF.`}
+            </Terminal>
           </div>
+          <p className="text-center text-[13px] text-panel/45 mt-6">
+            The only difference between the two files is one added field:&nbsp;
+            <code className="font-mono text-panel/75 bg-panel/[0.06] px-2 py-0.5 rounded">
+              "sender": &#123; "name": "NovaTech Solutions GmbH" &#125;
+            </code>
+          </p>
         </FadeUp>
       </div>
     </section>
@@ -972,63 +255,269 @@ function HeroReveal() {
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   SECTION 2: TRUST LAYERS
+   WHY THIS EXISTS
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function TrustLayers() {
-  const layers = [
-    {
-      title: 'Readiness',
-      desc: 'Structural contract inferred from your template. Missing fields, wrong types, null values — intercepted at the data layer before render.',
-      stats: ['854 automated tests', '500 soak renders, 0 errors', '~60ms avg latency (Apple Silicon)'],
-      flourish: <ReadinessFlourish />,
-    },
-    {
-      title: 'Compliance',
-      desc: 'Machine-readable German B2B invoices for the supported EN 16931 path. Validated before render, embedded as ZUGFeRD / Factur-X. Pure Python \u2014 no Java stack.',
-      stats: ['Supported EN 16931 path', 'ZUGFeRD / Factur-X', 'German B2B invoice flow'],
-      flourish: <ComplianceFlourish />,
-      caption: 'Real JSON input \u2192 real CII XML output. XSD + Schematron validated.',
-    },
-    {
-      title: 'Provenance',
-      desc: 'Traceable input-to-output lineage within the render pipeline. Know what data went in, what template was used, and fingerprint the artifact produced.',
-      stats: ['Input fingerprinting', 'Template fingerprinting', 'Output SHA-256'],
-      flourish: <ProvenanceFlourish />,
-    },
-  ]
-
+function WhyExists() {
   return (
-    <section className="py-20 md:py-28">
-      <div className="max-w-[1280px] mx-auto px-6 md:px-10">
-        <FadeUp>
-          <p className="text-[11px] tracking-[0.22em] uppercase text-rust mb-4 font-semibold">Trust layers</p>
-          <h2 className="font-display font-extrabold text-[28px] md:text-[40px] tracking-[-0.03em] leading-[1.08] mb-16 max-w-lg">
-            Three layers between your data and a broken document.
-          </h2>
+    <Section
+      id="why"
+      kicker="The gap"
+      title="Stripe and Shopify don't generate compliant invoices."
+      lede="They send you billing exports — cents in integers, Unix timestamps, decimal-string amounts, no seller info, no concept of EU tax compliance. factur-x and drafthorse generate compliant Factur-X / ZUGFeRD XML, but they assume clean canonical input. TrustRender is the validation and normalization layer in between."
+    >
+      <FadeUp delay={150}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+          {[
+            {
+              n: '1',
+              title: 'Adapt',
+              body: 'Convert raw Stripe / Shopify payloads into canonical structure. Cents → euros, Unix → ISO dates, strings → floats.',
+            },
+            {
+              n: '2',
+              title: 'Validate',
+              body: 'Check arithmetic, identity, structure. Catch missing seller fields, broken line totals, mismatched subtotals.',
+            },
+            {
+              n: '3',
+              title: 'Hand off',
+              body: 'Pass the canonical dict to factur-x or drafthorse. They generate the compliant XML, you trust the input.',
+            },
+          ].map((step) => (
+            <div
+              key={step.n}
+              className="p-6 rounded-xl border border-rule-light bg-panel"
+            >
+              <div className="flex items-baseline gap-3 mb-3">
+                <span className="font-display text-[28px] font-extrabold text-rust leading-none">
+                  {step.n}
+                </span>
+                <h3 className="font-display font-bold text-[18px] text-ink">
+                  {step.title}
+                </h3>
+              </div>
+              <p className="text-[14px] leading-relaxed text-mid">{step.body}</p>
+            </div>
+          ))}
+        </div>
+      </FadeUp>
+    </Section>
+  )
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ADAPTERS — Stripe + Shopify side by side
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function Adapters() {
+  return (
+    <Section
+      id="adapters"
+      kicker="Adapters"
+      title="Bring your own billing platform."
+      lede="Each adapter knows the platform's quirks — Stripe's cents, Shopify's decimal strings, Unix timestamps, ISO 8601 — and produces a canonical invoice dict ready for validation."
+      light={false}
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <FadeUp delay={100}>
+          <div className="bg-ink-3 border border-panel/10 rounded-xl p-7">
+            <div className="flex items-baseline justify-between mb-4">
+              <h3 className="font-display font-bold text-[22px] text-panel">Stripe</h3>
+              <code className="text-[12px] font-mono text-panel/40">--source stripe</code>
+            </div>
+            <ul className="space-y-2.5 text-[14px] text-panel/70 mb-5">
+              <li className="flex gap-3">
+                <span className="text-rust-light">→</span>
+                <span>cents <code className="font-mono text-panel/50">247500</code> become euros <code className="font-mono text-panel/50">2475.00</code></span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-rust-light">→</span>
+                <span>Unix timestamps <code className="font-mono text-panel/50">1775779200</code> become dates <code className="font-mono text-panel/50">2026-04-10</code></span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-rust-light">→</span>
+                <span>line items extracted from <code className="font-mono text-panel/50">lines.data[]</code></span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-rust-light">→</span>
+                <span>customer maps to recipient; sender stays empty (Stripe doesn't have it)</span>
+              </li>
+            </ul>
+            <Terminal>
+{`from trustrender import validate_invoice
+from trustrender.adapters import from_stripe
+
+result = validate_invoice(
+    from_stripe(stripe_invoice),
+    zugferd=True,
+)`}
+            </Terminal>
+          </div>
         </FadeUp>
-        <div className="space-y-16 md:space-y-24">
-          {layers.map((l, i) => (
-            <FadeUp key={l.title} delay={i * 100}>
-              <div className={`grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-8 md:gap-14 items-center ${i % 2 === 1 ? 'md:grid-cols-[1fr_1.4fr]' : ''}`}>
-                {/* Flourish — alternates sides */}
-                <div className={`bg-panel rounded-xl border border-rule-light overflow-hidden p-6 md:p-8 ${i % 2 === 1 ? 'md:order-2' : ''}`}
-                  style={{ boxShadow: '0 2px 12px rgba(20,18,16,0.05)' }}>
-                  {l.flourish}
-                  {l.caption && <p className="text-[10px] text-muted text-center mt-2 italic">{l.caption}</p>}
+
+        <FadeUp delay={200}>
+          <div className="bg-ink-3 border border-panel/10 rounded-xl p-7">
+            <div className="flex items-baseline justify-between mb-4">
+              <h3 className="font-display font-bold text-[22px] text-panel">Shopify</h3>
+              <code className="text-[12px] font-mono text-panel/40">--source shopify</code>
+            </div>
+            <ul className="space-y-2.5 text-[14px] text-panel/70 mb-5">
+              <li className="flex gap-3">
+                <span className="text-rust-light">→</span>
+                <span>decimal strings <code className="font-mono text-panel/50">"1100.00"</code> become floats <code className="font-mono text-panel/50">1100.00</code></span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-rust-light">→</span>
+                <span>ISO 8601 <code className="font-mono text-panel/50">"2026-04-08T14:30+02:00"</code> becomes <code className="font-mono text-panel/50">2026-04-08</code></span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-rust-light">→</span>
+                <span><code className="font-mono text-panel/50">first_name + last_name</code> joined into recipient</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-rust-light">→</span>
+                <span>line totals computed from <code className="font-mono text-panel/50">qty × price</code> when missing</span>
+              </li>
+            </ul>
+            <Terminal>
+{`from trustrender import validate_invoice
+from trustrender.adapters import from_shopify
+
+result = validate_invoice(
+    from_shopify(shopify_order),
+)`}
+            </Terminal>
+          </div>
+        </FadeUp>
+      </div>
+
+      <FadeUp delay={300}>
+        <p className="text-center text-[13px] text-panel/45 mt-10">
+          Custom billing system?  Pass the dict directly to{' '}
+          <code className="font-mono text-panel/70">validate_invoice()</code> — 90+
+          field aliases (DocNumber, invoiceNo, vendor.companyName…) resolve to canonical names automatically.
+        </p>
+      </FadeUp>
+    </Section>
+  )
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   WHAT IT CHECKS
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function WhatItChecks() {
+  const checks = [
+    { rule: 'identity.invoice_number', desc: 'Missing or empty invoice number' },
+    { rule: 'identity.sender_name', desc: 'Missing vendor / sender name' },
+    { rule: 'identity.recipient_name', desc: 'Missing recipient / buyer name' },
+    { rule: 'items.non_empty', desc: 'No line items present' },
+    { rule: 'arithmetic.line_total', desc: 'line_total ≠ quantity × unit_price' },
+    { rule: 'arithmetic.subtotal', desc: 'subtotal ≠ sum of line_totals' },
+    { rule: 'arithmetic.total', desc: 'total ≠ subtotal + tax_amount' },
+  ]
+  return (
+    <Section
+      id="checks"
+      kicker="Validation"
+      title="Seven deterministic checks. No AI. No heuristics."
+      lede="Every rule is objectively verifiable. Either the math works or it doesn't. Either the field exists or it doesn't. No surprises in production."
+    >
+      <FadeUp delay={150}>
+        <div className="rounded-xl border border-rule-light bg-panel overflow-hidden">
+          {checks.map((c, i) => (
+            <div
+              key={c.rule}
+              className={`grid grid-cols-[minmax(200px,260px)_1fr] gap-6 px-6 py-4 ${
+                i !== checks.length - 1 ? 'border-b border-rule-light' : ''
+              }`}
+            >
+              <code className="font-mono text-[13px] text-rust">{c.rule}</code>
+              <span className="text-[14px] text-ink-2">{c.desc}</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-[13px] text-muted mt-6 max-w-2xl">
+          When <code className="font-mono">--zugferd</code> is set, additional EN
+          16931 readiness checks run: tax-rate consistency, currency, country
+          codes, supported document types (380 invoices, 381 credit notes).
+        </p>
+      </FadeUp>
+    </Section>
+  )
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   END-TO-END PYTHON EXAMPLE
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function EndToEnd() {
+  return (
+    <Section
+      id="example"
+      kicker="In your code"
+      title="Three lines between Stripe and a compliant Factur-X invoice."
+      lede="Adapter normalizes the platform quirks. Validator returns a canonical dict and a list of any blocking issues. You hand the canonical dict to factur-x or drafthorse for XML embedding."
+      light={false}
+      narrow
+    >
+      <FadeUp delay={150}>
+        <Terminal filename="integration.py">
+{`from trustrender import validate_invoice
+from trustrender.adapters import from_stripe
+
+# 1. Pull a Stripe invoice (raw API response)
+stripe_invoice = stripe.Invoice.retrieve("in_1RExNk...")
+
+# 2. Adapt + validate (one call)
+result = validate_invoice(
+    from_stripe(stripe_invoice.to_dict()),
+    zugferd=True,
+)
+
+# 3. Hand off the canonical dict — or surface the blocking errors
+if result["render_ready"] and result["zugferd_ready"]:
+    canonical = result["canonical"]
+    # ... your factur-x / drafthorse generation code here
+else:
+    for error in result["errors"]:
+        print(f"BLOCKED: {error['message']}")`}
+        </Terminal>
+        <div className="mt-8 flex flex-wrap gap-3 justify-center">
+          <CopyPill text="pip install trustrender" dark />
+          <a
+            href={`${REPO}/blob/main/examples/start_to_finish.py`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-panel/15 hover:border-panel/30 bg-panel/[0.05] hover:bg-panel/[0.08] text-panel/80 transition-colors text-[13px]"
+          >
+            See the full example  ↗
+          </a>
+        </div>
+      </FadeUp>
+    </Section>
+  )
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   STATS / TRUST
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function Stats() {
+  const stats = [
+    { value: '993', label: 'tests passing' },
+    { value: '90+', label: 'field aliases' },
+    { value: 'EN 16931', label: 'compliance path' },
+    { value: 'Pure Python', label: 'no Java, no browser' },
+  ]
+  return (
+    <section className="py-16 md:py-20 bg-bg border-y border-rule-light">
+      <div className="max-w-[1200px] mx-auto px-6 md:px-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          {stats.map((s, i) => (
+            <FadeUp key={s.label} delay={i * 80}>
+              <div className="text-center md:text-left">
+                <div className="font-display font-extrabold text-[30px] md:text-[38px] text-ink leading-none mb-1.5 tracking-tight">
+                  {s.value}
                 </div>
-                {/* Text */}
-                <div className={i % 2 === 1 ? 'md:order-1' : ''}>
-                  <p className="text-[11px] tracking-[0.18em] uppercase text-rust font-semibold mb-3">0{i + 1}</p>
-                  <div className="text-[28px] md:text-[34px] font-display tracking-tight mb-4 text-ink">{l.title}</div>
-                  <p className="text-[15px] text-ink-2 leading-relaxed mb-6">{l.desc}</p>
-                  <div className="space-y-3">
-                    {l.stats.map(s => (
-                      <div key={s} className="text-[13px] text-mid flex items-center gap-2.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-rust shrink-0" />
-                        {s}
-                      </div>
-                    ))}
-                  </div>
+                <div className="text-[12px] tracking-[0.18em] uppercase text-mid font-semibold">
+                  {s.label}
                 </div>
               </div>
             </FadeUp>
@@ -1040,2766 +529,90 @@ function TrustLayers() {
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   SECTION 3: LIVE PLAYGROUND
+   SCOPE — what it is / isn't
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-const FIXTURES = {
-  'invoice.j2.typ': {
-    label: 'Invoice',
-    valid: {
-      invoice_number: "INV-2026-0042", invoice_date: "April 10, 2026", due_date: "May 10, 2026", payment_terms: "Net 30",
-      sender: { name: "Acme Corp", address: "123 Business Ave, SF, CA 94105", email: "billing@acme.com" },
-      recipient: { name: "Contoso Ltd", address: "456 Enterprise Blvd, NY, NY 10001", email: "ap@contoso.com" },
-      items: [
-        { num: 1, description: "Website redesign", qty: 1, unit_price: "$4,500.00", amount: "$4,500.00" },
-        { num: 2, description: "Logo and brand", qty: 1, unit_price: "$2,200.00", amount: "$2,200.00" },
-        { num: 3, description: "SEO optimization", qty: 1, unit_price: "$1,800.00", amount: "$1,800.00" },
-      ],
-      subtotal: "$8,500.00", tax_rate: "8.5%", tax_amount: "$722.50", total: "$9,222.50",
-      notes: "Payment due within 30 days."
-    },
-    invalid: {
-      invoice_number: "INV-2026-0042", invoice_date: "April 10, 2026", due_date: "May 10, 2026", payment_terms: "Net 30",
-      sender: { name: "Acme Corp", address: "123 Business Ave, SF, CA 94105" },
-      recipient: { address: "456 Enterprise Blvd, NY, NY 10001", email: "ap@contoso.com" },
-      items: [
-        { num: 1, description: "Website redesign", qty: 1, unit_price: "$4,500.00", amount: "$4,500.00" },
-        { num: 2, qty: 1, unit_price: "$2,200.00", amount: "$2,200.00" },
-        { num: 3, description: "SEO optimization", qty: 1, unit_price: "$1,800.00", amount: "$1,800.00" },
-      ],
-      subtotal: "$8,500.00", tax_rate: "8.5%", tax_amount: "$722.50", total: "$8,500.00",
-      notes: "Payment due within 30 days."
-    },
-  },
-  'statement.j2.typ': {
-    label: 'Statement',
-    valid: {
-      company: { name: "Acme Corp", address: "123 Business Ave, SF, CA 94105", email: "accounts@acme.com", phone: "(415) 555-0100" },
-      customer: { name: "Contoso Ltd", account_number: "ACCT-78432", address: "456 Enterprise Blvd, NY, NY 10001", email: "ap@contoso.com" },
-      statement_date: "April 10, 2026", period: "Mar 1 \u2013 Mar 31, 2026",
-      opening_balance: "$12,450.00", closing_balance: "$18,267.50", total_charges: "$9,225.00", total_payments: "-$3,407.50",
-      transactions: [
-        { date: "Mar 01", description: "Opening Balance", reference: "", amount: "", balance: "$12,450.00" },
-        { date: "Mar 02", description: "Invoice #0031", reference: "INV-0031", amount: "$1,500.00", balance: "$13,950.00" },
-        { date: "Mar 03", description: "Wire payment", reference: "PMT-9981", amount: "-$2,000.00", balance: "$11,950.00" },
-      ],
-      aging: { current: "$5,575.00", days_30: "$3,200.00", days_60: "$1,500.00", days_90: "$7,992.50", total: "$18,267.50" },
-      notes: "Payment terms: Net 30."
-    },
-    invalid: {
-      company: { name: "Acme Corp", address: "123 Business Ave, SF, CA 94105", email: "accounts@acme.com", phone: "(415) 555-0100" },
-      customer: { name: "Contoso Ltd", address: "456 Enterprise Blvd, NY, NY 10001", email: "ap@contoso.com" },
-      statement_date: "April 10, 2026", period: "Mar 1 \u2013 Mar 31, 2026",
-      opening_balance: "$12,450.00", closing_balance: "$18,267.50", total_charges: "$9,225.00", total_payments: "-$3,407.50",
-      transactions: [
-        { date: "Mar 01", description: "Opening Balance", reference: "", amount: "", balance: "$12,450.00" },
-        { date: "Mar 02", reference: "INV-0031", amount: "$1,500.00", balance: "$13,950.00" },
-      ],
-      aging: { current: "$5,575.00", days_30: "$3,200.00", total: "$18,267.50" },
-      notes: null
-    },
-  },
-  'receipt.j2.typ': {
-    label: 'Receipt',
-    valid: {
-      company: { name: "Daily Grind Coffee", address: "782 Market St, SF, CA 94102", phone: "(415) 555-0187", website: "dailygrind.com" },
-      receipt_number: "REC-20260410", date: "April 10, 2026", time: "8:47 AM", cashier: "Maria S.", register: "POS-03",
-      items: [
-        { description: "Oat Milk Latte (Large)", qty: 2, unit_price: "$6.75", amount: "$13.50" },
-        { description: "Avocado Toast", qty: 1, unit_price: "$12.95", amount: "$12.95" },
-      ],
-      subtotal: "$26.45", tax_label: "CA Sales Tax", tax_amount: "$2.28", total: "$28.73",
-      payment: { method: "Visa", last_four: "4821", auth_code: "A94721" },
-      amount_tendered: "$28.73", change_due: "$0.00", footer_message: "Thank you!"
-    },
-    invalid: {
-      company: { name: "Daily Grind Coffee", address: "782 Market St, SF, CA 94102", phone: "(415) 555-0187" },
-      receipt_number: "REC-20260410", date: "April 10, 2026", time: "8:47 AM", cashier: "Maria S.", register: "POS-03",
-      items: [
-        { description: "Oat Milk Latte (Large)", qty: 2, unit_price: "$6.75", amount: "$13.50" },
-        { qty: 1, unit_price: "$12.95", amount: "$12.95" },
-      ],
-      subtotal: "$26.45", tax_label: "CA Sales Tax", tax_amount: "$2.28", total: null,
-      payment: { method: "Visa", last_four: "4821" },
-      amount_tendered: "$28.73", change_due: "$0.00", footer_message: "Thank you!"
-    },
-  },
-  'letter.j2.typ': {
-    label: 'Letter',
-    valid: {
-      sender: { name: "Acme Corp", title: "Accounts Receivable", address: "123 Business Ave, SF, CA 94105", phone: "(415) 555-0100", email: "ar@acme.com" },
-      recipient: { name: "Margaret Chen", title: "CFO", company: "Contoso Ltd", address: "456 Enterprise Blvd, NY, NY 10001" },
-      date: "April 10, 2026", subject: "Outstanding Balance", salutation: "Dear Ms. Chen,",
-      body_paragraphs: ["Your account has an outstanding balance of $18,267.50.", "Please settle at your earliest convenience."],
-      closing: "Sincerely,", signature_name: "James Rodriguez", signature_title: "Director of Finance", signature_company: "Acme Corp",
-    },
-    invalid: {
-      sender: { name: "Acme Corp", title: "Accounts Receivable", address: "123 Business Ave, SF, CA 94105", phone: "(415) 555-0100" },
-      recipient: { name: "Margaret Chen", title: "CFO", company: "Contoso Ltd", address: "456 Enterprise Blvd, NY, NY 10001" },
-      date: "April 10, 2026", subject: "Outstanding Balance", salutation: "Dear Ms. Chen,",
-      body_paragraphs: "Your account has an outstanding balance.",
-      closing: "Sincerely,", signature_name: "James Rodriguez", signature_title: "Director of Finance",
-    },
-  },
-  'einvoice.j2.typ': {
-    label: 'E-Invoice (DE)',
-    zugferd: 'en16931',
-    valid: {
-      invoice_type: "380", invoice_number: "RE-2026-0042", invoice_date: "2026-04-10", due_date: "2026-05-10", currency: "EUR",
-      seller: { name: "Muster GmbH", address: "Musterstra\u00dfe 1", city: "Berlin", postal_code: "10115", country: "DE", vat_id: "DE123456789", email: "rechnung@muster.de", phone: "+49 30 12345678" },
-      buyer: { name: "Kunde AG", address: "Kundenweg 42", city: "M\u00fcnchen", postal_code: "80331", country: "DE", vat_id: "DE987654321" },
-      items: [
-        { description: "Webseiten-Redesign", quantity: 1, unit: "C62", unit_price: 4500.00, tax_rate: 19, line_total: 4500.00 },
-        { description: "SEO-Optimierung (3 Monate)", quantity: 3, unit: "MON", unit_price: 750.00, tax_rate: 19, line_total: 2250.00 },
-        { description: "Logo-Design und CI", quantity: 1, unit: "C62", unit_price: 2200.00, tax_rate: 19, line_total: 2200.00 },
-      ],
-      subtotal: 8950.00,
-      tax_entries: [{ rate: 19, basis: 8950.00, amount: 1700.50 }],
-      tax_total: 1700.50, total: 10650.50,
-      payment: { means: "credit_transfer", iban: "DE89370400440532013000", bic: "COBADEFFXXX", bank_name: "Commerzbank" },
-      notes: "Zahlbar innerhalb von 30 Tagen netto."
-    },
-    invalid: {
-      invoice_type: "380", invoice_number: "RE-2026-0042", invoice_date: "2026-04-10", due_date: "2026-05-10", currency: "EUR",
-      seller: { name: "Muster GmbH", address: "Musterstra\u00dfe 1", city: "Berlin", postal_code: "10115", country: "DE" },
-      buyer: { name: "Kunde AG", address: "Kundenweg 42", city: "M\u00fcnchen", postal_code: "80331", country: "DE" },
-      items: [
-        { description: "Webseiten-Redesign", quantity: 1, unit: "C62", unit_price: 4500.00, tax_rate: 19, line_total: 4500.00 },
-      ],
-      subtotal: 8950.00,
-      tax_entries: [{ rate: 19, basis: 8950.00, amount: 1700.50 }],
-      tax_total: 1700.50, total: 10650.50,
-      payment: { means: "credit_transfer", iban: "DE89370400440532013000" },
-      notes: "Zahlbar innerhalb von 30 Tagen netto."
-    },
-  },
-  'report.j2.typ': {
-    label: 'Report',
-    valid: {
-      company: { name: "Acme Corp", department: "Engineering" },
-      title: "Q1 2026 Infrastructure Review", subtitle: "Quarterly Summary", date: "April 10, 2026",
-      prepared_by: "Sarah Kim, VP Eng", period: "Jan 1 \u2013 Mar 31, 2026",
-      executive_summary: "Uptime 99.94%. Two P1 incidents resolved within SLA.",
-      metrics: [{ label: "Uptime", value: "99.94%", target: "99.9%", status: "above" }],
-      incidents: [{ id: "INC-0012", date: "Feb 14", severity: "P1", duration: "18 min", description: "DB pool exhaustion.", root_cause: "Connection leak.", resolution: "Hotfix." }],
-      spend_by_service: [{ service: "Compute", q1_spend: "$52,100", q4_spend: "$58,400", change: "-10.8%" }],
-      recommendations: ["Migrate to reserved instances."],
-    },
-    invalid: {
-      company: { name: "Acme Corp", department: "Engineering" },
-      title: "Q1 2026 Infrastructure Review", subtitle: "Quarterly Summary", date: "April 10, 2026",
-      prepared_by: "Sarah Kim, VP Eng", period: "Jan 1 \u2013 Mar 31, 2026",
-      executive_summary: "Uptime 99.94%. Two P1 incidents resolved within SLA.",
-      metrics: [{ label: "Uptime", value: "99.94%", target: "99.9%" }],
-      incidents: [{ id: "INC-0012", date: "Feb 14", severity: "P1", duration: "18 min", description: "DB pool exhaustion." }],
-      spend_by_service: [{ service: "Compute", q1_spend: "$52,100" }],
-    },
-  },
-}
-
-// Display name for a rendered bundle — doc type + best identifier + time fallback
-const bundleDisplayName = (templateKey, data) => {
-  const label = FIXTURES[templateKey]?.label || 'Document'
-  let id = ''
-  try {
-    const d = typeof data === 'string' ? JSON.parse(data) : data
-    if (templateKey === 'invoice.j2.typ') id = d.invoice_number || (d.recipient?.name ? `for ${d.recipient.name}` : '')
-    else if (templateKey === 'receipt.j2.typ') id = d.receipt_number || (d.company?.name ? `from ${d.company.name}` : '')
-    else if (templateKey === 'statement.j2.typ') id = d.customer?.account_number || (d.customer?.name ? `for ${d.customer.name}` : '')
-    else if (templateKey === 'letter.j2.typ') id = d.recipient?.name ? `to ${d.recipient.name}` : d.subject ? `- ${d.subject}` : ''
-    else if (templateKey === 'einvoice.j2.typ') id = d.invoice_number || (d.buyer?.name ? `for ${d.buyer.name}` : '')
-    else if (templateKey === 'report.j2.typ') return d.title || d.subtitle || label
-  } catch {}
-  return id ? `${label} ${id}` : label
-}
-
-// Required fields per document type — gate "Ready to render" on these
-const REQUIRED_FIELDS = {
-  'invoice.j2.typ': (d) =>
-    d.invoice_number && d.invoice_date && d.sender?.name && d.recipient?.name
-    && d.items?.length > 0 && d.total,
-  'statement.j2.typ': (d) =>
-    d.company?.name && d.customer?.name && d.statement_date && d.closing_balance,
-  'receipt.j2.typ': (d) =>
-    d.company?.name && (d.receipt_number || d.date) && d.items?.length > 0 && d.total,
-  'letter.j2.typ': (d) =>
-    d.sender?.name && d.recipient?.name && d.subject && d.body_paragraphs?.length > 0,
-  'einvoice.j2.typ': (d) =>
-    d.invoice_number && d.seller?.name && d.buyer?.name && d.items?.length > 0 && d.total,
-  'report.j2.typ': (d) =>
-    d.title && d.company?.name && d.executive_summary,
-}
-
-const isComplete = (templateKey, data) => {
-  const check = REQUIRED_FIELDS[templateKey]
-  if (!check) return false
-  try { return Boolean(check(data)) } catch { return false }
-}
-
-// Minimal starter shape — just enough structure, no field dump
-const SCAFFOLDS = {
-  'invoice.j2.typ': { sender: {}, recipient: {}, items: [] },
-  'statement.j2.typ': { company: {}, customer: {}, transactions: [], aging: {} },
-  'receipt.j2.typ': { company: {}, items: [], payment: {} },
-  'letter.j2.typ': { sender: {}, recipient: {}, body_paragraphs: [] },
-  'einvoice.j2.typ': { seller: {}, buyer: {}, items: [], tax_entries: [], payment: {} },
-  'report.j2.typ': { company: {}, metrics: [], incidents: [], spend_by_service: [], recommendations: [] },
-}
-
-/* ── Mini Ready Demo (landing page teaser) ───────────────────────── */
-function ReadyDemo() {
-  const [template, setTemplate] = useState('invoice.j2.typ')
-  const [payloadMode, setPayloadMode] = useState('valid')
-  const [json, setJson] = useState(() => JSON.stringify(FIXTURES['invoice.j2.typ'].valid, null, 2))
-  const [parseError, setParseError] = useState(null)
-  const [verdict, setVerdict] = useState(null)
-  const [checking, setChecking] = useState(false)
-
-  const switchFixture = (tpl, mode) => {
-    setTemplate(tpl); setPayloadMode(mode)
-    setJson(JSON.stringify(FIXTURES[tpl][mode === 'valid' ? 'valid' : 'invalid'], null, 2))
-    setVerdict(null)
-  }
-
-  useEffect(() => {
-    try { JSON.parse(json); setParseError(null) }
-    catch (e) { setParseError(e.message.split(' at ')[0]); setVerdict(null); setChecking(false) }
-  }, [json])
-
-  const runPreflight = async () => {
-    if (parseError) return
-    setChecking(true); setVerdict(null)
-    try {
-      const data = JSON.parse(json)
-      const res = await fetch(apiUrl('/preflight'), {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ template, data }),
-      })
-      setVerdict(await res.json()); setChecking(false)
-    } catch {
-      setVerdict({ ready: false, errors: [{ stage: 'network', check: 'unreachable', severity: 'error', path: 'server', message: 'Server unreachable. Is trustrender serve running on port 8190?' }], warnings: [], stages_checked: [] })
-      setChecking(false)
-    }
-  }
-
+function Scope() {
   return (
-    <section id="playground" className="py-20 md:py-28 bg-surface border-t border-rule">
-      <div className="max-w-[1280px] mx-auto px-6 md:px-10">
-        <FadeUp>
-          <p className="text-[11px] tracking-[0.22em] uppercase text-rust mb-4 font-semibold">Try it</p>
-          <h2 className="font-display font-extrabold text-[28px] md:text-[40px] tracking-[-0.03em] leading-[1.08] mb-3">
-            Check readiness before render.
-          </h2>
-          <p className="text-[15px] text-mid max-w-md leading-relaxed mb-10">
-            Toggle to an invalid payload and see what TrustRender catches before the renderer is ever invoked.
-          </p>
-        </FadeUp>
-
-        <FadeUp delay={200}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-            {/* Editor */}
-            <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-              <div className="px-4 py-2.5 border-b border-rule-light flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="flex gap-1.5"><div className="w-2 h-2 rounded-full bg-rule" /><div className="w-2 h-2 rounded-full bg-rule" /><div className="w-2 h-2 rounded-full bg-rule" /></div>
-                  <span className="text-[10px] font-mono text-muted ml-2">payload</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <select value={template} onChange={e => switchFixture(e.target.value, payloadMode)} className="text-[10px] font-mono text-muted bg-transparent border border-rule rounded px-2 py-1 cursor-pointer">
-                    {Object.entries(FIXTURES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                  </select>
-                  <span className="text-[9px] text-muted">example</span>
-                  <div className="flex rounded-full border border-rule overflow-hidden">
-                    <button onClick={() => switchFixture(template, 'valid')}
-                      className={`text-[9px] px-2.5 py-1 font-medium cursor-pointer transition-colors
-                        ${payloadMode === 'valid' ? 'bg-sage/10 text-sage' : 'text-muted hover:text-mid'}`}>
-                      passing
-                    </button>
-                    <button onClick={() => switchFixture(template, 'invalid')}
-                      className={`text-[9px] px-2.5 py-1 font-medium cursor-pointer transition-colors
-                        ${payloadMode === 'invalid' ? 'bg-wine/10 text-wine' : 'text-muted hover:text-mid'}`}>
-                      broken
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <textarea value={json} onChange={e => setJson(e.target.value)} spellCheck={false} wrap="off"
-                className="w-full p-4 font-mono text-[11px] leading-[1.8] text-ink-2 bg-panel resize-none focus:outline-none min-h-[320px] whitespace-pre overflow-x-auto"
-                style={{ tabSize: 2 }} />
-              {parseError && <div className="px-4 py-2 border-t border-wine/20 bg-wine/[0.04] text-[11px] text-wine font-mono">JSON: {parseError}</div>}
-              {payloadMode === 'invalid' && !parseError && (
-                <div className="px-4 py-2 border-t border-rule-light text-[10px] text-muted">Try the broken payload to see what Ready catches.</div>
-              )}
-              <div className="px-4 py-3 border-t border-rule-light flex items-center gap-3">
-                <button onClick={runPreflight} disabled={!!parseError || checking}
-                  className={`text-[12px] px-5 py-2.5 rounded-full font-medium transition-all cursor-pointer ${parseError ? 'bg-rule text-muted cursor-not-allowed' : checking ? 'bg-ink/70 text-panel cursor-wait' : 'bg-ink text-panel hover:bg-ink-2'}`}>
-                  {checking ? 'Checking\u2026' : 'Check readiness'}
-                </button>
-              </div>
-            </div>
-
-            {/* Verdict */}
-            <div className="bg-panel rounded-xl border border-rule-light overflow-hidden min-h-[420px] flex flex-col" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-              <div className="px-4 py-2.5 border-b border-rule-light flex items-center justify-between">
-                <span className="text-[10px] font-mono text-muted">readiness</span>
-                {verdict && !parseError && (
-                  <span className={`text-[10px] font-medium ${verdict.ready ? 'text-sage' : 'text-wine'}`}>
-                    {verdict.ready ? 'ready' : `${verdict.errors.length} issue${verdict.errors.length !== 1 ? 's' : ''}`}
-                  </span>
-                )}
-              </div>
-              <div className="flex-1 flex items-start p-4 overflow-y-auto">
-                {!verdict && !checking && parseError && (
-                  <div className="w-full py-12 px-6 text-center">
-                    <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-wine/10 flex items-center justify-center">
-                      <svg className="w-5 h-5 text-wine" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </div>
-                    <p className="text-[14px] font-semibold text-wine">Invalid JSON</p>
-                    <p className="text-[12px] text-mid mt-1">{parseError}</p>
-                    <p className="text-[11px] text-muted mt-2">Fix syntax to run readiness checks</p>
-                  </div>
-                )}
-                {!verdict && !checking && !parseError && (
-                  <div className="w-full text-center py-16">
-                    <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-rule flex items-center justify-center">
-                      <svg className="w-5 h-5 text-rule" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    </div>
-                    <p className="text-[13px] text-muted">Click &ldquo;Check readiness&rdquo; to validate</p>
-                  </div>
-                )}
-                {checking && (
-                  <div className="w-full text-center py-16">
-                    <div className="w-48 h-1.5 bg-rule rounded-full overflow-hidden mx-auto mb-4"><div className="h-full bg-ink/30 rounded-full shimmer-bar" /></div>
-                    <p className="text-[13px] text-muted font-medium">Checking&hellip;</p>
-                  </div>
-                )}
-                {verdict && !parseError && (
-                  <div className="w-full space-y-4">
-                    {/* Verdict badge */}
-                    <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${verdict.ready ? 'bg-sage/[0.06] border-sage/20' : 'bg-wine/[0.04] border-wine/20'}`}>
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${verdict.ready ? 'bg-sage/15' : 'bg-wine/10'}`}>
-                        {verdict.ready
-                          ? <svg className="w-4 h-4 text-sage" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                          : <svg className="w-4 h-4 text-wine" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                        }
-                      </div>
-                      <div>
-                        <div className={`text-[14px] font-semibold ${verdict.ready ? 'text-sage' : 'text-wine'}`}>
-                          {verdict.ready ? 'Ready to render' : 'Not ready'}
-                        </div>
-                        <div className="text-[11px] text-muted">
-                          {verdict.stages_checked?.length || 0} stages checked
-                          {verdict.warnings?.length > 0 && ` \u00b7 ${verdict.warnings.length} warning${verdict.warnings.length !== 1 ? 's' : ''}`}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Errors */}
-                    {verdict.errors?.length > 0 && (
-                      <div className="space-y-1.5">
-                        {verdict.errors.map((e, i) => (
-                          <div key={i} className="border-l-[3px] border-wine/30 pl-3 py-2 rounded-r-sm bg-wine/[0.03]">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-wine/10 text-wine font-mono">{e.stage}</span>
-                              <span className="font-mono text-[12px] font-semibold text-ink">{e.path}</span>
-                            </div>
-                            <div className="text-[11px] text-mid mt-0.5">{e.message}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Warnings */}
-                    {verdict.warnings?.length > 0 && (
-                      <div className="space-y-1.5">
-                        {verdict.warnings.map((w, i) => (
-                          <div key={i} className="border-l-[3px] border-rust/30 pl-3 py-2 rounded-r-sm bg-rust/[0.03]">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-rust/10 text-rust font-mono">{w.stage}</span>
-                              <span className="font-mono text-[12px] font-semibold text-ink">{w.path}</span>
-                            </div>
-                            <div className="text-[11px] text-mid mt-0.5">{w.message}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {verdict.ready && <p className="text-[11px] text-sage border-l-2 border-sage/30 pl-3">All checks passed. This payload is ready to render.</p>}
-                    {!verdict.ready && <p className="text-[11px] text-mid border-l-2 border-rule pl-3">Fix the issues above. No PDF was generated.</p>}
-                  </div>
-                )}
-              </div>
-              <div className="px-4 py-3 border-t border-rule-light">
-                <a href="#app" className="flex items-center justify-between gap-3 group px-4 py-2.5 -mx-1 rounded-lg bg-rust/8 hover:bg-rust/15 transition-colors">
-                  <span className="text-[12px] text-rust font-semibold">Try the full playground</span>
-                  <span className="text-[11px] text-rust/60 font-mono group-hover:text-rust transition-colors">Ingest &middot; Preflight &middot; Render &rarr;</span>
-                </a>
-              </div>
-            </div>
-          </div>
-        </FadeUp>
-      </div>
-    </section>
-  )
-}
-
-/* ── Ingest sample payloads ──────────────────────────────────────── */
-const WORKSPACE_INGEST_SAMPLES = {
-  stripe: {
-    label: 'Stripe-style',
-    data: {"number":"INV-2026-00042","date":"2026-03-01","due_date":"2026-03-31","account_name":"Buildspace Labs Inc.","account_email":"billing@buildspace.so","customer_name":"Momentum Ventures","customer_email":"finance@momentum.vc","lines":{"data":[{"title":"Platform subscription (Pro)","count":1,"price":399.00,"amount":399.00},{"title":"API calls overage (50K)","count":1,"price":45.00,"amount":45.00},{"title":"Priority support (monthly)","count":1,"price":149.00,"amount":149.00}]},"sub_total":593.00,"tax":50.41,"taxRate":"8.5%","grand_total":643.41,"currency":"usd"},
-  },
-  quickbooks: {
-    label: 'QuickBooks',
-    data: {"DocNumber":"INV-1089","TxnDate":"2026-03-10","DueDate":"2026-04-09","CompanyName":"Redwood Digital LLC","CompanyEmail":"ar@redwood-digital.com","customer":{"Name":"Pinnacle Group","EmailAddress":"billing@pinnaclegroup.com","BillingAddress":"200 Corporate Plaza, Chicago, IL 60601"},"Line":[{"LineNum":1,"Description":"UX/UI Design — Phase 1","Quantity":1,"UnitPrice":3500.00,"Amount":3500.00},{"LineNum":2,"Description":"Frontend Development","Quantity":40,"UnitPrice":95.00,"Amount":3800.00},{"LineNum":3,"Description":"Project Management","Quantity":8,"UnitPrice":120.00,"Amount":960.00}],"SubTotal":8260.00,"TotalTax":702.10,"taxRate":"8.5%","TotalAmt":8962.10,"CustomerMemo":"Payment due within 30 days.","paymentTerms":"Net 30"},
-  },
-  xero: {
-    label: 'Xero',
-    data: {"InvoiceNumber":"INV-0234","date":"2026-03-20","DueDate":"2026-04-19","Contact":{"Name":"Greenfield Dynamics","EmailAddress":"accounts@greenfield.io"},"LineItems":[{"Description":"Annual SaaS License","Quantity":1.0,"UnitAmount":12000.00,"LineAmount":12000.00},{"Description":"Onboarding & Implementation","Quantity":1.0,"UnitAmount":4500.00,"LineAmount":4500.00}],"SubTotal":16500.00,"TotalTax":1402.50,"Total":17902.50,"CurrencyCode":"USD","Reference":"PO-8821"},
-  },
-  csv: {
-    label: 'CSV flat',
-    data: {"invoice_no":"CSV-2026-001","date":"2026-03-01","due_date":"2026-03-31","bill_from_name":"Summit Analytics Co.","bill_from_address":"312 Innovation Way, Denver, CO 80202","bill_from_email":"billing@summit-analytics.com","bill_to_name":"Horizon Financial Group","bill_to_address":"88 Wall Street, New York, NY 10005","bill_to_email":"ap@horizon-financial.com","items":[{"description":"Data pipeline audit","quantity":1,"unit_price":4500.00},{"description":"Dashboard development (40h)","quantity":40,"unit_price":125.00},{"description":"Monthly maintenance (retainer)","quantity":1,"unit_price":800.00}],"tax_rate":0,"payment_terms":"Net 30","notes":"Wire transfer preferred."},
-  },
-}
-
-/* ── Full App Workspace (at #app) ────────────────────────────────── */
-function AppWorkspace() {
-  const [tab, setTab] = useState('ingest')
-  const [template, setTemplate] = useState('')
-  const [payloadMode, setPayloadMode] = useState('valid')
-  const [json, setJson] = useState('{\n  \n}')
-  const [parseError, setParseError] = useState(null)
-
-  // Server templates — discovered from /templates endpoint
-  const [serverTemplates, setServerTemplates] = useState(null) // null=loading, []=none
-  const [serverLoaded, setServerLoaded] = useState(false)
-
-  useEffect(() => {
-    fetch(apiUrl('/templates'))
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data?.templates?.length) {
-          setServerTemplates(data.templates)
-        } else {
-          setServerTemplates([])
-        }
-        setServerLoaded(true)
-      })
-      .catch(() => {
-        setServerTemplates([])
-        setServerLoaded(true)
-      })
-  }, [])
-
-  const loadServerTemplate = async (tpl) => {
-    setVerdict(null); setRenderStatus('idle'); setPdfData(null); setRenderError(null)
-    setPayloadMode('valid')
-    // Fetch template source
-    try {
-      const srcRes = await fetch(apiUrl(`/template-source?name=${encodeURIComponent(tpl)}`))
-      if (srcRes.ok) {
-        const { source } = await srcRes.json()
-        setTemplateSource(source); setOriginalSource(source)
-      }
-    } catch {}
-    // Fetch matching data file
-    try {
-      const dataRes = await fetch(apiUrl(`/template-data?name=${encodeURIComponent(tpl)}`))
-      if (dataRes.ok) {
-        const { data } = await dataRes.json()
-        if (data) {
-          setJson(JSON.stringify(data, null, 2))
-          return
-        }
-      }
-    } catch {}
-    // Fallback to fixture data if available
-    if (FIXTURES[tpl]) {
-      setJson(JSON.stringify(FIXTURES[tpl].valid, null, 2))
-    } else {
-      setJson('{\n  \n}')
-    }
-  }
-
-  // Error-to-editor mapping
-  const [pathIndex, setPathIndex] = useState(null)
-  const dataScrollToLine = useRef(null)
-  const templateScrollToLine = useRef(null)
-
-  // Template editor state
-  const [editorTab, setEditorTab] = useState('data') // 'data' | 'template'
-  const [templateSource, setTemplateSource] = useState('')
-  const [originalSource, setOriginalSource] = useState('')
-  const [sourceLoading, setSourceLoading] = useState(false)
-
-  // Ready state
-  const [verdict, setVerdict] = useState(null)
-  const [checking, setChecking] = useState(false)
-  const preflightTimer = useRef(null)
-
-  // Generate state
-  const [renderStatus, setRenderStatus] = useState('idle')
-  const [pdfData, setPdfData] = useState(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [renderError, setRenderError] = useState(null)
-  const [traceId, setTraceId] = useState(null)
-
-  // Outputs state — session-local render bundles
-  const [outputBundles, setOutputBundles] = useState([])
-  const MAX_BUNDLES = 50
-
-  // History state
-  const [traces, setTraces] = useState(null) // null=not loaded, []=empty, [...]=data
-  const [historyError, setHistoryError] = useState(null) // 'disabled' or 'error'
-  const [selectedTrace, setSelectedTrace] = useState(null)
-  const [dashboardAvailable, setDashboardAvailable] = useState(false)
-
-  // Ingest stage state
-  const [rawJson, setRawJson] = useState('{\n  \n}')
-  const [rawParseError, setRawParseError] = useState(null)
-  const [ingestResult, setIngestResult] = useState(null)
-  const [ingestResultStale, setIngestResultStale] = useState(false) // true when rawJson changed after last run
-  const [ingesting, setIngesting] = useState(false)
-  const [ingestTraceTab, setIngestTraceTab] = useState('aliases')
-  const [ingestViewMode, setIngestViewMode] = useState('summary')
-  const [ingestTraceOpen, setIngestTraceOpen] = useState(false)
-  const [ingestSampleKey, setIngestSampleKey] = useState('')
-  const prevIngestRef = useRef(null) // previous ingest result for recovery detection
-
-  // Guided correction state
-  const [pendingPatches, setPendingPatches] = useState([])
-  const [patchInputValues, setPatchInputValues] = useState({})
-  const [patchPreviewOpen, setPatchPreviewOpen] = useState(false)
-  const [activePatchId, setActivePatchId] = useState(null) // single open fix panel
-
-  // Probe /dashboard availability once (local dev only — production API
-  // host never mounts /dashboard, so skip the wasted request)
-  useEffect(() => {
-    if (API_BASE) {
-      setDashboardAvailable(false)
-      return
-    }
-    fetch('/dashboard', { method: 'HEAD' })
-      .then(res => setDashboardAvailable(res.ok))
-      .catch(() => setDashboardAvailable(false))
-  }, [])
-
-  const fetchTraces = async ({ autoSelect = false } = {}) => {
-    try {
-      const res = await fetch(apiUrl('/history?limit=50'))
-      if (res.status === 503) { setHistoryError('disabled'); setTraces(null); return }
-      if (!res.ok) { setHistoryError('error'); return }
-      const data = await res.json()
-      setTraces(data); setHistoryError(null)
-      if (autoSelect && data.length > 0) setSelectedTrace(data[0])
-    } catch { setHistoryError('error') }
-  }
-
-  // Refresh traces when History tab is selected — auto-select newest on first load
-  useEffect(() => { if (tab === 'history') fetchTraces({ autoSelect: !selectedTrace }) }, [tab])
-
-  // Refresh after any render completes (regardless of current tab) so History is fresh when user arrives
-  const prevRenderStatus = useRef(renderStatus)
-  useEffect(() => {
-    if (prevRenderStatus.current === 'rendering' && (renderStatus === 'done' || renderStatus === 'error')) {
-      fetchTraces({ autoSelect: tab === 'history' })
-    }
-    prevRenderStatus.current = renderStatus
-  }, [renderStatus])
-
-  // Centralized doc-type transition — one generation counter guards all async
-  const transitionGen = useRef(0)
-
-  const beginTransition = (tpl) => {
-    const gen = ++transitionGen.current
-    if (preflightTimer.current) clearTimeout(preflightTimer.current)
-    preflightSeq.current++
-    setTemplate(tpl)
-    setVerdict(null); setChecking(false)
-    setRenderStatus('idle'); setPdfData(null); setRenderError(null)
-    setParseError(null)
-    setTemplateSource(''); setOriginalSource('')
-    // Generation-guarded template source fetch
-    ;(async () => {
-      setSourceLoading(true)
-      try {
-        const res = await fetch(apiUrl(`/template-source?name=${encodeURIComponent(tpl)}`))
-        if (res.ok && transitionGen.current === gen) {
-          const { source } = await res.json()
-          setTemplateSource(source); setOriginalSource(source)
-        }
-      } catch {}
-      if (transitionGen.current === gen) setSourceLoading(false)
-    })()
-    return gen
-  }
-
-  const switchFixture = (tpl, mode) => {
-    beginTransition(tpl)
-    setPayloadMode(mode)
-    if (!FIXTURES[tpl]) {
-      loadServerTemplate(tpl)
-      return
-    }
-    setJson(JSON.stringify(FIXTURES[tpl][mode === 'valid' ? 'valid' : 'invalid'], null, 2))
-  }
-
-  const selectDocType = (tpl) => {
-    beginTransition(tpl)
-    setPayloadMode('valid')
-    setJson(JSON.stringify(SCAFFOLDS[tpl] || {}, null, 2))
-    setEditorTab('data')
-  }
-
-  // Load sample data into current draft
-  const loadSample = () => {
-    if (FIXTURES[template]) {
-      setJson(JSON.stringify(FIXTURES[template].valid, null, 2))
-      setPayloadMode('valid')
-    }
-  }
-
-  // Infer the right template key from a canonical payload shape.
-  // Returns a FIXTURES key or null if the shape is unknown.
-  // Never auto-maps: if uncertain, returns null and user picks.
-  const inferTemplateFromCanonical = (canonical) => {
-    if (!canonical) return null
-    // Invoice shape: has invoice_number + items array + party objects
-    if (canonical.invoice_number !== undefined && Array.isArray(canonical.items)) return 'invoice.j2.typ'
-    // Extend here as ingestion expands to other document types
-    return null
-  }
-
-  const startFresh = () => {
-    setTemplate('')
-    setPayloadMode('valid')
-    setJson('{\n  \n}')
-    setTemplateSource('')
-    setOriginalSource('')
-    setVerdict(null)
-    setRenderStatus('idle')
-    setPdfData(null)
-    setRenderError(null)
-    setParseError(null)
-    setEditorTab('data')
-    setTraceId(null)
-    setSelectedTrace(null)
-    setRawJson('{\n  \n}')
-    setRawParseError(null)
-    setIngestResult(null)
-    setIngestResultStale(false)
-    setIngesting(false)
-    setIngestSampleKey('')
-    setIngestViewMode('summary')
-    setIngestTraceOpen(false)
-    prevIngestRef.current = null // new session — no recovery context
-    setPendingPatches([])
-    setPatchInputValues({})
-    setPatchPreviewOpen(false)
-    setActivePatchId(null)
-    setTab('ingest')
-  }
-
-  // Ingest: run raw JSON through /ingest endpoint
-  const runIngest = async () => {
-    let data
-    try { data = JSON.parse(rawJson) } catch { return }
-    setIngesting(true)
-    prevIngestRef.current = ingestResult // capture for recovery detection
-    setIngestResult(null)
-    setIngestResultStale(false)
-    try {
-      const res = await fetch(apiUrl('/ingest'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data }),
-      })
-      const result = await res.json()
-      setIngestResult(result)
-      setIngestViewMode('summary')
-      // Blocked: auto-open trace on the Blocked tab so errors are immediately visible
-      // Ready: trace collapsed by default — decision first, evidence on demand
-      setIngestTraceTab(result.render_ready ? 'aliases' : 'blocked')
-      setIngestTraceOpen(!result.render_ready)
-    } catch {
-      setIngestResult({ status: 'blocked', render_ready: false, canonical: {}, template_payload: null, errors: [{ rule_id: 'network', severity: 'blocked', passed: false, message: 'Server unreachable' }], warnings: [], normalizations: [], computed_fields: [], unknown_fields: [] })
-    }
-    setIngesting(false)
-  }
-
-  // Ingest: run with explicit JSON override (avoids stale closure after setRawJson)
-  const runIngestWith = async (jsonOverride) => {
-    let data
-    try { data = JSON.parse(jsonOverride) } catch { return }
-    setIngesting(true)
-    prevIngestRef.current = ingestResult
-    setIngestResult(null)
-    setIngestResultStale(false)
-    try {
-      const res = await fetch(apiUrl('/ingest'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data }),
-      })
-      const result = await res.json()
-      setIngestResult(result)
-      setIngestViewMode('summary')
-      setIngestTraceTab(result.render_ready ? 'aliases' : 'blocked')
-      setIngestTraceOpen(!result.render_ready)
-    } catch {
-      setIngestResult({ status: 'blocked', render_ready: false, canonical: {}, template_payload: null, errors: [{ rule_id: 'network', severity: 'blocked', passed: false, message: 'Server unreachable' }], warnings: [], normalizations: [], computed_fields: [], unknown_fields: [] })
-    }
-    setIngesting(false)
-  }
-
-  // Guided correction: apply accepted patches to rawJson and rerun ingest
-  const applyAndRerun = async () => {
-    const accepted = pendingPatches.filter(p => p.status === 'accepted')
-    if (!accepted.length) return
-    const newJson = applyPatches(rawJson, accepted)
-    setRawJson(newJson)
-    await runIngestWith(newJson)
-  }
-
-  // Ingest: load a sample payload into the raw editor
-  const loadIngestSample = (key) => {
-    setIngestSampleKey(key)
-    if (key && WORKSPACE_INGEST_SAMPLES[key]) {
-      setRawJson(JSON.stringify(WORKSPACE_INGEST_SAMPLES[key].data, null, 2))
-    } else {
-      setRawJson('{\n  \n}')
-    }
-    setIngestResult(null)
-    setIngestResultStale(false)
-    setIngestViewMode('summary')
-    setIngestTraceOpen(false)
-    prevIngestRef.current = null // new session — no recovery context
-    setPendingPatches([])
-    setPatchInputValues({})
-    setPatchPreviewOpen(false)
-    setActivePatchId(null)
-  }
-
-  // Ingest → Preflight: copy template_payload into the preflight editor and switch tabs.
-  // Template is inferred from canonical shape — never blindly assumed.
-  const continueToPreFlight = () => {
-    if (!ingestResult?.template_payload || ingestResultStale) return
-    const payload = ingestResult.template_payload
-    const inferredTemplate = inferTemplateFromCanonical(ingestResult.canonical)
-    setJson(JSON.stringify(payload, null, 2))
-    setEditorTab('data')
-    if (inferredTemplate) {
-      // Deterministic: we know what template this canonical shape maps to
-      beginTransition(inferredTemplate)
-      setPayloadMode('valid')
-    } else if (!template) {
-      // Unknown shape — user must pick a template on the Preflight tab
-      setJson(JSON.stringify(payload, null, 2))
-    }
-    // Explicitly increment preflight sequence to cancel any in-flight check
-    preflightSeq.current++
-    setVerdict(null)
-    setChecking(false)
-    setTab('preflight')
-  }
-
-  const fetchTemplateSource = async (tpl) => {
-    const gen = transitionGen.current
-    setSourceLoading(true)
-    try {
-      const res = await fetch(apiUrl(`/template-source?name=${encodeURIComponent(tpl)}`))
-      if (res.ok && transitionGen.current === gen) {
-        const { source } = await res.json()
-        setTemplateSource(source); setOriginalSource(source)
-      }
-    } catch {}
-    if (transitionGen.current === gen) setSourceLoading(false)
-  }
-
-  // Fetch template source on initial mount
-  useEffect(() => { if (template) fetchTemplateSource(template) }, [])
-
-  // Raw JSON parse check for ingest tab
-  useEffect(() => {
-    try {
-      JSON.parse(rawJson)
-      setRawParseError(null)
-    } catch (e) {
-      setRawParseError(e.message.split(' at ')[0])
-    }
-  }, [rawJson])
-
-  // Mark ingest result stale when raw JSON is edited after a run
-  useEffect(() => {
-    if (ingestResult && !ingesting) setIngestResultStale(true)
-  }, [rawJson])
-
-  // Generate patches for blocked ingest results
-  useEffect(() => {
-    if (ingestResult && !ingestResult.render_ready) {
-      setPendingPatches(generatePatches(ingestResult, rawJson))
-      setPatchInputValues({})
-      setPatchPreviewOpen(false)
-      setActivePatchId(null)
-    } else {
-      setPendingPatches([])
-      setPatchPreviewOpen(false)
-      setActivePatchId(null)
-    }
-  }, [ingestResult])
-
-  // JSON parse check + path index build
-  useEffect(() => {
-    try {
-      JSON.parse(json)
-      setParseError(null)
-      // Build path index on successful parse (non-blocking)
-      if (typeof requestIdleCallback !== 'undefined') {
-        requestIdleCallback(() => setPathIndex(buildPathIndex(json)))
-      } else {
-        setTimeout(() => setPathIndex(buildPathIndex(json)), 0)
-      }
-    } catch (e) {
-      setParseError(e.message.split(' at ')[0])
-      setVerdict(null)
-      setChecking(false)
-      if (preflightTimer.current) clearTimeout(preflightTimer.current)
-      preflightSeq.current++
-    }
-  }, [json])
-
-  // Auto-preflight on valid JSON / template source change
-  // Request sequencing: only apply the latest response, ignore stale ones
-  const jsonRef = useRef(json)
-  const templateRef = useRef(template)
-  const templateSourceRef = useRef(templateSource)
-  const originalSourceRef = useRef(originalSource)
-  const preflightSeq = useRef(0)
-  jsonRef.current = json
-  templateRef.current = template
-  templateSourceRef.current = templateSource
-  originalSourceRef.current = originalSource
-
-  const templateSourceTimer = useRef(null)
-  const isTemplateModified = templateSource !== originalSource && originalSource !== ''
-
-  // Debounce: 500ms for data changes, 900ms for template source edits (burstier typing)
-  useEffect(() => {
-    if (parseError || !template) return
-    if (preflightTimer.current) clearTimeout(preflightTimer.current)
-    preflightTimer.current = setTimeout(() => { runPreflight() }, 500)
-    return () => clearTimeout(preflightTimer.current)
-  }, [json, template])
-
-  useEffect(() => {
-    if (parseError || !originalSource) return
-    if (templateSourceTimer.current) clearTimeout(templateSourceTimer.current)
-    templateSourceTimer.current = setTimeout(() => { runPreflight() }, 900)
-    return () => clearTimeout(templateSourceTimer.current)
-  }, [templateSource])
-
-  const runPreflight = async () => {
-    let data
-    try { data = JSON.parse(jsonRef.current) } catch { return }
-    const tpl = templateRef.current
-    const src = templateSourceRef.current
-    const origSrc = originalSourceRef.current
-    const modified = src !== origSrc && origSrc !== ''
-    const seq = ++preflightSeq.current
-    setChecking(true)
-    const payload = { template: tpl, data }
-    if (modified) payload.template_source = src
-    const fixtureZugferd = FIXTURES[tpl]?.zugferd
-    if (fixtureZugferd) payload.zugferd = fixtureZugferd
-    try {
-      const res = await fetch(apiUrl('/preflight'), {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      if (seq !== preflightSeq.current) return // stale response, discard
-      setVerdict(await res.json())
-    } catch {
-      if (seq !== preflightSeq.current) return
-      setVerdict({ ready: false, errors: [{ stage: 'network', check: 'unreachable', severity: 'error', path: 'server', message: 'Server unreachable' }], warnings: [], stages_checked: [] })
-    }
-    if (seq === preflightSeq.current) setChecking(false)
-  }
-
-  // Error-to-editor navigation
-  const handleErrorClick = useCallback((issue) => {
-    const location = resolveErrorLocation(issue, pathIndex, templateSource)
-    if (!location || !location.navigable) return
-
-    if (location.editor === 'data') {
-      setEditorTab('data')
-      // Small delay to let tab switch render the editor
-      setTimeout(() => { dataScrollToLine.current?.(location.line) }, 50)
-    } else if (location.editor === 'template') {
-      setEditorTab('template')
-      setTimeout(() => { templateScrollToLine.current?.(location.line) }, 50)
-    }
-  }, [pathIndex, templateSource])
-
-  const isErrorNavigable = useCallback((issue) => {
-    const location = resolveErrorLocation(issue, pathIndex, templateSource)
-    return location?.navigable ?? false
-  }, [pathIndex, templateSource])
-
-  const renderPdf = async () => {
-    if (parseError) return
-    setRenderStatus('rendering'); setRenderError(null); setCurrentPage(1); setTraceId(null)
-    if (pdfData?.downloadUrl) URL.revokeObjectURL(pdfData.downloadUrl)
-    setPdfData(null)
-
-    // Freeze render-time state for bundle
-    const frozenTemplate = template
-    const frozenSource = templateSource
-    const frozenJson = JSON.stringify(JSON.parse(json), null, 2)
-
-    try {
-      const data = JSON.parse(json)
-      const renderPayload = { template, data, validate: true, debug: true }
-      if (isTemplateModified) renderPayload.template_source = templateSource
-      const fixtureZugferd = FIXTURES[template]?.zugferd
-      if (fixtureZugferd) renderPayload.zugferd = fixtureZugferd
-      const res = await fetch(apiUrl('/render'), {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(renderPayload),
-      })
-      const resTraceId = res.headers.get('X-Trace-ID') || null
-      if (resTraceId) setTraceId(resTraceId)
-      if (res.ok) {
-        const buf = await res.arrayBuffer()
-        const uint8 = new Uint8Array(buf)
-        const downloadUrl = URL.createObjectURL(new Blob([uint8], { type: 'application/pdf' }))
-        const pdf = await pdfjsLib.getDocument({ data: uint8.slice() }).promise
-        const pages = []
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i)
-          const vp = page.getViewport({ scale: 2 })
-          const canvas = document.createElement('canvas')
-          canvas.width = vp.width; canvas.height = vp.height
-          await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise
-          pages.push(canvas.toDataURL('image/png'))
-        }
-        setPdfData({ pages, totalPages: pdf.numPages, downloadUrl })
-        setRenderStatus('done')
-
-        // Capture output bundle
-        const bundle = {
-          id: crypto.randomUUID(),
-          timestamp: new Date().toISOString(),
-          templateName: frozenTemplate,
-          templateSource: frozenSource,
-          jsonData: frozenJson,
-          pdfBytes: uint8,
-          traceId: resTraceId,
-          trace: null,
-          outcome: 'success',
-        }
-        // Best-effort trace fetch
-        if (resTraceId) {
-          try {
-            const tr = await fetch(apiUrl(`/history/${resTraceId}`))
-            if (tr.ok) bundle.trace = await tr.json()
-          } catch { /* trace is optional */ }
-        }
-        setOutputBundles(prev => [bundle, ...prev].slice(0, MAX_BUNDLES))
-      } else {
-        const errData = await res.json()
-        setRenderError(errData); setRenderStatus('error')
-        // Record failed render (no pdfBytes)
-        setOutputBundles(prev => [{
-          id: crypto.randomUUID(),
-          timestamp: new Date().toISOString(),
-          templateName: frozenTemplate,
-          templateSource: frozenSource,
-          jsonData: frozenJson,
-          pdfBytes: null,
-          traceId: resTraceId,
-          trace: null,
-          outcome: 'error',
-          errorMessage: errData.message || 'Render failed',
-        }, ...prev].slice(0, MAX_BUNDLES))
-      }
-    } catch (e) {
-      const isNet = e instanceof TypeError && e.message.includes('fetch')
-      setRenderError({ error: isNet ? 'NETWORK' : 'RENDER_ERROR', message: isNet ? 'Server unreachable' : e.message })
-      setRenderStatus('error')
-    }
-  }
-
-  // ── ZIP bundle helpers ──
-  const makeProvenance = (bundle) => JSON.stringify({
-    version: '0.1.0',
-    engine: 'TrustRender',
-    timestamp: bundle.timestamp,
-    template: bundle.templateName,
-    hashes: {
-      template: bundle.trace?.template_hash || 'unavailable',
-      data: bundle.trace?.data_hash || 'unavailable',
-      output_pdf: bundle.trace?.output_hash || 'unavailable',
-    },
-    outcome: bundle.outcome,
-    duration_ms: bundle.trace?.total_ms || null,
-  }, null, 2)
-
-  const downloadBundle = async (bundle) => {
-    const zip = new JSZip()
-    const ts = bundle.timestamp.replace(/[:.]/g, '-').slice(0, 19)
-    const fileLabel = bundleDisplayName(bundle.templateName, bundle.jsonData).toLowerCase().replace(/[^a-z0-9]+/g, '-')
-    const folderName = `trustrender-${fileLabel}-${ts}`
-    const folder = zip.folder(folderName)
-    if (bundle.pdfBytes) folder.file(`${fileLabel}.pdf`, bundle.pdfBytes)
-    folder.file(bundle.templateName, bundle.templateSource)
-    folder.file('data.json', bundle.jsonData)
-    if (bundle.trace) folder.file('trace.json', JSON.stringify(bundle.trace, null, 2))
-    folder.file('provenance.json', makeProvenance(bundle))
-    const blob = await zip.generateAsync({ type: 'blob' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url; a.download = `${folderName}.zip`; a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  const downloadAllBundles = async () => {
-    const zip = new JSZip()
-    for (const b of outputBundles.filter(b => b.outcome === 'success')) {
-      const ts = b.timestamp.replace(/[:.]/g, '-').slice(0, 19)
-      const bFileLabel = bundleDisplayName(b.templateName, b.jsonData).toLowerCase().replace(/[^a-z0-9]+/g, '-')
-      const folder = zip.folder(`${bFileLabel}-${ts}`)
-      if (b.pdfBytes) folder.file(`${bFileLabel}.pdf`, b.pdfBytes)
-      folder.file(b.templateName, b.templateSource)
-      folder.file('data.json', b.jsonData)
-      if (b.trace) folder.file('trace.json', JSON.stringify(b.trace, null, 2))
-      folder.file('provenance.json', makeProvenance(b))
-    }
-    const blob = await zip.generateAsync({ type: 'blob' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url; a.download = `trustrender-session-${new Date().toISOString().slice(0, 10)}.zip`; a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  const STAGES = ['payload', 'template', 'environment', 'compliance', 'semantic']
-  const STAGE_LABELS = {
-    payload: 'Payload',
-    template: 'Layout',
-    environment: 'Render engine',
-    compliance: 'Compliance',
-    semantic: 'Semantic',
-  }
-  const STAGE_SKIP_INFO = {
-    compliance: { label: 'optional', reason: 'Enable with a compliance profile' },
-    semantic: { label: 'optional', reason: 'Enable with semantic hints for this template' },
-  }
-
-  const stageStatus = (stageName) => {
-    if (!verdict) return 'unchecked'
-    if (!verdict.stages_checked?.includes(stageName)) return 'skipped'
-    if (verdict.errors?.some(e => e.stage === stageName)) return 'fail'
-    if (verdict.warnings?.some(w => w.stage === stageName)) return 'warn'
-    return 'pass'
-  }
-
-  const StageIcon = ({ status }) => {
-    if (status === 'pass') return <svg className="w-3.5 h-3.5 text-sage" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-    if (status === 'fail') return <svg className="w-3.5 h-3.5 text-wine" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-    if (status === 'warn') return <div className="w-3 h-3 rounded-full bg-rust/30 flex items-center justify-center"><div className="w-1.5 h-1.5 rounded-full bg-rust" /></div>
-    if (status === 'skipped') return <div className="w-3.5 h-3.5 rounded-full border-[1.5px] border-dashed border-muted" />
-    return <div className="w-3 h-3 rounded-full border border-rule-light" />
-  }
-
-  return (
-    <div className="min-h-screen bg-bg">
-      {/* Header */}
-      <header className="border-b border-rule-light bg-panel">
-        <div className="max-w-[1280px] mx-auto px-6 md:px-10 flex items-center justify-between h-14">
-          <div className="flex items-center gap-4">
-            <a href="#" className="flex items-center gap-2.5">
-              <AnimatedLogo size="small" />
-            </a>
-            <button onClick={startFresh}
-              className="text-[11px] text-muted hover:text-ink px-3 py-1.5 rounded-md border border-rule-light hover:border-rule transition-colors cursor-pointer font-medium">
-              New draft
-            </button>
-          </div>
-          <div className="flex items-center gap-1 bg-surface rounded-lg p-1 border border-rule-light">
-            {[['ingest', 'Ingest'], ['preflight', 'Preflight'], ['render', 'Render'], ['history', 'History']].map(([key, label]) => (
-              <button key={key} onClick={() => setTab(key)}
-                className={`text-[13px] px-4 py-1.5 rounded-md font-medium transition-colors cursor-pointer
-                  ${tab === key ? 'bg-panel text-ink shadow-sm' : 'text-muted hover:text-mid'}`}>
-                {label}
-                {key === 'ingest' && ingestResult && (
-                  <span className={`ml-1.5 inline-block w-1.5 h-1.5 rounded-full ${ingestResult.render_ready ? 'bg-sage' : 'bg-wine'}`} />
-                )}
-                {key === 'preflight' && verdict && !checking && (
-                  <span className={`ml-1.5 inline-block w-1.5 h-1.5 rounded-full ${verdict.ready ? 'bg-sage' : 'bg-wine'}`} />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-[1280px] mx-auto px-6 md:px-10 py-8">
-        {/* Pipeline stages */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6 items-start">
-          {/* Left panel: Ingest raw editor OR Preflight/Render data+template editor */}
-          {tab === 'ingest' ? (
-          <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-            <div className="px-4 py-2.5 border-b border-rule-light flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1.5"><div className="w-2 h-2 rounded-full bg-rule" /><div className="w-2 h-2 rounded-full bg-rule" /><div className="w-2 h-2 rounded-full bg-rule" /></div>
-                <span className="text-[13px] font-semibold text-ink ml-2">Raw input</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <select value={ingestSampleKey} onChange={e => loadIngestSample(e.target.value)}
-                  className="text-[10px] font-mono text-muted bg-transparent border border-rule rounded px-2 py-1 cursor-pointer">
-                  <option value="">Paste your own…</option>
-                  {Object.entries(WORKSPACE_INGEST_SAMPLES).map(([k, v]) => (
-                    <option key={k} value={k}>{v.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <CodeEditor
-              value={rawJson}
-              onChange={setRawJson}
-              language="json"
-              className="w-full min-h-[520px]"
-            />
-            {rawParseError && (
-              <div className="px-4 py-2 border-t border-wine/20 bg-wine/[0.04] text-[11px] text-wine font-mono">
-                JSON: {rawParseError}
-              </div>
-            )}
-            <div className="px-4 py-3 border-t border-rule-light flex items-center justify-between">
-              <span className="text-[11px] text-muted">
-                {rawParseError ? 'Fix JSON errors to continue' : ingestSampleKey ? `${WORKSPACE_INGEST_SAMPLES[ingestSampleKey]?.label} payload loaded` : 'Paste raw JSON from any source'}
-              </span>
-              {ingestResultStale ? (
-                <span className="text-[11px] text-muted italic">Result is stale — use Re-run ingest above</span>
-              ) : (
-                <button
-                  onClick={runIngest}
-                  disabled={!!rawParseError || ingesting}
-                  className="text-[13px] px-5 py-2 rounded-full font-semibold bg-ink text-panel hover:bg-ink-2 transition-all cursor-pointer shadow-sm hover:shadow-md disabled:opacity-40 disabled:cursor-default">
-                  {ingesting ? 'Running…' : 'Run ingest →'}
-                </button>
-              )}
-            </div>
-          </div>
-          ) : !template ? (
-          <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-            <div className="px-4 py-3 border-b border-rule-light">
-              <span className="text-[13px] font-semibold text-ink">Choose a document type</span>
-            </div>
-            <div className="divide-y divide-rule-light">
-              {Object.entries(FIXTURES).map(([key, fix]) => (
-                <button key={key} onClick={() => selectDocType(key)}
-                  className="w-full px-4 py-3.5 flex items-center justify-between hover:bg-surface transition-colors cursor-pointer text-left">
-                  <span className="text-[13px] font-medium text-ink">{fix.label}</span>
-                  <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
-                </button>
-              ))}
-            </div>
-          </div>
-          ) : (
-          <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-            {/* Editor header: tab switcher + template selector */}
-            <div className="px-4 py-2.5 border-b border-rule-light flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1.5"><div className="w-2 h-2 rounded-full bg-rule" /><div className="w-2 h-2 rounded-full bg-rule" /><div className="w-2 h-2 rounded-full bg-rule" /></div>
-                <div className="flex items-center gap-0.5 ml-2 rounded-md border border-rule overflow-hidden">
-                  <button onClick={() => setEditorTab('data')}
-                    className={`text-[10px] font-mono px-2.5 py-1 cursor-pointer transition-colors
-                      ${editorTab === 'data' ? 'bg-surface text-ink font-semibold' : 'text-muted hover:text-mid'}`}>
-                    Data
-                  </button>
-                  <button onClick={() => setEditorTab('template')}
-                    className={`text-[10px] font-mono px-2.5 py-1 cursor-pointer transition-colors flex items-center gap-1
-                      ${editorTab === 'template' ? 'bg-surface text-ink font-semibold' : 'text-muted hover:text-mid'}`}>
-                    Layout
-                    {isTemplateModified && <span className="w-1.5 h-1.5 rounded-full bg-rust" />}
-                  </button>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <select value={template} onChange={e => selectDocType(e.target.value)} className="text-[10px] font-mono text-muted bg-transparent border border-rule rounded px-2 py-1 cursor-pointer">
-                  {Object.entries(FIXTURES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                </select>
-                {(FIXTURES[template]?.zugferd || template.includes('einvoice')) && (
-                  <span className="text-[8px] font-mono px-2 py-0.5 rounded-full bg-rust/10 text-rust font-semibold">EN 16931</span>
-                )}
-                {editorTab === 'data' && FIXTURES[template] && (
-                  <button onClick={loadSample}
-                    className="text-[9px] px-2.5 py-1 font-medium cursor-pointer text-muted hover:text-ink border border-rule rounded-full transition-colors">
-                    Load sample
-                  </button>
-                )}
-                {editorTab === 'template' && isTemplateModified && (
-                  <button onClick={() => setTemplateSource(originalSource)}
-                    className="text-[9px] px-2.5 py-1 font-medium cursor-pointer text-muted hover:text-ink border border-rule rounded-full transition-colors">
-                    Reset
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Data editor */}
-            {editorTab === 'data' && (
-              <>
-                <CodeEditor
-                  value={json}
-                  onChange={setJson}
-                  language="json"
-                  onEditorReady={(scrollFn) => { dataScrollToLine.current = scrollFn }}
-                  className="w-full min-h-[520px]"
-                />
-                {parseError && <div className="px-4 py-2 border-t border-wine/20 bg-wine/[0.04] text-[11px] text-wine font-mono">JSON: {parseError}</div>}
-                {payloadMode === 'invalid' && !parseError && (
-                  <div className="px-4 py-2 border-t border-rule-light text-[10px] text-muted">Try the broken payload to see what Ready catches.</div>
-                )}
-              </>
-            )}
-
-            {/* Template editor */}
-            {editorTab === 'template' && (
-              <>
-                {sourceLoading ? (
-                  <div className="p-4 min-h-[520px] flex items-center justify-center">
-                    <span className="text-[11px] text-muted font-mono">Loading template...</span>
-                  </div>
-                ) : (
-                  <CodeEditor
-                    value={templateSource}
-                    onChange={setTemplateSource}
-                    language="plain"
-                    onEditorReady={(scrollFn) => { templateScrollToLine.current = scrollFn }}
-                    className="w-full min-h-[520px]"
-                  />
-                )}
-                {/* Template compile errors from preflight */}
-                {verdict && !checking && verdict.errors?.filter(e => ['template', 'template_preprocess', 'compilation', 'template_syntax'].includes(e.stage) || e.check?.includes('syntax')).length > 0 && (
-                  <div className="px-4 py-2 border-t border-wine/20 bg-wine/[0.04]">
-                    {verdict.errors.filter(e => ['template', 'template_preprocess', 'compilation', 'template_syntax'].includes(e.stage) || e.check?.includes('syntax')).map((e, i) => (
-                      <div key={i} className="text-[11px] text-wine font-mono">{e.message}</div>
-                    ))}
-                  </div>
-                )}
-                <div className="px-4 py-1.5 border-t border-rule-light text-[9px] text-muted">
-                  Edits are session-only and not saved to disk.
-                </div>
-              </>
-            )}
-          </div>
-          )}
-
-          {/* Right: Tab content */}
+    <Section
+      id="scope"
+      kicker="Honest scope"
+      title="Narrow. Deterministic. Boring on purpose."
+      lede="TrustRender is a focused validation layer, not an AP automation platform. It does one thing well: catch billing-data problems before they become non-compliant XML."
+    >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <FadeUp delay={100}>
           <div>
-            {/* ── INGEST TAB ── */}
-            {tab === 'ingest' && (
-              <div className="space-y-4">
-                {/* Idle state */}
-                {!ingestResult && !ingesting && (
-                  <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-                    <div className="flex flex-col items-center justify-center py-20 px-8 text-center">
-                      <div className="w-12 h-12 mb-5 rounded-full border-2 border-rule flex items-center justify-center">
-                        <svg className="w-5 h-5 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" /></svg>
-                      </div>
-                      <p className="text-[14px] font-semibold text-ink mb-2">Ingest stage</p>
-                      <p className="text-[12px] text-muted max-w-xs leading-relaxed">
-                        Paste raw JSON from Stripe, QuickBooks, Xero, or any source. Run ingest to normalize it into a canonical invoice payload.
-                      </p>
-                      <p className="text-[11px] text-muted/50 mt-3">Select a sample from the dropdown to see it in action.</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Loading */}
-                {ingesting && (
-                  <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-rule-light bg-panel">
-                    <div className="w-48 h-1.5 bg-rule rounded-full overflow-hidden"><div className="h-full bg-ink/30 rounded-full shimmer-bar" /></div>
-                    <span className="text-[12px] text-muted">Ingesting&hellip;</span>
-                  </div>
-                )}
-
-                {/* Result */}
-                {ingestResult && !ingesting && (() => {
-                  const stale = ingestResultStale
-                  const aliases = ingestResult.normalizations?.filter(n => n.source === 'alias') || []
-                  const computed = ingestResult.normalizations?.filter(n => n.source === 'computed' || n.source === 'default') || []
-                  const unknown = ingestResult.unknown_fields || []
-                  const blocked = ingestResult.errors?.filter(e => e.severity === 'blocked') || []
-                  const warnings = ingestResult.warnings || []
-                  const inferredTpl = inferTemplateFromCanonical(ingestResult.canonical)
-                  const canonical = ingestResult.canonical || {}
-                  const payload = ingestResult.template_payload || {}
-                  const topAliases = aliases.slice(0, 3)
-
-                  // Human-friendly labels for blocked error paths
-                  const blockedHumanLabel = {
-                    'sender.name': 'Missing sender name',
-                    'recipient.name': 'Missing recipient name',
-                    'invoice_number': 'Missing invoice number',
-                    'items': 'No line items',
-                  }
-                  const blockedInputHints = {
-                    'sender.name': ['CompanyName', 'account_name', 'bill_from_name', 'sender.name'],
-                    'recipient.name': ['customer_name', 'bill_to_name', 'recipient.name'],
-                    'invoice_number': ['InvoiceNumber', 'DocNumber', 'invoice_no', 'invoice_number'],
-                    'items': ['LineItems', 'Line', 'lines', 'items'],
-                  }
-
-                  // Recovery detection: previous was blocked, current is ready
-                  const prev = prevIngestRef.current
-                  const isRecovery = ingestResult.render_ready && prev && !prev.render_ready
-                  const resolvedPaths = isRecovery
-                    ? (prev.errors || []).filter(e => e.severity === 'blocked').map(e => e.path || e.rule_id).filter(Boolean)
-                    : []
-                  // Map blocked paths to Summary row labels for highlight
-                  const pathToSummaryLabel = { 'sender.name': 'Sender', 'recipient.name': 'Recipient', 'invoice_number': 'Invoice #', 'due_date': 'Due', 'items': 'Items', 'total': 'Total', 'subtotal': 'Total' }
-                  const recoveryHighlights = new Set(resolvedPaths.map(p => pathToSummaryLabel[p]).filter(Boolean))
-
-                  return (
-                    <div className="space-y-3">
-
-                      {/* ── Card 1: Outcome ── */}
-                      <div className={`rounded-xl border overflow-hidden ${stale ? 'border-amber-400/40 bg-amber-50/[0.06]' : ingestResult.render_ready ? 'border-sage/25 bg-sage/[0.04]' : 'border-wine/25 bg-wine/[0.03]'}`} style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-                        <div className="px-5 py-4">
-                          {stale ? (
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <div className="text-[13px] font-semibold text-ink">Input changed. Re-run ingest to refresh results.</div>
-                                <div className="text-[11px] text-muted/70 mt-0.5">Showing previous result until rerun.</div>
-                              </div>
-                              <button onClick={runIngest} className="text-[13px] px-5 py-2 rounded-full font-semibold bg-ink text-panel hover:bg-ink-2 transition-all cursor-pointer shadow-sm hover:shadow-md">
-                                Re-run ingest →
-                              </button>
-                            </div>
-                          ) : (
-                            <>
-                              {/* Status + detection row */}
-                              <div className="flex items-start gap-4">
-                                <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${ingestResult.render_ready ? 'bg-sage/15' : 'bg-wine/10'}`}>
-                                  {ingestResult.render_ready
-                                    ? <svg className="w-4.5 h-4.5 text-sage" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                                    : <svg className="w-4.5 h-4.5 text-wine" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                                  }
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className={`font-semibold ${ingestResult.render_ready ? 'text-[17px] text-sage' : 'text-[17px] text-wine'}`}>
-                                    {ingestResult.render_ready ? 'Render-ready' : `Blocked — ${blocked.length} render-blocking issue${blocked.length !== 1 ? 's' : ''}`}
-                                  </div>
-                                  {isRecovery && resolvedPaths.length > 0 && (
-                                    <div className="text-[11px] text-sage/80 mt-0.5">
-                                      {resolvedPaths.length === 1
-                                        ? `Previously blocked issue resolved: ${resolvedPaths[0]}`
-                                        : `${resolvedPaths.length} blocking issues resolved: ${resolvedPaths.join(', ')}`}
-                                    </div>
-                                  )}
-                                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[11px] text-muted">
-                                    <span>Invoice detected</span>
-                                    {inferredTpl && <span className="font-mono">Template: {inferredTpl}</span>}
-                                    <span className="font-mono text-[10px]">
-                                      {[
-                                        aliases.length > 0 && `${aliases.length} alias${aliases.length !== 1 ? 'es' : ''}`,
-                                        ingestResult.computed_fields?.length > 0 && `${ingestResult.computed_fields.length} computed`,
-                                        blocked.length > 0 && `${blocked.length} blocked`,
-                                        warnings.length > 0 && `${warnings.length} warnings`,
-                                      ].filter(Boolean).join(' · ')}
-                                    </span>
-                                  </div>
-                                  {/* Resolved fields */}
-                                  {topAliases.length > 0 && (
-                                    <div className="mt-2.5">
-                                      <div className="text-[10px] text-muted font-medium tracking-wide uppercase mb-1">Resolved fields</div>
-                                      <div className="flex flex-wrap gap-1.5">
-                                      {topAliases.map((a, i) => (
-                                        <span key={i} className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-surface border border-rule-light">
-                                          <span className="text-wine">{a.original_key}</span>
-                                          <span className="text-muted/50"> → </span>
-                                          <span className="text-sage">{a.canonical_name}</span>
-                                        </span>
-                                      ))}
-                                      {aliases.length > 3 && <span className="text-[10px] text-muted self-center">+{aliases.length - 3} more</span>}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                                <span className={`text-[10px] font-mono px-2.5 py-1 rounded-full border flex-shrink-0 ${ingestResult.render_ready ? 'text-sage border-sage/30 bg-sage/[0.08]' : ingestResult.status === 'ready_with_warnings' ? 'text-rust border-rust/30 bg-rust/[0.08]' : 'text-wine border-wine/30 bg-wine/[0.08]'}`}>
-                                  {ingestResult.status}
-                                </span>
-                              </div>
-
-                              {/* CTA row */}
-                              <div className="flex items-center justify-between mt-4 pt-3.5 border-t border-rule-light/60">
-                                <button onClick={() => setIngestTraceOpen(o => !o)}
-                                  className="text-[11px] text-muted hover:text-ink transition-colors cursor-pointer flex items-center gap-1">
-                                  {ingestTraceOpen ? '↑ Hide mappings' : '↓ Inspect mappings'}
-                                </button>
-                                {ingestResult.render_ready ? (
-                                  <div className="flex flex-col items-end gap-1.5">
-                                    <span className="text-[11px] text-muted">Canonical invoice complete. Continue to validation.</span>
-                                    <button onClick={continueToPreFlight}
-                                      className="text-[13px] px-5 py-2 rounded-full font-semibold bg-ink text-panel hover:bg-ink-2 transition-all cursor-pointer shadow-sm hover:shadow-md">
-                                      Continue to preflight →
-                                    </button>
-                                  </div>
-                                ) : (() => {
-                                  const acceptedCount = pendingPatches.filter(p => p.status === 'accepted').length
-                                  return acceptedCount > 0 ? (
-                                    <div className="flex items-center gap-3">
-                                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sage/10 text-sage border border-sage/20">{acceptedCount} fix{acceptedCount !== 1 ? 'es' : ''} ready</span>
-                                      <button
-                                        onClick={() => setPatchPreviewOpen(o => !o)}
-                                        className="text-[11px] text-muted hover:text-ink cursor-pointer transition-colors">
-                                        {patchPreviewOpen ? 'Hide preview' : 'Preview changes'}
-                                      </button>
-                                      <button
-                                        onClick={applyAndRerun}
-                                        className="text-[13px] px-5 py-2 rounded-full font-semibold bg-ink text-panel hover:bg-ink-2 transition-all cursor-pointer shadow-sm hover:shadow-md">
-                                        Apply &amp; re-run ingest →
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <span className="text-[12px] text-wine font-medium">Fix {blocked.length} render-blocking issue{blocked.length !== 1 ? 's' : ''} to continue</span>
-                                  )
-                                })()}
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* ── Patch diff preview ── */}
-                      {patchPreviewOpen && pendingPatches.some(p => p.status === 'accepted') && (() => {
-                        const accepted = pendingPatches.filter(p => p.status === 'accepted')
-                        const patchedJson = applyPatches(rawJson, accepted)
-                        const diffLines = computePatchDiff(rawJson, patchedJson)
-                        return (
-                          <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-                            <div className="px-4 py-2.5 border-b border-rule-light flex items-center justify-between">
-                              <span className="text-[12px] font-semibold text-ink">Patch preview</span>
-                              <span className="text-[10px] text-muted font-mono">{accepted.length} change{accepted.length !== 1 ? 's' : ''}</span>
-                            </div>
-                            <pre className="p-4 text-[11px] font-mono leading-relaxed overflow-x-auto max-h-[280px] overflow-y-auto">
-                              {diffLines.map((line, idx) => (
-                                <div key={idx} className={
-                                  line.type === 'added' ? 'text-sage bg-sage/[0.06]' :
-                                  line.type === 'removed' ? 'text-wine bg-wine/[0.04] line-through opacity-60' :
-                                  'text-muted/50'
-                                }>
-                                  <span className="inline-block w-4 text-right mr-3 text-muted/30 select-none">{line.type === 'added' ? '+' : line.type === 'removed' ? '-' : ' '}</span>
-                                  {line.text}
-                                </div>
-                              ))}
-                            </pre>
-                          </div>
-                        )
-                      })()}
-
-                      {/* ── Card 2: Canonical document ── */}
-                      <div className={`bg-panel rounded-xl border border-rule-light overflow-hidden ${stale ? 'opacity-50' : ''}`} style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-                        <div className="px-4 py-2.5 border-b border-rule-light flex items-center justify-between">
-                          <div className="flex items-center gap-0.5 rounded-md border border-rule overflow-hidden">
-                            {[['summary', 'Summary'], ['canonical', 'Canonical JSON'], ['raw', 'Raw JSON']].map(([mode, label]) => (
-                              <button key={mode} onClick={() => setIngestViewMode(mode)}
-                                className={`text-[10px] font-mono px-2.5 py-1 cursor-pointer transition-colors
-                                  ${ingestViewMode === mode ? 'bg-surface text-ink font-semibold' : 'text-muted hover:text-mid'}`}>
-                                {label}
-                              </button>
-                            ))}
-                          </div>
-                          <span className="text-[10px] font-mono text-muted">
-                            {ingestViewMode === 'summary' ? 'canonical fields' : ingestViewMode === 'canonical' ? 'normalized payload' : 'original input'}
-                          </span>
-                        </div>
-                        {ingestViewMode === 'summary' ? (
-                          <div className="p-4 space-y-0">
-                            {[
-                              ['Invoice #', payload.invoice_number || canonical.invoice_number],
-                              ['Date', payload.invoice_date || canonical.invoice_date],
-                              ['Due', payload.due_date || canonical.due_date],
-                              ['Terms', payload.payment_terms || canonical.payment_terms],
-                              ['Sender', payload.sender?.name || canonical.sender?.name],
-                              ['Recipient', payload.recipient?.name || canonical.recipient?.name],
-                              ['Items', (payload.items ?? canonical.items) != null ? `${(payload.items ?? canonical.items).length} line item${(payload.items ?? canonical.items).length !== 1 ? 's' : ''}` : null],
-                              ['Total', payload.total || (canonical.total ? `${canonical.total}` : null)],
-                              ['Notes', payload.notes || canonical.notes],
-                            ].filter(([, v]) => v).map(([label, value]) => (
-                              <div key={label} className={`flex items-baseline gap-3 py-1.5 border-b border-rule-light/40 last:border-0 ${isRecovery && recoveryHighlights.has(label) ? 'bg-sage/[0.06] -mx-1 px-1 rounded' : ''}`}>
-                                <span className="text-[10px] text-muted font-mono w-20 flex-shrink-0">{label}</span>
-                                <span className="text-[12px] text-ink leading-snug">{value}</span>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <pre className="font-mono text-[11px] text-ink-2 leading-relaxed p-4 overflow-auto max-h-[360px] whitespace-pre-wrap">
-                            {JSON.stringify(ingestViewMode === 'canonical' ? ingestResult.canonical : JSON.parse(rawJson), null, 2)}
-                          </pre>
-                        )}
-                      </div>
-
-                      {/* ── Card 3: Trace (collapsible) ── */}
-                      {ingestTraceOpen && (
-                        <div className={`bg-panel rounded-xl border border-rule-light overflow-hidden ${stale ? 'opacity-50' : ''}`} style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-                          <div className="px-3 py-1.5 border-b border-rule-light flex items-center gap-0.5">
-                            {[
-                              ['aliases', 'Aliases', aliases.length],
-                              ['computed', 'Computed', computed.length + (ingestResult.computed_fields?.length || 0)],
-                              ['unknown', 'Unknown', unknown.length],
-                              ['blocked', 'Blocked', blocked.length],
-                            ].map(([key, label, count]) => (
-                              <button key={key} onClick={() => setIngestTraceTab(key)}
-                                className={`text-[11px] px-3 py-1.5 rounded-md font-medium transition-colors cursor-pointer flex items-center gap-1.5
-                                  ${ingestTraceTab === key ? 'bg-surface text-ink' : 'text-muted hover:text-mid'}`}>
-                                {label}
-                                {count > 0 && (
-                                  <span className={`text-[9px] font-mono px-1 rounded ${ingestTraceTab === key ? 'text-mid' : 'text-muted/60'} ${key === 'blocked' && count > 0 ? 'text-wine' : ''}`}>{count}</span>
-                                )}
-                              </button>
-                            ))}
-                          </div>
-                          <div className="p-4 min-h-[120px]">
-                            {/* Aliases tab */}
-                            {ingestTraceTab === 'aliases' && (
-                              aliases.length === 0
-                                ? <p className="text-[12px] text-muted">No aliases applied — all fields were already canonical.</p>
-                                : <div className="space-y-2">
-                                    {aliases.map((n, i) => (
-                                      <div key={i} className="flex items-start gap-3 py-1.5 border-b border-rule-light/50 last:border-0">
-                                        <code className="text-[11px] text-wine font-mono flex-shrink-0">{n.original_key}</code>
-                                        <svg className="w-3 h-3 text-muted mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
-                                        <code className="text-[11px] text-sage font-mono flex-shrink-0">{n.canonical_name}</code>
-                                        {n.message && <span className="text-[10px] text-muted flex-1 leading-relaxed">{n.message}</span>}
-                                      </div>
-                                    ))}
-                                  </div>
-                            )}
-                            {/* Computed tab */}
-                            {ingestTraceTab === 'computed' && (
-                              computed.length === 0 && !ingestResult.computed_fields?.length
-                                ? <p className="text-[12px] text-muted">No fields were computed or defaulted.</p>
-                                : <div className="space-y-2">
-                                    {ingestResult.computed_fields?.map((f, i) => (
-                                      <div key={`cf-${i}`} className="flex items-center gap-3 py-1 border-b border-rule-light/50 last:border-0">
-                                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-sage/10 text-sage border border-sage/20">computed</span>
-                                        <code className="text-[11px] font-mono text-ink">{f}</code>
-                                      </div>
-                                    ))}
-                                    {computed.map((n, i) => (
-                                      <div key={`cn-${i}`} className="flex items-start gap-3 py-1 border-b border-rule-light/50 last:border-0">
-                                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-rust/10 text-rust border border-rust/20">{n.source}</span>
-                                        <code className="text-[11px] font-mono text-ink">{n.canonical_name}</code>
-                                        {n.message && <span className="text-[10px] text-muted leading-relaxed">{n.message}</span>}
-                                      </div>
-                                    ))}
-                                  </div>
-                            )}
-                            {/* Unknown tab */}
-                            {ingestTraceTab === 'unknown' && (
-                              unknown.length === 0
-                                ? <p className="text-[12px] text-muted">No unrecognized fields.</p>
-                                : <div className="space-y-2">
-                                    {unknown.map((u, i) => (
-                                      <div key={i} className="flex items-start gap-3 py-1.5 border-b border-rule-light/50 last:border-0">
-                                        <code className="text-[11px] font-mono text-ink flex-shrink-0">{u.path}</code>
-                                        <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded flex-shrink-0 ${u.classification === 'suspicious' ? 'bg-rust/10 text-rust border border-rust/20' : u.classification === 'near_match' ? 'bg-sage/10 text-sage border border-sage/20' : 'bg-surface text-muted border border-rule'}`}>
-                                          {u.classification}
-                                        </span>
-                                        {u.suggestion && <span className="text-[10px] text-muted">→ did you mean <code className="font-mono text-sage">{u.suggestion}</code>?</span>}
-                                      </div>
-                                    ))}
-                                  </div>
-                            )}
-                            {/* Blocked tab — tiered fix UI */}
-                            {ingestTraceTab === 'blocked' && (
-                              blocked.length === 0
-                                ? <p className="text-[12px] text-muted">No blocking issues.</p>
-                                : <div className="space-y-2">
-                                    {blocked.map((e, i) => {
-                                      const entry = ISSUE_REGISTRY[e.rule_id]
-                                      const humanLabel = entry?.label || (e.path && blockedHumanLabel[e.path])
-                                      const hints = e.path && blockedInputHints[e.path]
-                                      const patch = pendingPatches.find(p => p.ruleId === e.rule_id)
-                                      const isActive = patch && activePatchId === patch.id
-                                      const isAccepted = patch?.status === 'accepted'
-
-                                      return (
-                                        <div key={i} className="border-l-[3px] border-wine/30 pl-3 py-2 rounded-r-sm bg-wine/[0.03]">
-                                          {/* Error heading */}
-                                          <div className="text-[12px] font-semibold text-wine">{humanLabel || e.message}</div>
-                                          {humanLabel && <div className="text-[10px] text-muted font-mono mt-1">{e.rule_id} · {e.path}</div>}
-                                          {!humanLabel && e.path && <div className="text-[10px] text-muted font-mono mt-1">path: {e.path}</div>}
-
-                                          {/* Tier A: deterministic safe fix */}
-                                          {patch?.tier === 'A' && (
-                                            <div className="mt-2 rounded-md bg-sage/[0.06] border border-sage/20 p-3">
-                                              {isAccepted ? (
-                                                <div className="flex items-center justify-between">
-                                                  <div className="flex items-center gap-2">
-                                                    <span className="text-sage text-[14px]">✓</span>
-                                                    <span className="text-[11px] text-sage font-medium">{patch.label}</span>
-                                                  </div>
-                                                  <button
-                                                    onClick={() => setPendingPatches(prev => prev.map(p => p.id === patch.id ? { ...p, status: 'suggested' } : p))}
-                                                    className="text-[10px] text-muted hover:text-ink cursor-pointer">Undo</button>
-                                                </div>
-                                              ) : (
-                                                <>
-                                                  <div className="text-[11px] text-ink font-medium">Safe fix: {patch.label}</div>
-                                                  {patch.value !== undefined && patch.value !== null && (
-                                                    <div className="text-[10px] text-muted mt-1">
-                                                      Value: <code className="font-mono text-ink/80">{typeof patch.value === 'object' ? JSON.stringify(patch.value) : String(patch.value)}</code>
-                                                      <span className="text-muted/60"> (from your input)</span>
-                                                    </div>
-                                                  )}
-                                                  <div className="text-[10px] text-muted/70 mt-0.5">{patch.detail}</div>
-                                                  <div className="flex gap-2 mt-2">
-                                                    <button
-                                                      onClick={() => {
-                                                        setPendingPatches(prev => prev.map(p => p.id === patch.id ? { ...p, status: 'accepted' } : p))
-                                                        setActivePatchId(null)
-                                                      }}
-                                                      className="text-[11px] px-3 py-1 rounded-md bg-sage/20 text-sage font-medium hover:bg-sage/30 cursor-pointer transition-colors">
-                                                      Accept fix
-                                                    </button>
-                                                    <button
-                                                      onClick={() => setActivePatchId(null)}
-                                                      className="text-[11px] px-3 py-1 rounded-md text-muted hover:text-ink cursor-pointer transition-colors">
-                                                      Skip
-                                                    </button>
-                                                  </div>
-                                                </>
-                                              )}
-                                            </div>
-                                          )}
-
-                                          {/* Tier B: guided user fix */}
-                                          {patch?.tier === 'B' && (
-                                            <div className="mt-2 rounded-md bg-surface border border-rule-light p-3">
-                                              {isAccepted ? (
-                                                <div className="flex items-center justify-between">
-                                                  <div className="flex items-center gap-2">
-                                                    <span className="text-sage text-[14px]">✓</span>
-                                                    <span className="text-[11px] text-ink font-medium">{patch.targetPath} = <code className="font-mono text-sage">{patch.value}</code></span>
-                                                  </div>
-                                                  <button
-                                                    onClick={() => setPendingPatches(prev => prev.map(p => p.id === patch.id ? { ...p, status: 'suggested', value: null } : p))}
-                                                    className="text-[10px] text-muted hover:text-ink cursor-pointer">Undo</button>
-                                                </div>
-                                              ) : isActive ? (
-                                                <>
-                                                  <label className="text-[11px] text-ink font-medium block mb-1.5">{patch.label}:</label>
-                                                  <div className="flex gap-2">
-                                                    <input
-                                                      type="text"
-                                                      value={patchInputValues[patch.id] || ''}
-                                                      onChange={(ev) => setPatchInputValues(prev => ({ ...prev, [patch.id]: ev.target.value }))}
-                                                      onKeyDown={(ev) => {
-                                                        if (ev.key === 'Enter' && patchInputValues[patch.id]?.trim()) {
-                                                          setPendingPatches(prev => prev.map(p => p.id === patch.id ? { ...p, value: patchInputValues[patch.id].trim(), status: 'accepted' } : p))
-                                                          setActivePatchId(null)
-                                                        }
-                                                      }}
-                                                      placeholder={patch.targetPath}
-                                                      className="flex-1 text-[11px] px-2.5 py-1.5 rounded-md border border-rule bg-panel font-mono focus:outline-none focus:border-ink/40"
-                                                      autoFocus
-                                                    />
-                                                    <button
-                                                      onClick={() => {
-                                                        const val = patchInputValues[patch.id]?.trim()
-                                                        if (!val) return
-                                                        setPendingPatches(prev => prev.map(p => p.id === patch.id ? { ...p, value: val, status: 'accepted' } : p))
-                                                        setActivePatchId(null)
-                                                      }}
-                                                      disabled={!patchInputValues[patch.id]?.trim()}
-                                                      className="text-[11px] px-3 py-1 rounded-md bg-ink text-panel font-medium hover:bg-ink-2 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                                                      Accept
-                                                    </button>
-                                                  </div>
-                                                </>
-                                              ) : (
-                                                <button
-                                                  onClick={() => setActivePatchId(patch.id)}
-                                                  className="text-[11px] text-ink/70 hover:text-ink cursor-pointer transition-colors">
-                                                  {patch.label} →
-                                                </button>
-                                              )}
-                                            </div>
-                                          )}
-
-                                          {/* Tier C: diagnostic only */}
-                                          {entry?.diagnosticOnly && (
-                                            <div className="mt-2 rounded-md bg-surface/50 border border-rule-light/60 p-3">
-                                              <div className="text-[11px] text-muted">{entry.diagnosticMessage}</div>
-                                              {e.message && <div className="text-[10px] font-mono text-muted/70 mt-1">{e.message}</div>}
-                                            </div>
-                                          )}
-
-                                          {/* Fallback: no patch and no registry entry */}
-                                          {!patch && !entry?.diagnosticOnly && hints && (
-                                            <div className="text-[11px] text-mid mt-1">
-                                              Add {hints.map((h, j) => <span key={j}>{j > 0 && ', '}<span className="font-mono text-ink/70">{h}</span></span>)} to continue
-                                            </div>
-                                          )}
-                                        </div>
-                                      )
-                                    })}
-                                  </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                    </div>
-                  )
-                })()}
-              </div>
-            )}
-
-            {/* ── PREFLIGHT TAB ── */}
-            {tab === 'preflight' && (
-              <div className="space-y-4">
-                {/* Verdict badge */}
-                {checking && (
-                  <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-rule-light bg-panel">
-                    <div className="w-48 h-1.5 bg-rule rounded-full overflow-hidden"><div className="h-full bg-ink/30 rounded-full shimmer-bar" /></div>
-                    <span className="text-[12px] text-muted">Checking readiness&hellip;</span>
-                  </div>
-                )}
-                {verdict && !checking && !parseError && (() => {
-                  let parsedData; try { parsedData = JSON.parse(json) } catch { parsedData = null }
-                  const dataFilled = parsedData && isComplete(template, parsedData)
-                  const actuallyReady = verdict.ready && dataFilled
-                  const incompleteButValid = verdict.ready && !dataFilled
-                  return (
-                  <div className={`flex items-center gap-4 px-5 py-4 rounded-lg border ${actuallyReady ? 'bg-sage/[0.06] border-sage/20' : incompleteButValid ? 'bg-surface border-rule-light' : 'bg-wine/[0.04] border-wine/20'}`}>
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${actuallyReady ? 'bg-sage/15' : incompleteButValid ? 'bg-rule/20' : 'bg-wine/10'}`}>
-                      {actuallyReady
-                        ? <svg className="w-4.5 h-4.5 text-sage" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                        : incompleteButValid
-                        ? <svg className="w-4.5 h-4.5 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        : <svg className="w-4.5 h-4.5 text-wine" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                      }
-                    </div>
-                    <div className="flex-1">
-                      <div className={`font-semibold ${actuallyReady ? 'text-[17px] text-sage' : incompleteButValid ? 'text-[14px] text-muted' : 'text-[14px] text-wine'}`}>
-                        {actuallyReady ? 'Ready to render' : incompleteButValid ? 'Structure valid — fill in your data' : `${verdict.errors?.length || 0} issue${(verdict.errors?.length || 0) !== 1 ? 's' : ''} must be fixed`}
-                      </div>
-                      <div className="text-[11px] text-muted mt-0.5">
-                        {verdict.stages_checked?.length || 0} stages checked
-                        {verdict.warnings?.length > 0 && ` \u00b7 ${verdict.warnings.length} warning${verdict.warnings.length !== 1 ? 's' : ''}`}
-                      </div>
-                    </div>
-                    {actuallyReady ? (
-                      <button onClick={() => { setTab('render'); setTimeout(renderPdf, 100) }}
-                        className="text-[13px] px-5 py-2 rounded-full font-semibold bg-ink text-panel hover:bg-ink-2 transition-all cursor-pointer flex-shrink-0 shadow-sm hover:shadow-md">
-                        Render PDF
-                      </button>
-                    ) : (
-                      <div className="text-[10px] text-muted font-mono flex-shrink-0">{verdict.checked_at?.split('T')[1]?.split('.')[0] || ''}</div>
-                    )}
-                  </div>
-                  )
-                })()}
-                {!verdict && !checking && parseError && (
-                  <>
-                    <div className="flex items-center gap-4 px-5 py-4 rounded-lg border bg-wine/[0.04] border-wine/20">
-                      <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 bg-wine/10">
-                        <svg className="w-4.5 h-4.5 text-wine" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[14px] font-semibold text-wine">Invalid JSON</div>
-                        <div className="text-[12px] text-mid mt-0.5">{parseError}</div>
-                        <div className="text-[11px] text-muted mt-1">Fix syntax to run readiness checks</div>
-                      </div>
-                    </div>
-                    <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-                      <div className="px-4 py-2.5 border-b border-rule-light">
-                        <span className="text-[10px] font-mono text-muted">stages</span>
-                      </div>
-                      <div className="divide-y divide-rule-light">
-                        {STAGES.map(stage => (
-                          <div key={stage} className="px-4 py-3 opacity-50">
-                            <div className="flex items-center gap-3">
-                              <div className="w-[18px] h-[18px] rounded-full border-2 border-rule flex items-center justify-center flex-shrink-0">
-                                <div className="w-1.5 h-1.5 rounded-full bg-rule" />
-                              </div>
-                              <span className="text-[13px] font-medium text-muted">{STAGE_LABELS[stage] || stage}</span>
-                              <span className="text-[10px] font-mono text-muted ml-auto">blocked</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
-                {!verdict && !checking && !parseError && (
-                  <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-rule-light bg-panel">
-                    <div className="w-8 h-8 rounded-full border-2 border-rule flex items-center justify-center flex-shrink-0">
-                      <svg className="w-4 h-4 text-rule" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    </div>
-                    <div className="text-[13px] text-muted">Edit the payload to run readiness checks automatically</div>
-                  </div>
-                )}
-
-                {/* Stage list */}
-                {verdict && !checking && !parseError && (
-                  <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-                    <div className="px-4 py-2.5 border-b border-rule-light">
-                      <span className="text-[10px] font-mono text-muted">stages</span>
-                    </div>
-                    <div className="divide-y divide-rule-light">
-                      {STAGES.map(stage => {
-                        const s = stageStatus(stage)
-                        const issues = [...(verdict.errors?.filter(e => e.stage === stage) || []), ...(verdict.warnings?.filter(w => w.stage === stage) || [])]
-                        return (
-                          <div key={stage} className={`px-4 py-3 ${s === 'skipped' ? 'opacity-50' : ''}`}>
-                            <div className="flex items-center gap-3">
-                              <StageIcon status={s} />
-                              <div className="flex-1 min-w-0">
-                                <span className={`text-[13px] font-medium ${s === 'skipped' ? 'text-muted' : 'text-ink'}`}>{STAGE_LABELS[stage] || stage}</span>
-                                {s === 'skipped' && STAGE_SKIP_INFO[stage] && (
-                                  <div className="text-[10px] text-muted">{STAGE_SKIP_INFO[stage].reason}</div>
-                                )}
-                              </div>
-                              <span className={`text-[10px] font-mono flex-shrink-0 ${s === 'pass' ? 'text-sage' : s === 'fail' ? 'text-wine' : s === 'warn' ? 'text-rust' : 'text-muted'}`}>
-                                {s === 'pass' ? 'pass' : s === 'fail' ? 'fail' : s === 'warn' ? 'warn' : s === 'skipped' ? (STAGE_SKIP_INFO[stage]?.label || 'skipped') : ''}
-                              </span>
-                            </div>
-                            {issues.length > 0 && (
-                              <div className="mt-2 ml-6.5 space-y-1">
-                                {issues.map((issue, i) => {
-                                  const navigable = isErrorNavigable(issue)
-                                  return (
-                                    <div key={i}
-                                      onClick={navigable ? () => handleErrorClick(issue) : undefined}
-                                      className={`border-l-[3px] pl-3 py-1.5 rounded-r-sm ${issue.severity === 'error' ? 'border-wine/30 bg-wine/[0.03]' : 'border-rust/30 bg-rust/[0.03]'} ${navigable ? 'cursor-pointer hover:bg-wine/[0.06] transition-colors' : ''}`}
-                                    >
-                                      <div className="font-mono text-[11px] font-semibold text-ink">{issue.path}</div>
-                                      <div className="text-[10px] text-mid">{issue.message}</div>
-                                    </div>
-                                  )
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-
-                    {/* Compliance eligibility */}
-                    {verdict.profile_eligible?.length > 0 && (
-                      <div className="px-4 py-3 border-t border-rule-light">
-                        <div className="text-[10px] text-muted mb-2">Eligible compliance profiles</div>
-                        <div className="flex gap-2">
-                          {verdict.profile_eligible.map(p => (
-                            <span key={p} className="text-[10px] px-2 py-1 rounded bg-sage/10 text-sage font-mono border border-sage/20">{p}</span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ── RENDER TAB ── */}
-            {tab === 'render' && (
-              <div className="space-y-4">
-                {/* Output */}
-                <div className="bg-panel rounded-xl border border-rule-light overflow-hidden min-h-[480px] flex flex-col" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-                  <div className="px-4 py-2.5 border-b border-rule-light flex items-center justify-between gap-3">
-                    <span className="text-[11px] font-mono text-muted">{renderStatus === 'done' ? 'output.pdf' : renderStatus === 'rendering' ? 'rendering\u2026' : renderStatus === 'error' ? 'error' : 'output'}</span>
-                    <div className="flex items-center gap-3">
-                      {renderStatus === 'done' && pdfData && pdfData.totalPages > 1 && (
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage <= 1} className="text-[12px] text-muted hover:text-ink disabled:opacity-30 cursor-pointer disabled:cursor-default px-1">&larr;</button>
-                          <span className="text-[11px] text-muted font-mono tabular-nums">{currentPage}/{pdfData.totalPages}</span>
-                          <button onClick={() => setCurrentPage(p => Math.min(pdfData.totalPages, p + 1))} disabled={currentPage >= pdfData.totalPages} className="text-[12px] text-muted hover:text-ink disabled:opacity-30 cursor-pointer disabled:cursor-default px-1">&rarr;</button>
-                        </div>
-                      )}
-                      {traceId && <span className="text-[10px] font-mono text-muted">trace: {traceId.slice(0, 8)}</span>}
-                      {renderStatus === 'done' && <span className="text-[11px] text-sage font-medium">rendered</span>}
-                      {renderStatus === 'error' && <span className="text-[11px] text-wine font-mono font-medium">{renderError?.error}</span>}
-                      {pdfData?.downloadUrl && <a href={pdfData.downloadUrl} download="trustrender-demo.pdf" className="text-[12px] text-rust hover:text-wine font-medium">Download</a>}
-                    </div>
-                  </div>
-                  <div className="flex-1 flex items-center justify-center p-4">
-                    {renderStatus === 'idle' && (
-                      <div className="text-center py-12">
-                        {/* Document silhouette */}
-                        <div className="w-[120px] mx-auto mb-6 rounded border border-rule-light bg-white/60 p-4 opacity-40" style={{ aspectRatio: '8.5/11' }}>
-                          <div className="w-1/2 h-1.5 bg-rule/20 rounded-full mb-3" />
-                          <div className="w-3/4 h-1 bg-rule/15 rounded-full mb-2" />
-                          <div className="w-full h-1 bg-rule/15 rounded-full mb-2" />
-                          <div className="w-2/3 h-1 bg-rule/15 rounded-full mb-4" />
-                          <div className="w-full h-px bg-rule/10 mb-3" />
-                          <div className="space-y-1.5">
-                            <div className="flex gap-2"><div className="w-2/5 h-1 bg-rule/12 rounded-full" /><div className="flex-1 h-1 bg-rule/12 rounded-full" /></div>
-                            <div className="flex gap-2"><div className="w-2/5 h-1 bg-rule/12 rounded-full" /><div className="flex-1 h-1 bg-rule/12 rounded-full" /></div>
-                            <div className="flex gap-2"><div className="w-2/5 h-1 bg-rule/12 rounded-full" /><div className="flex-1 h-1 bg-rule/12 rounded-full" /></div>
-                          </div>
-                        </div>
-                        <p className="text-[14px] text-muted font-medium mb-1.5">Your rendered PDF will appear here</p>
-                        {verdict?.ready ? (
-                          <button onClick={() => { renderPdf() }}
-                            className="text-[12px] text-rust hover:text-wine font-medium cursor-pointer transition-colors">
-                            Render now
-                          </button>
-                        ) : (
-                          <button onClick={() => setTab('preflight')}
-                            className="text-[12px] text-rust hover:text-wine font-medium cursor-pointer transition-colors">
-                            Run readiness checks first &rarr;
-                          </button>
-                        )}
-                      </div>
-                    )}
-                    {renderStatus === 'rendering' && (
-                      <div className="text-center py-16">
-                        <div className="w-48 h-1.5 bg-rule rounded-full overflow-hidden mx-auto mb-4"><div className="h-full bg-ink/30 rounded-full shimmer-bar" /></div>
-                        <p className="text-[13px] text-muted font-medium">Rendering&hellip;</p>
-                      </div>
-                    )}
-                    {renderStatus === 'done' && pdfData && (
-                      <div className="w-full flex flex-col items-center anim-doc">
-                        <div className="relative w-full max-w-[480px]">
-                          {pdfData.totalPages > 1 && currentPage < pdfData.totalPages && (
-                            <><div className="absolute top-2 left-2 right-[-4px] bottom-[-4px] bg-white/60 rounded border border-rule/30" />
-                            {pdfData.totalPages > 2 && currentPage < pdfData.totalPages - 1 && <div className="absolute top-4 left-4 right-[-8px] bottom-[-8px] bg-white/30 rounded border border-rule/20" />}</>
-                          )}
-                          <img src={pdfData.pages[currentPage - 1]} alt={`Page ${currentPage}`} className="relative w-full rounded bg-white border border-rule/40" style={{ boxShadow: '0 8px 24px rgba(20,18,16,0.08)' }} />
-                        </div>
-                        <div className="mt-3 text-[10px] text-muted">{pdfData.totalPages === 1 ? '1 page' : `${pdfData.totalPages} pages`}</div>
-                      </div>
-                    )}
-                    {renderStatus === 'error' && renderError && (
-                      <div className="p-4 w-full overflow-y-auto max-h-[520px]">
-                        <div className="mb-5">
-                          <div className="text-[15px] font-display text-wine mb-1">{renderError.error === 'DATA_CONTRACT' ? 'Payload intercepted before render' : renderError.error}</div>
-                          <div className="text-[12px] text-mid">{renderError.message}</div>
-                        </div>
-                        {renderError.detail ? (
-                          <pre className="font-mono text-[11px] text-ink-2 whitespace-pre-wrap leading-relaxed bg-wine/[0.03] border-l-[3px] border-wine/30 pl-4 py-3 rounded-r-sm">{renderError.detail}</pre>
-                        ) : null}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ── HISTORY TAB ── */}
-            {tab === 'history' && (
-              <div className="space-y-4">
-                {/* Disabled state */}
-                {historyError === 'disabled' && (
-                  <div className="bg-panel rounded-xl border border-rule-light overflow-hidden min-h-[480px] flex items-center justify-center" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-                    <div className="text-center py-16 px-8">
-                      <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-rule flex items-center justify-center">
-                        <svg className="w-5 h-5 text-rule" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      </div>
-                      <p className="text-[14px] font-semibold text-ink mb-2">History not enabled</p>
-                      <p className="text-[12px] text-muted max-w-xs mx-auto leading-relaxed">
-                        Start the server with <code className="font-mono text-[11px] bg-surface px-1 py-0.5 rounded">--history ~/.trustrender/history.db</code> to enable render trace storage.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Loading */}
-                {!historyError && traces === null && (
-                  <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-rule-light bg-panel">
-                    <div className="w-48 h-1.5 bg-rule rounded-full overflow-hidden"><div className="h-full bg-ink/30 rounded-full shimmer-bar" /></div>
-                    <span className="text-[12px] text-muted">Loading traces&hellip;</span>
-                  </div>
-                )}
-
-                {/* Empty state */}
-                {!historyError && traces && traces.length === 0 && (
-                  <div className="bg-panel rounded-xl border border-rule-light overflow-hidden min-h-[480px] flex items-center justify-center" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-                    <div className="text-center py-16 px-8">
-                      <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-rule flex items-center justify-center">
-                        <svg className="w-5 h-5 text-rule" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      </div>
-                      <p className="text-[14px] font-semibold text-ink mb-2">No renders yet</p>
-                      <p className="text-[12px] text-muted">Render a document from the Ready tab to see trace history here.</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Trace list */}
-                {!historyError && traces && traces.length > 0 && (
-                  <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-                    <div className="px-4 py-2.5 border-b border-rule-light flex items-center justify-between">
-                      <span className="text-[10px] font-mono text-muted">{traces.length} trace{traces.length !== 1 ? 's' : ''}</span>
-                      <div className="flex items-center gap-3">
-                        {dashboardAvailable && (
-                          <a href={apiUrl('/dashboard')} target="_blank" rel="noopener noreferrer" className="text-[10px] text-muted hover:text-ink">Open dashboard &rarr;</a>
-                        )}
-                        <button onClick={fetchTraces} className="text-[10px] text-muted hover:text-ink cursor-pointer">refresh</button>
-                      </div>
-                    </div>
-                    <div className="divide-y divide-rule-light max-h-[300px] overflow-y-auto">
-                      {traces.map(t => (
-                        <button key={t.id} onClick={() => setSelectedTrace(t)}
-                          className={`w-full px-4 py-3 flex items-center gap-3 text-left cursor-pointer transition-colors hover:bg-surface/50
-                            ${selectedTrace?.id === t.id ? 'bg-surface/80' : ''}`}>
-                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${t.outcome === 'success' ? 'bg-sage' : 'bg-wine'}`} />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className={`text-[12px] font-medium truncate ${t.outcome === 'error' ? 'text-wine' : 'text-ink'}`}>{t.template_name}</span>
-                              {t.zugferd_profile && <span className="text-[8px] px-1.5 py-0.5 rounded bg-sage/10 text-sage font-mono flex-shrink-0">{t.zugferd_profile}</span>}
-                              {t.provenance_hash && <span className="text-[8px] px-1.5 py-0.5 rounded bg-rust/10 text-rust font-mono flex-shrink-0">prov</span>}
-                            </div>
-                            <div className="text-[10px] text-muted">
-                              {t.timestamp?.split('T')[1]?.split('.')[0] || ''}
-                              {t.total_ms != null && ` \u00b7 ${t.total_ms}ms`}
-                              {t.outcome === 'error' && t.error_code && ` \u00b7 ${t.error_code}`}
-                            </div>
-                          </div>
-                          <span className={`text-[10px] font-mono flex-shrink-0 ${t.outcome === 'success' ? 'text-sage' : 'text-wine'}`}>{t.outcome}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Selected trace detail */}
-                {selectedTrace && (
-                  <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-                    <div className="px-4 py-2.5 border-b border-rule-light flex items-center justify-between">
-                      <span className="text-[10px] font-mono text-muted">trace: {selectedTrace.id?.slice(0, 8)}</span>
-                      <button onClick={() => setSelectedTrace(null)} className="text-[10px] text-muted hover:text-ink cursor-pointer">close</button>
-                    </div>
-                    <div className="p-4 space-y-3">
-                      {/* Metadata */}
-                      <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                        {[
-                          ['Template', selectedTrace.template_name],
-                          ['Outcome', selectedTrace.outcome],
-                          ['Duration', selectedTrace.total_ms != null ? `${selectedTrace.total_ms}ms` : '\u2014'],
-                          ['PDF size', selectedTrace.pdf_size ? `${(selectedTrace.pdf_size / 1024).toFixed(1)} KB` : '\u2014'],
-                          ['Backend', selectedTrace.backend || '\u2014'],
-                          ['Validated', selectedTrace.validated ? 'yes' : 'no'],
-                          ['ZUGFeRD', selectedTrace.zugferd_profile || '\u2014'],
-                          ['Provenance', selectedTrace.provenance_hash ? 'yes' : 'no'],
-                        ].map(([label, value]) => (
-                          <div key={label} className="flex items-baseline gap-2">
-                            <span className="text-[10px] text-muted w-16 flex-shrink-0">{label}</span>
-                            <span className={`text-[11px] font-mono ${value === 'success' ? 'text-sage' : value === 'error' ? 'text-wine' : 'text-ink'}`}>{value}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Error info */}
-                      {selectedTrace.outcome === 'error' && selectedTrace.error_message && (
-                        <div className="border-l-[3px] border-wine/30 pl-3 py-2 rounded-r-sm bg-wine/[0.03]">
-                          <div className="text-[10px] text-muted mb-0.5">stage: {selectedTrace.error_stage}</div>
-                          <div className="font-mono text-[11px] text-wine">{selectedTrace.error_code}</div>
-                          <div className="text-[11px] text-mid mt-0.5">{selectedTrace.error_message}</div>
-                        </div>
-                      )}
-
-                      {/* Stages */}
-                      {selectedTrace.stages?.length > 0 && (
-                        <div>
-                          <div className="text-[10px] text-muted mb-2">Pipeline stages</div>
-                          <div className="space-y-1">
-                            {selectedTrace.stages.map((s, i) => (
-                              <div key={i} className="flex items-center gap-2 py-1">
-                                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${s.status === 'pass' ? 'bg-sage' : s.status === 'fail' || s.status === 'error' ? 'bg-wine' : s.status === 'skip' ? 'bg-rule' : 'bg-rust'}`} />
-                                <span className="text-[11px] text-ink flex-1">{s.stage}</span>
-                                <span className={`text-[10px] font-mono ${s.status === 'pass' ? 'text-sage' : s.status === 'fail' || s.status === 'error' ? 'text-wine' : 'text-muted'}`}>{s.status}</span>
-                                {s.duration_ms != null && <span className="text-[10px] font-mono text-muted">{s.duration_ms}ms</span>}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Identity */}
-                      <div className="pt-2 border-t border-rule-light">
-                        <div className="text-[10px] text-muted mb-1">Identity</div>
-                        <div className="font-mono text-[10px] text-muted space-y-0.5">
-                          <div>trace: {selectedTrace.id}</div>
-                          {selectedTrace.template_hash && <div>template: {selectedTrace.template_hash}</div>}
-                          {selectedTrace.data_hash && <div>data: {selectedTrace.data_hash}</div>}
-                          {selectedTrace.output_hash ? <div>output: {selectedTrace.output_hash}</div> : <div className="text-muted/40">output hash: not recorded</div>}
-                          {selectedTrace.engine_version && <div>engine: trustrender {selectedTrace.engine_version}</div>}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   SECTION: INVOICE INGEST DEMO
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
-const INGEST_SAMPLES = {
-  stripe: {
-    label: 'Stripe-style',
-    tag: 'ready',
-    data: {
-      number: 'INV-2026-00042',
-      date: '2026-03-01',
-      due_date: '2026-03-31',
-      account_name: 'Buildspace Labs Inc.',
-      account_email: 'billing@buildspace.so',
-      customer_name: 'Momentum Ventures',
-      customer_email: 'finance@momentum.vc',
-      lines: {
-        data: [
-          { title: 'Platform subscription (Pro)', count: 1, price: 399.00, amount: 399.00 },
-          { title: 'API calls overage (50K)',      count: 1, price: 45.00,  amount: 45.00 },
-          { title: 'Priority support (monthly)',   count: 1, price: 149.00, amount: 149.00 },
-        ]
-      },
-      sub_total: 593.00,
-      tax: 50.41,
-      taxRate: '8.5%',
-      grand_total: 643.41,
-      currency: 'usd',
-    },
-  },
-  quickbooks: {
-    label: 'QuickBooks',
-    tag: 'ready',
-    data: {
-      DocNumber: 'INV-1089',
-      TxnDate: '2026-03-10',
-      DueDate: '2026-04-09',
-      CompanyName: 'Redwood Digital LLC',
-      CompanyEmail: 'ar@redwood-digital.com',
-      customer: { Name: 'Pinnacle Group', EmailAddress: 'billing@pinnaclegroup.com' },
-      Line: [
-        { LineNum: 1, Description: 'UX/UI Design — Phase 1',   Quantity: 1,  UnitPrice: 3500, Amount: 3500 },
-        { LineNum: 2, Description: 'Frontend Development',      Quantity: 40, UnitPrice: 95,   Amount: 3800 },
-        { LineNum: 3, Description: 'Project Management',        Quantity: 8,  UnitPrice: 120,  Amount: 960  },
-      ],
-      SubTotal: 8260,
-      TotalTax: 702.10,
-      taxRate: '8.5%',
-      TotalAmt: 8962.10,
-      CustomerMemo: 'Payment due within 30 days.',
-      paymentTerms: 'Net 30',
-    },
-  },
-  xero: {
-    label: 'Xero (blocked)',
-    tag: 'blocked',
-    data: {
-      InvoiceNumber: 'INV-0234',
-      date: '2026-03-20',
-      DueDate: '2026-04-19',
-      Contact: { Name: 'Greenfield Dynamics', EmailAddress: 'accounts@greenfield.io' },
-      LineItems: [
-        { Description: 'Annual SaaS License',        Quantity: 1, UnitAmount: 12000, LineAmount: 12000 },
-        { Description: 'Onboarding & Implementation', Quantity: 1, UnitAmount: 4500,  LineAmount: 4500  },
-      ],
-      SubTotal: 16500,
-      TotalTax: 1402.50,
-      Total: 17902.50,
-      CurrencyCode: 'USD',
-    },
-  },
-  typo: {
-    label: 'Near-miss typos',
-    tag: 'blocked',
-    data: {
-      invioce_number: 'INV-TYPO-001',
-      invoice_date: '2026-04-10',
-      due_date: '2026-05-10',
-      sender: { name: 'Typo Corp', address: '123 Main St' },
-      recipeint: { name: 'Target LLC', address: '456 Oak Ave' },
-      items: [
-        { descrption: 'Service A', quantity: 1, unit_price: 100.0 },
-      ],
-    },
-  },
-}
-
-function IngestNormRow({ norm }) {
-  const isCoerce  = norm.message && norm.message.startsWith('coerced')
-  const isCompute = norm.source === 'computed'
-  const isDefault = norm.source === 'default'
-  const isUnwrap  = norm.message && norm.message.includes('unwrapped money')
-  const isDate    = norm.message && norm.message.startsWith('date ')
-  const isAlias   = !isCoerce && !isCompute && !isDefault && !isUnwrap && !isDate
-  const isRoot    = norm.canonical_name === '(root)'
-
-  let badge = null
-  let desc  = norm.message || ''
-
-  if (isRoot)    { badge = <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-rust/10 text-rust">unwrap</span> }
-  else if (isCompute) { badge = <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-sage/10 text-sage">computed</span> }
-  else if (isDefault) { badge = <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-rule text-muted">default</span> }
-  else if (isUnwrap)  { badge = <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-rust/10 text-rust">unwrap</span> }
-  else if (isCoerce || isDate) { badge = <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">coerce</span> }
-  else if (isAlias && norm.original_key) { badge = <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">alias</span> }
-
-  return (
-    <div className="flex items-start gap-3 py-1.5 border-b border-rule-light last:border-0">
-      <div className="w-16 flex-none pt-0.5">{badge}</div>
-      <div className="flex-1 min-w-0">
-        <span className="font-mono text-[11px] text-ink">{norm.canonical_name}</span>
-        {norm.original_key && <span className="text-muted text-[11px]"> ← <code className="text-ink-2">{norm.original_key}</code></span>}
-      </div>
-      {desc && <div className="text-[10px] text-muted font-mono truncate max-w-[260px]" title={desc}>{desc}</div>}
-    </div>
-  )
-}
-
-function IngestDemo() {
-  const [sampleKey, setSampleKey] = useState('stripe')
-  const [json, setJson]           = useState(() => JSON.stringify(INGEST_SAMPLES.stripe.data, null, 2))
-  const [parseError, setParseError] = useState(null)
-  const [result, setResult]         = useState(null)
-  const [loading, setLoading]       = useState(false)
-  const [normTab, setNormTab]       = useState('alias')
-
-  useEffect(() => {
-    try { JSON.parse(json); setParseError(null) }
-    catch (e) { setParseError(e.message.split(' at ')[0]) }
-  }, [json])
-
-  const loadSample = (key) => {
-    setSampleKey(key)
-    setJson(JSON.stringify(INGEST_SAMPLES[key].data, null, 2))
-    setResult(null)
-  }
-
-  const runIngest = async () => {
-    if (parseError) return
-    setLoading(true); setResult(null)
-    try {
-      const data = JSON.parse(json)
-      const res = await fetch(apiUrl('/ingest'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data }),
-      })
-      setResult(await res.json())
-    } catch {
-      setResult({ _error: 'Server unreachable. Is trustrender serve running?' })
-    }
-    setLoading(false)
-  }
-
-  const aliases   = result?.normalizations?.filter(n => n.source === 'alias' && n.original_key)     ?? []
-  const coercions = result?.normalizations?.filter(n => n.source === 'alias' && !n.original_key)    ?? []
-  const computed  = result?.normalizations?.filter(n => n.source === 'computed' || n.source === 'default') ?? []
-  const blocked   = result?.errors?.filter(e => e.severity === 'blocked') ?? []
-  const errors    = result?.errors?.filter(e => e.severity === 'error')   ?? []
-  const warnings  = result?.warnings ?? []
-  const unknowns  = result?.unknown_fields ?? []
-  const nearMatch = unknowns.filter(u => u.classification === 'near_match')
-  const suspicious= unknowns.filter(u => u.classification === 'suspicious')
-
-  return (
-    <section id="ingest" className="py-20 md:py-28 bg-surface border-t border-rule">
-      <div className="max-w-[1280px] mx-auto px-6 md:px-10">
-        <FadeUp>
-          <p className="text-[11px] tracking-[0.22em] uppercase text-rust mb-4 font-semibold">Invoice ingest</p>
-          <h2 className="font-display font-extrabold text-[28px] md:text-[40px] tracking-[-0.03em] leading-[1.08] mb-3">
-            Messy data in. Canonical payload out.
-          </h2>
-          <p className="text-[15px] text-mid max-w-xl leading-relaxed mb-10">
-            Paste any invoice JSON — QuickBooks exports, Stripe webhooks, CSV rows, hand-rolled APIs.
-            The ingest pipeline resolves field aliases, coerces types, computes missing totals,
-            and tells you exactly what it did. Blocked payloads stay blocked. No invented data.
-          </p>
-        </FadeUp>
-
-        <FadeUp delay={150}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-
-            {/* ── Left: editor ── */}
-            <div className="bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-              <div className="px-4 py-2.5 border-b border-rule-light flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="flex gap-1.5"><div className="w-2 h-2 rounded-full bg-rule" /><div className="w-2 h-2 rounded-full bg-rule" /><div className="w-2 h-2 rounded-full bg-rule" /></div>
-                  <span className="text-[10px] font-mono text-muted ml-2">invoice payload</span>
-                </div>
-                <div className="flex gap-1">
-                  {Object.entries(INGEST_SAMPLES).map(([key, s]) => (
-                    <button key={key} onClick={() => loadSample(key)}
-                      className={`text-[9px] px-2 py-1 rounded font-mono font-medium transition-colors cursor-pointer
-                        ${sampleKey === key
-                          ? s.tag === 'ready'   ? 'bg-sage/10 text-sage border border-sage/20'
-                                                : 'bg-wine/10 text-wine border border-wine/20'
-                          : 'text-muted hover:text-mid border border-transparent'}`}>
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <textarea value={json} onChange={e => setJson(e.target.value)} spellCheck={false} wrap="off"
-                className="w-full p-4 font-mono text-[11px] leading-[1.8] text-ink-2 bg-panel resize-none focus:outline-none min-h-[380px] whitespace-pre overflow-x-auto"
-                style={{ tabSize: 2 }} />
-              {parseError && <div className="px-4 py-2 border-t border-wine/20 bg-wine/[0.04] text-[11px] text-wine font-mono">JSON: {parseError}</div>}
-              <div className="px-4 py-3 border-t border-rule-light flex items-center gap-3">
-                <button onClick={runIngest} disabled={!!parseError || loading}
-                  className={`text-[12px] px-5 py-2.5 rounded-full font-medium transition-all cursor-pointer
-                    ${parseError ? 'bg-rule text-muted cursor-not-allowed'
-                    : loading   ? 'bg-ink/70 text-panel cursor-wait'
-                                : 'bg-ink text-panel hover:bg-ink-2'}`}>
-                  {loading ? 'Ingesting\u2026' : 'Run ingest'}
-                </button>
-                {result && !result._error && (
-                  <span className={`text-[11px] font-mono font-semibold ${result.render_ready ? 'text-sage' : 'text-wine'}`}>
-                    {result.render_ready ? '✓ render-ready' : '✗ blocked'}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* ── Right: results ── */}
-            <div className="bg-panel rounded-xl border border-rule-light overflow-hidden min-h-[480px] flex flex-col" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-              {!result && !loading && (
-                <div className="flex-1 flex items-center justify-center text-center px-8 py-16">
-                  <div>
-                    <div className="w-12 h-12 mx-auto mb-4 rounded-full border border-rule flex items-center justify-center">
-                      <svg className="w-5 h-5 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
-                      </svg>
-                    </div>
-                    <p className="text-[13px] text-muted">Select a sample and run ingest to see the normalization trace.</p>
-                  </div>
-                </div>
-              )}
-
-              {loading && (
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-[13px] text-muted font-medium">Ingesting&hellip;</div>
-                </div>
-              )}
-
-              {result?._error && (
-                <div className="flex-1 flex items-center justify-center p-8">
-                  <p className="text-[13px] text-wine font-mono">{result._error}</p>
-                </div>
-              )}
-
-              {result && !result._error && (
-                <div className="flex flex-col flex-1 overflow-hidden">
-                  {/* Status banner */}
-                  <div className={`px-5 py-4 border-b border-rule-light flex items-center gap-4
-                    ${result.render_ready ? 'bg-sage/[0.04]' : 'bg-wine/[0.04]'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-none
-                      ${result.render_ready ? 'bg-sage/15' : 'bg-wine/15'}`}>
-                      {result.render_ready
-                        ? <svg className="w-4 h-4 text-sage" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                        : <svg className="w-4 h-4 text-wine" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                      }
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className={`text-[13px] font-semibold ${result.render_ready ? 'text-sage' : 'text-wine'}`}>
-                        {result.render_ready ? 'Render-ready' : 'Blocked — render prevented'}
-                      </div>
-                      <div className="text-[11px] text-muted mt-0.5 font-mono">
-                        {result.normalizations?.length ?? 0} normalizations &middot;&nbsp;
-                        {result.computed_fields?.length ?? 0} computed &middot;&nbsp;
-                        {unknowns.length} unknown fields
-                      </div>
-                    </div>
-                    {warnings.length > 0 && (
-                      <span className="text-[10px] font-mono px-2 py-1 rounded-full bg-amber-100 text-amber-700">
-                        {warnings.length} warning{warnings.length > 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Block reasons */}
-                  {(blocked.length > 0 || errors.length > 0) && (
-                    <div className="px-5 py-3 border-b border-rule-light bg-wine/[0.02] space-y-2">
-                      {[...blocked, ...errors].map((e, i) => (
-                        <div key={i} className="flex items-start gap-2">
-                          <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded mt-0.5 flex-none
-                            ${e.severity === 'blocked' ? 'bg-wine/10 text-wine' : 'bg-amber-100 text-amber-700'}`}>
-                            {e.severity}
-                          </span>
-                          <div className="min-w-0">
-                            <code className="text-[10px] text-muted font-mono">{e.rule_id}</code>
-                            <div className="text-[11px] text-ink mt-0.5">{e.message}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Tabs */}
-                  <div className="flex border-b border-rule-light px-5 pt-3 gap-4">
-                    {[
-                      { key: 'alias',    label: `Aliases (${aliases.length})` },
-                      { key: 'coerce',   label: `Coercions (${coercions.length})` },
-                      { key: 'computed', label: `Computed (${computed.length})` },
-                      { key: 'unknown',  label: `Unknown (${unknowns.length})` },
-                    ].map(t => (
-                      <button key={t.key} onClick={() => setNormTab(t.key)}
-                        className={`text-[11px] pb-2 font-medium border-b-2 transition-colors cursor-pointer
-                          ${normTab === t.key ? 'border-rust text-ink' : 'border-transparent text-muted hover:text-mid'}`}>
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Tab content */}
-                  <div className="flex-1 overflow-y-auto px-5 py-3">
-                    {normTab === 'alias' && (
-                      aliases.length === 0
-                        ? <p className="text-[12px] text-muted py-4">No field aliases applied.</p>
-                        : aliases.map((n, i) => <IngestNormRow key={i} norm={n} />)
-                    )}
-                    {normTab === 'coerce' && (
-                      coercions.length === 0
-                        ? <p className="text-[12px] text-muted py-4">No type coercions needed.</p>
-                        : coercions.map((n, i) => <IngestNormRow key={i} norm={n} />)
-                    )}
-                    {normTab === 'computed' && (
-                      computed.length === 0
-                        ? <p className="text-[12px] text-muted py-4">No fields were computed.</p>
-                        : computed.map((n, i) => <IngestNormRow key={i} norm={n} />)
-                    )}
-                    {normTab === 'unknown' && (
-                      unknowns.length === 0
-                        ? <p className="text-[12px] text-muted py-4">No unknown fields — all keys recognized.</p>
-                        : (
-                          <div className="space-y-1.5 py-1">
-                            {nearMatch.length > 0 && (
-                              <div className="mb-3">
-                                <div className="text-[10px] uppercase tracking-[0.15em] text-muted font-semibold mb-1.5">Near-match suggestions</div>
-                                {nearMatch.map((u, i) => (
-                                  <div key={i} className="flex items-start gap-2 py-1.5 border-b border-rule-light last:border-0">
-                                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 flex-none mt-0.5">typo?</span>
-                                    <div className="flex-1 min-w-0">
-                                      <code className="text-[11px] text-wine">{u.path}</code>
-                                      <span className="text-muted text-[11px]"> → did you mean </span>
-                                      <code className="text-[11px] text-sage">{u.suggestion}</code>
-                                      <span className="text-muted text-[10px] ml-1">(not auto-mapped)</span>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            {suspicious.length > 0 && (
-                              <div className="mb-3">
-                                <div className="text-[10px] uppercase tracking-[0.15em] text-muted font-semibold mb-1.5">Suspicious (financial keywords)</div>
-                                {suspicious.map((u, i) => (
-                                  <div key={i} className="flex items-center gap-2 py-1.5 border-b border-rule-light last:border-0">
-                                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 flex-none">watch</span>
-                                    <code className="text-[11px] text-ink">{u.path}</code>
-                                    <span className="text-[10px] text-muted">preserved in extras</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            {unknowns.filter(u => u.classification === 'pass_through').map((u, i) => (
-                              <div key={i} className="flex items-center gap-2 py-1.5 border-b border-rule-light last:border-0">
-                                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-rule text-muted flex-none">pass</span>
-                                <code className="text-[11px] text-muted">{u.path}</code>
-                              </div>
-                            ))}
-                          </div>
-                        )
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </FadeUp>
-      </div>
-    </section>
-  )
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   SECTION 4: COMPLIANCE WEDGE
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function ComplianceWedge() {
-  return (
-    <section className="py-20 md:py-28 border-t border-rule">
-      <div className="max-w-[1280px] mx-auto px-6 md:px-10">
-        <FadeUp>
-          <div className="flex flex-col md:flex-row gap-12 md:gap-20">
-            <div className="md:w-2/5">
-              <p className="text-[11px] tracking-[0.22em] uppercase text-rust mb-4 font-semibold">Compliance</p>
-              <h2 className="font-display font-extrabold text-[28px] md:text-[36px] tracking-[-0.03em] leading-[1.08] mb-4">
-                Validated e&#8209;invoicing for the supported German B2B path.
-              </h2>
-              <p className="text-[15px] text-mid leading-relaxed mb-6">
-                TrustRender validates invoice data and checks arithmetic consistency before the PDF is created. When the optional facturx library is installed, XSD and Schematron schema validation also run. Structurally invalid data is rejected before a document is produced. Output is PDF/A-3b with embedded CII XML for the supported EN 16931 invoice flow.
-              </p>
-              <p className="text-[13px] text-mid/70 leading-relaxed">
-                Scoped to German domestic B2B invoicing: DE, EUR, mixed VAT rates, standard invoices and credit notes. No Java, no iText, no browser.
-              </p>
-            </div>
-            <div className="md:w-3/5 grid grid-cols-2 gap-4">
+            <h3 className="font-display font-bold text-[18px] text-ink mb-4 flex items-center gap-2">
+              <span className="text-sage">●</span> What it is
+            </h3>
+            <ul className="space-y-3 text-[14px] text-ink-2">
               {[
-                { l: 'EN 16931 validated', d: 'XSD-checked XML for the supported invoice path' },
-                { l: 'ZUGFeRD / Factur-X', d: 'CII XML embedded in PDF/A-3b output' },
-                { l: 'German B2B invoice flow', d: 'DE, EUR, mixed VAT rates, invoices and credit notes' },
-                { l: 'pip install and go', d: 'Pure Python \u2014 no Java, no iText, no Chromium' },
-              ].map(c => (
-                <div key={c.l} className="bg-panel rounded-lg border border-rule-light p-5" style={{ boxShadow: '0 1px 4px rgba(20,18,16,0.03)' }}>
-                  <div className="text-[14px] font-semibold text-ink">{c.l}</div>
-                  <div className="text-[13px] text-mid mt-1.5 leading-relaxed">{c.d}</div>
-                </div>
+                'Validation + normalization for Stripe / Shopify / custom billing data',
+                'Adapter layer — handles platform-specific formats',
+                'Pre-flight check before factur-x / drafthorse embedding',
+                'EN 16931 readiness scan (German B2B path)',
+                'Deterministic rule set — same input, same output, every time',
+              ].map((x) => (
+                <li key={x} className="flex gap-3">
+                  <span className="text-sage mt-1">·</span>
+                  <span>{x}</span>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         </FadeUp>
-
-        {/* Scope Matrix */}
-        <FadeUp delay={150}>
-          <div className="mt-16 bg-panel rounded-xl border border-rule-light overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(20,18,16,0.04)' }}>
-            <div className="px-6 py-4 border-b border-rule-light">
-              <span className="text-[11px] tracking-[0.15em] uppercase text-muted font-semibold">Supported standards</span>
-            </div>
-            <div className="divide-y divide-rule-light">
+        <FadeUp delay={200}>
+          <div>
+            <h3 className="font-display font-bold text-[18px] text-ink mb-4 flex items-center gap-2">
+              <span className="text-wine">●</span> What it isn't
+            </h3>
+            <ul className="space-y-3 text-[14px] text-mid">
               {[
-                { standard: 'ZUGFeRD / Factur-X (EN 16931)', status: 'Supported (narrow scope)', icon: '\u2705', detail: 'DE domestic, EUR, standard VAT only. No reverse charge or cross-border.' },
-                { standard: 'Credit notes (type 381)', status: 'Supported', icon: '\u2705', detail: 'Same pipeline, same validation' },
-                { standard: 'Mixed VAT rates (7% + 19%)', status: 'Supported', icon: '\u2705', detail: 'Per-item tax rates, multiple tax entries' },
-              ].map(r => (
-                <div key={r.standard} className="px-6 py-4 flex items-center gap-4">
-                  <span className="text-[16px] w-8 text-center">{r.icon}</span>
-                  <div className="flex-1">
-                    <div className="text-[13px] font-semibold text-ink">{r.standard}</div>
-                    <div className="text-[11px] text-muted mt-0.5">{r.detail}</div>
-                  </div>
-                  <span className={`text-[11px] font-mono font-semibold px-3 py-1 rounded-full ${r.status === 'Production-ready' ? 'bg-sage/10 text-sage' : 'text-muted bg-surface'}`}>
-                    {r.status}
-                  </span>
-                </div>
+                'A full AP automation platform',
+                'An e-invoicing compliance certification',
+                'An AI-powered data fixer (every rule is deterministic)',
+                'A replacement for factur-x or drafthorse — it runs before them',
+                'Cross-border, reverse-charge, or non-EUR currency support (yet)',
+              ].map((x) => (
+                <li key={x} className="flex gap-3">
+                  <span className="text-wine mt-1">·</span>
+                  <span>{x}</span>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         </FadeUp>
       </div>
-    </section>
+    </Section>
   )
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   SECTION: Performance & Audit Trail
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function PerformanceProof() {
-  return (
-    <section className="py-20 md:py-28 bg-ink text-panel">
-      <div className="max-w-[1280px] mx-auto px-6 md:px-10">
-        <FadeUp>
-          <p className="text-[11px] tracking-[0.22em] uppercase text-rust mb-4 font-semibold">Measured, not claimed</p>
-          <h2 className="font-display font-extrabold text-[28px] md:text-[40px] tracking-[-0.03em] leading-[1.08] mb-6 max-w-lg">
-            1,000 line items. 33 pages. 211ms.
-          </h2>
-          <p className="text-[15px] text-panel/75 max-w-lg mb-12 leading-relaxed">
-            Every number on this page comes from committed benchmarks, not marketing estimates. Soak-tested at 500+ sequential renders with zero errors and zero temp file leaks.
-          </p>
-        </FadeUp>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-          {/* Performance stats */}
-          <FadeUp delay={100}>
-            <div className="bg-panel/[0.06] rounded-xl border border-panel/10 p-6">
-              <div className="text-[11px] tracking-[0.15em] uppercase text-panel/55 font-semibold mb-5">Render performance</div>
-              <div className="space-y-4">
-                {[
-                  { label: '1,000-row invoice', value: '211ms', detail: '33 pages, 0.21ms/row' },
-                  { label: '1,000-row statement', value: '260ms', detail: '29 pages, 0.26ms/row' },
-                  { label: 'Simple invoice (warm)', value: '41ms', detail: '1 page, single render' },
-                  { label: 'Server throughput', value: '53.8 RPS', detail: '5 concurrent, Apple Silicon' },
-                ].map(s => (
-                  <div key={s.label} className="flex items-baseline justify-between">
-                    <div>
-                      <div className="text-[13px] text-panel/90">{s.label}</div>
-                      <div className="text-[10px] text-panel/45 font-mono">{s.detail}</div>
-                    </div>
-                    <div className="text-[18px] font-bold text-rust font-mono">{s.value}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </FadeUp>
-
-          {/* Ops dashboard preview */}
-          <FadeUp delay={200}>
-            <div className="bg-panel/[0.06] rounded-xl border border-panel/10 overflow-hidden">
-              {/* Dashboard header bar */}
-              <div className="px-5 py-3 border-b border-panel/8 flex items-center justify-between">
-                <span className="text-[12px] font-semibold text-panel/70">Ops Dashboard</span>
-                <div className="flex items-center gap-4 text-[10px] font-mono text-panel/30">
-                  <span>6 renders</span>
-                  <span className="text-sage">100%</span>
-                  <span>84ms avg</span>
-                </div>
-              </div>
-              {/* Trace detail */}
-              <div className="p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-[14px] font-bold text-panel/90">einvoice.j2.typ</span>
-                  <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-sage/20 text-sage">OK</span>
-                  <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-rust/20 text-rust">EN16931</span>
-                </div>
-                {/* Pipeline stages */}
-                <div className="space-y-2 mb-4">
-                  {[
-                    { stage: 'zugferd_validation', time: '0ms', meta: 'en16931' },
-                    { stage: 'contract_validation', time: '1ms', meta: '' },
-                    { stage: 'compilation', time: '54ms', meta: '46KB' },
-                    { stage: 'zugferd_postprocess', time: '96ms', meta: '8573B XML' },
-                  ].map(s => (
-                    <div key={s.stage} className="flex items-center gap-3 px-3 py-2 rounded bg-panel/[0.04] border border-panel/6">
-                      <span className="text-sage text-[11px]">{'\u2713'}</span>
-                      <span className="text-[11px] font-mono text-panel/60 flex-1">{s.stage}</span>
-                      <span className="text-[10px] font-mono text-panel/30">{s.time}{s.meta ? ` \u00b7 ${s.meta}` : ''}</span>
-                    </div>
-                  ))}
-                </div>
-                {/* Identity */}
-                <div className="border-t border-panel/8 pt-3">
-                  <div className="text-[9px] tracking-[0.15em] uppercase text-panel/25 font-semibold mb-2">Identity</div>
-                  <div className="space-y-1.5 font-mono text-[10px]">
-                    <div className="flex justify-between"><span className="text-panel/30">template</span><span className="text-panel/50">sha256:6958217f022d9d54</span></div>
-                    <div className="flex justify-between"><span className="text-panel/30">data</span><span className="text-panel/50">sha256:5184ad6254598a63</span></div>
-                    <div className="flex justify-between"><span className="text-panel/30">output</span><span className="text-panel/50">sha256:a23cc650b6d7c7ab</span></div>
-                    <div className="flex justify-between"><span className="text-panel/30">engine</span><span className="text-panel/50">trustrender 0.1.2</span></div>
-                  </div>
-                </div>
-              </div>
-              <div className="px-5 py-2.5 border-t border-panel/8 text-[10px] text-panel/25">
-                Every render is traced. Inspect pipeline stages, hashes, and compliance runs in the ops dashboard.
-              </div>
-            </div>
-          </FadeUp>
-        </div>
-
-        <p className="text-[11px] text-panel/45 font-mono mb-8 text-center">
-          Benchmarks: macOS, Apple Silicon, Python 3.12, Typst 0.14. Results vary by platform.
-        </p>
-
-        {/* Memory + reliability row */}
-        <FadeUp delay={300}>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { n: '69.5 MB', d: 'Peak RSS under load' },
-              { n: '500+', d: 'Soak renders, zero errors' },
-              { n: '854', d: 'Automated tests' },
-              { n: '102', d: 'Ugly-data edge cases' },
-            ].map(s => (
-              <div key={s.d} className="text-center py-4">
-                <div className="text-[24px] md:text-[28px] font-bold text-rust font-mono">{s.n}</div>
-                <div className="text-[11px] text-panel/40 mt-1">{s.d}</div>
-              </div>
-            ))}
-          </div>
-        </FadeUp>
-      </div>
-    </section>
-  )
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   SECTION: Developer Setup
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function DeveloperSetup() {
-  return (
-    <section className="py-20 md:py-28 border-t border-rule">
-      <div className="max-w-[1280px] mx-auto px-6 md:px-10">
-        <FadeUp>
-          <div className="flex flex-col md:flex-row gap-12 md:gap-20 items-center">
-            <div className="md:w-2/5">
-              <p className="text-[11px] tracking-[0.22em] uppercase text-rust mb-4 font-semibold">Setup</p>
-              <h2 className="font-display font-extrabold text-[28px] md:text-[36px] tracking-[-0.03em] leading-[1.08] mb-4">
-                First PDF in 30 seconds.
-              </h2>
-              <p className="text-[15px] text-mid leading-relaxed mb-4">
-                Install, run one command, get a real invoice PDF. No config, no boilerplate, no fighting with dependencies.
-              </p>
-              <p className="text-[13px] text-mid/70 leading-relaxed">
-                <span className="font-mono">quickstart</span> creates a sample template, data file, and rendered PDF in your current directory. Edit the template, change the data, re-render.
-              </p>
-            </div>
-            <div className="md:w-3/5">
-              <div className="bg-ink rounded-xl border border-panel/10 overflow-hidden" style={{ boxShadow: '0 4px 20px rgba(20,18,16,0.2)' }}>
-                <div className="px-4 py-2.5 border-b border-panel/10 flex items-center gap-2">
-                  <div className="flex gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-panel/15" />
-                    <div className="w-2 h-2 rounded-full bg-panel/15" />
-                    <div className="w-2 h-2 rounded-full bg-panel/15" />
-                  </div>
-                  <span className="text-[10px] font-mono text-panel/30 ml-2">terminal</span>
-                </div>
-                <div className="p-5 font-mono text-[11px] leading-[1.9]">
-                  <div className="text-panel/50">$ pip install trustrender</div>
-                  <div className="text-panel/50">$ trustrender quickstart</div>
-                  <div className="text-panel/30 mt-3">Created:</div>
-                  <div className="text-panel/70">    trustrender-quickstart/invoice.j2.typ</div>
-                  <div className="text-panel/70">    trustrender-quickstart/invoice_data.json</div>
-                  <div className="text-panel/70">    trustrender-quickstart/invoice.pdf</div>
-                  <div className="mt-3 text-sage font-semibold">Your first PDF: invoice.pdf (34 KB)</div>
-                  <div className="text-panel/30 mt-3">Next:</div>
-                  <div className="text-panel/70">    open trustrender-quickstart/invoice.pdf</div>
-                  <div className="text-panel/70">    trustrender render invoice.j2.typ invoice_data.json -o invoice.pdf</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </FadeUp>
-      </div>
-    </section>
-  )
-}
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   SECTION 5: CTA
+   FINAL CTA
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function FinalCTA() {
   return (
-    <section className="pt-20 md:pt-28 pb-12 md:pb-16 bg-ink text-panel">
-      <div className="max-w-[1280px] mx-auto px-6 md:px-10">
+    <section className="py-24 md:py-32 bg-ink text-panel">
+      <div className="max-w-3xl mx-auto px-6 md:px-10 text-center">
         <FadeUp>
-          <div className="text-center">
-          <h2 className="font-display font-extrabold text-[32px] md:text-[48px] tracking-[-0.03em] leading-[1.05] mb-4 max-w-lg mx-auto">
-            Stop shipping documents you cannot trust.
+          <h2 className="font-display font-extrabold text-[34px] md:text-[52px] tracking-[-0.03em] leading-[1.05] mb-6">
+            Catch the problem at the data layer,<br />not at the customer.
           </h2>
-          <p className="text-[15px] text-panel/55 max-w-md mx-auto mb-8">
-            Readiness. Compliance. Provenance. Validated by default for Jinja2 templates.
+          <p className="text-[16px] md:text-[17px] text-panel/55 max-w-xl mx-auto mb-9 leading-relaxed">
+            Open source. MIT-licensed. No accounts, no SaaS, no telemetry. Just a
+            Python package that validates billing data before it becomes a broken
+            invoice.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
-            <a href="https://github.com/verityengine/trustrender" className="px-7 py-3.5 bg-rust hover:bg-rust-light text-white text-[14px] font-semibold rounded transition-colors inline-block">
-              View on GitHub
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <CopyPill text="pip install trustrender" dark />
+            <a
+              href={REPO}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-panel/15 hover:border-panel/30 bg-panel/[0.05] hover:bg-panel/[0.08] text-panel/80 transition-colors text-[13px]"
+            >
+              View on GitHub  ↗
             </a>
-            <a href="#app" className="px-7 py-3.5 bg-panel text-ink text-[14px] font-semibold rounded transition-colors hover:bg-panel/90 inline-block">
-              Try the playground
-            </a>
-          </div>
-          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
-            {[
-              { label: 'Lean core', cmd: 'pip install trustrender && trustrender quickstart', accent: false },
-              { label: 'With e-invoicing', cmd: 'pip install "trustrender[zugferd]" && trustrender quickstart', accent: true },
-            ].map(({ label, cmd, accent }) => (
-              <button key={label} onClick={() => { navigator.clipboard.writeText(cmd) }}
-                className={`px-5 py-4 rounded-lg text-left cursor-pointer transition-colors group ${accent ? 'border border-rust/40 bg-rust/[0.12] hover:bg-rust/[0.18]' : 'border border-panel/25 bg-panel/[0.08] hover:bg-panel/[0.12]'}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className={`text-[10px] tracking-[0.15em] uppercase font-semibold ${accent ? 'text-rust/70' : 'text-panel/50'}`}>{label}</span>
-                  <span className="text-[9px] text-panel/30 group-hover:text-panel/60 transition-colors">copy</span>
-                </div>
-                <code className="font-mono text-[13px] text-panel/90">{cmd}</code>
-              </button>
-            ))}
-          </div>
           </div>
         </FadeUp>
       </div>
@@ -3807,48 +620,55 @@ function FinalCTA() {
   )
 }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function useHash() {
-  const [hash, setHash] = useState(window.location.hash)
-  useEffect(() => {
-    const onHash = () => setHash(window.location.hash)
-    window.addEventListener('hashchange', onHash)
-    return () => window.removeEventListener('hashchange', onHash)
-  }, [])
-  return hash
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   FOOTER
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function Footer() {
+  return (
+    <footer className="bg-ink-2 border-t border-panel/5 text-panel/55 py-10">
+      <div className="max-w-[1200px] mx-auto px-6 md:px-10 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-2.5">
+          <div className="w-5 h-5 rounded bg-rust/20 border border-rust/30 flex items-center justify-center">
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
+              <path d="M3 3h7l3 3v7H3V3z" stroke="#d4783e" strokeWidth="1.6" strokeLinejoin="round" />
+              <path d="M5.5 9l1.5 1.5L10 7.5" stroke="#d4783e" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <span className="text-[13px] text-panel/70">TrustRender · by Verity Engine</span>
+        </div>
+        <nav className="flex items-center gap-5 text-[12px]">
+          <a href={REPO} target="_blank" rel="noopener noreferrer" className="hover:text-panel transition-colors">
+            GitHub
+          </a>
+          <a href={PYPI} target="_blank" rel="noopener noreferrer" className="hover:text-panel transition-colors">
+            PyPI
+          </a>
+          <a href={`${REPO}/blob/main/README.md`} target="_blank" rel="noopener noreferrer" className="hover:text-panel transition-colors">
+            Docs
+          </a>
+          <span className="text-panel/30">MIT</span>
+        </nav>
+      </div>
+    </footer>
+  )
 }
 
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   APP
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 export default function App() {
-  const hash = useHash()
-  const isApp = hash === '#app' || hash.startsWith('#app/')
-
-  if (isApp) return <AppWorkspace />
-
   return (
-    <div>
-      <nav className="sticky top-0 z-50 bg-ink/90 backdrop-blur-md border-b border-panel/10">
-        <div className="max-w-[1280px] mx-auto px-6 md:px-10 py-4 flex items-center justify-between">
-          <a href="/" className="text-panel"><AnimatedLogo animate /></a>
-          <div className="flex items-center gap-4">
-            <a href="#app" className="text-[14px] font-semibold px-5 py-2.5 rounded-lg bg-rust hover:bg-rust-light text-white transition-colors hidden md:inline-block">Try the playground</a>
-            <a href="https://github.com/verityengine/trustrender" className="text-[14px] font-medium px-5 py-2.5 rounded-lg bg-panel hover:bg-panel/90 text-ink transition-colors">GitHub</a>
-          </div>
-        </div>
-      </nav>
-      <HeroReveal />
-      <TrustLayers />
-      <ReadyDemo />
-      <IngestDemo />
-      <ComplianceWedge />
-      <PerformanceProof />
-      <DeveloperSetup />
+    <div className="min-h-screen">
+      <Header />
+      <Hero />
+      <WhyExists />
+      <Adapters />
+      <Stats />
+      <WhatItChecks />
+      <EndToEnd />
+      <Scope />
       <FinalCTA />
-      <footer className="py-5 bg-ink border-t border-panel/10">
-        <div className="max-w-[1280px] mx-auto px-6 md:px-10 flex items-center justify-between">
-          <div className="text-panel/50"><AnimatedLogo size="small" /></div>
-          <p className="text-panel/40 text-[10px] font-mono">trustrender v0.1</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }
