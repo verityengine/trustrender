@@ -283,24 +283,32 @@ What still slips past TrustRender: things only the official Schematron rules cat
 
 See [docs/einvoice-scope.md](docs/einvoice-scope.md) for the full scope matrix.
 
-## Optional: PDF rendering (legacy)
+## Also: deterministic PDF rendering
 
-TrustRender also includes a Jinja2 + Typst PDF render engine — the original product before the validation pivot. It is kept for users who want a single package that does both data validation and PDF rendering, but it is not part of the validation wedge and most users should use their own template engine and just hand TrustRender the data.
+TrustRender ships a Jinja2 + Typst render engine alongside the validation layer. Used internally to produce the visual PDF for Factur-X embedding, and usable standalone if you want one Python package that goes from data → validated canonical → final PDF without bringing in a headless browser.
+
+- 1,000-line invoice rendered in ~211 ms (Apple Silicon, single core)
+- 1,011-page invoice rendered in 37 seconds
+- No headless browser, no Chromium binary, no Java runtime — pure Python + the Typst CLI
+- SHA-256 fingerprinting of input, template, and output for audit trails (see `trustrender audit`)
+- Drift detection vs saved baselines for visual regression in CI
+- Subprocess-based backend with real timeouts (killable renders, not just abandoned)
+- Bundled fonts, six built-in templates (invoice, einvoice, statement, letter, receipt, report)
 
 ```
 pip install "trustrender[render]"
 trustrender render invoice.j2.typ data.json -o invoice.pdf --zugferd en16931
 ```
 
-Rendering uses Typst — no browser, no Chromium. Fast and deterministic.
+`render`, `preflight`, `audit`, `baseline`, and `serve` are all part of the rendering surface — see `trustrender --help` for the full set.
 
 ## What this is not
 
 - Not a full AP automation platform
 - Not an e-invoice compliance certification (run Schematron on the output XML for that)
-- Not an AI-powered data fixer (all corrections are deterministic)
-- Not a replacement for factur-x or drafthorse — it's the validation layer you run before them, plus thin wrappers around their entry points
-- Not a billing platform replacement — it expects you already collect payment via Stripe / Shopify / something else
+- Not an AI-powered data fixer — all normalizations and validations are deterministic
+- Not a replacement for factur-x or drafthorse — it validates billing data before them and wraps their entry points for convenience
+- Not a billing platform replacement — it expects you already collect payment via Stripe, Shopify, or something else
 
 ## Development
 

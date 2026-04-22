@@ -453,8 +453,8 @@ function EndToEnd() {
     <Section
       id="example"
       kicker="In your code"
-      title="Three lines between Stripe and a compliant Factur-X invoice."
-      lede="Adapter normalizes the platform quirks. Validator returns a canonical dict and a list of any blocking issues. You hand the canonical dict to factur-x or drafthorse for XML embedding."
+      title="From Stripe to a compliant Factur-X PDF."
+      lede="Adapter normalizes platform quirks. Validator catches structural problems. The bridge translates canonical → ZUGFeRD shape and runs full EN 16931 contract validation before drafthorse builds the XML."
       light={false}
       narrow
     >
@@ -462,33 +462,37 @@ function EndToEnd() {
         <Terminal filename="integration.py">
 {`from trustrender import validate_invoice
 from trustrender.adapters import from_stripe
-
-# 1. Pull a Stripe invoice (raw API response)
-stripe_invoice = stripe.Invoice.retrieve("in_1RExNk...")
-
-# 2. Adapt + validate (one call)
-result = validate_invoice(
-    from_stripe(stripe_invoice.to_dict()),
-    zugferd=True,
+from trustrender.zugferd import (
+    to_zugferd_data, build_invoice_xml, apply_zugferd
 )
 
-# 3. Hand off the canonical dict — or surface the blocking errors
-if result["render_ready"] and result["zugferd_ready"]:
-    canonical = result["canonical"]
-    # ... your factur-x / drafthorse generation code here
-else:
-    for error in result["errors"]:
-        print(f"BLOCKED: {error['message']}")`}
+# 1. Adapt + validate the Stripe payload
+result = validate_invoice(from_stripe(stripe_invoice.to_dict()))
+
+# 2. Bridge to ZUGFeRD shape (you supply the regulatory metadata
+#    Stripe never includes — VAT id, IBAN, applicable tax rate)
+zugferd_data = to_zugferd_data(
+    result["canonical"],
+    seller={"name": "...", "vat_id": "DE...",
+            "address": "...", "city": "...",
+            "postal_code": "...", "country": "DE"},
+    payment={"means": "credit_transfer", "iban": "DE..."},
+    tax_rate=19,
+)
+
+# 3. drafthorse builds the CII XML, factur-x embeds it in PDF/A-3b
+xml = build_invoice_xml(zugferd_data)
+factur_x_pdf = apply_zugferd(your_visual_pdf, xml, lang="de")`}
         </Terminal>
         <div className="mt-8 flex flex-wrap gap-3 justify-center">
           <CopyPill text="pip install trustrender" dark />
           <a
-            href={`${REPO}/blob/main/examples/start_to_finish.py`}
+            href={`${REPO}/blob/main/examples/with_drafthorse_facturx.py`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-panel/15 hover:border-panel/30 bg-panel/[0.05] hover:bg-panel/[0.08] text-panel/80 transition-colors text-[13px]"
           >
-            See the full example  ↗
+            See the end-to-end example  ↗
           </a>
         </div>
       </FadeUp>
@@ -501,7 +505,7 @@ else:
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function Stats() {
   const stats = [
-    { value: '993', label: 'tests passing' },
+    { value: '1,003', label: 'tests passing' },
     { value: '90+', label: 'field aliases' },
     { value: 'EN 16931', label: 'compliance path' },
     { value: 'Pure Python', label: 'no Java, no browser' },
@@ -525,6 +529,86 @@ function Stats() {
         </div>
       </div>
     </section>
+  )
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   RENDER ENGINE — the sidecar
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function RenderEngine() {
+  const stats = [
+    { value: '211 ms', label: '1,000 line items' },
+    { value: '37 s', label: '1,011-page invoice' },
+    { value: '0', label: 'errors in 500 soak renders' },
+    { value: 'PDF/A-3b', label: 'Factur-X output' },
+  ]
+  return (
+    <Section
+      id="render"
+      kicker="Also inside"
+      title="Deterministic PDF rendering, no headless browser."
+      lede="TrustRender ships a Jinja2 + Typst render engine alongside the validation layer. Used internally to produce the visual PDF for Factur-X embedding, and usable standalone if you want one Python package to go from data → validated canonical → final PDF."
+    >
+      <FadeUp delay={150}>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
+          {stats.map((s) => (
+            <div key={s.label} className="text-center md:text-left">
+              <div className="font-display font-extrabold text-[26px] md:text-[32px] text-ink leading-none mb-1.5 tracking-tight">
+                {s.value}
+              </div>
+              <div className="text-[11px] tracking-[0.16em] uppercase text-mid font-semibold">
+                {s.label}
+              </div>
+            </div>
+          ))}
+        </div>
+      </FadeUp>
+
+      <FadeUp delay={250}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+          <div>
+            <ul className="space-y-3 text-[14px] text-ink-2">
+              {[
+                'Pure Python + Typst CLI — no Chromium, no Java runtime, no WebKit',
+                'Subprocess backend with real timeouts (killable renders, not just abandoned)',
+                'SHA-256 fingerprinting of input, template, and output for audit trails',
+                'Drift detection vs saved baselines for visual regression in CI',
+                'Six built-in templates: invoice, einvoice, statement, letter, receipt, report',
+                'Bundled Inter and JetBrains Mono fonts',
+              ].map((x) => (
+                <li key={x} className="flex gap-3">
+                  <span className="text-rust mt-1">·</span>
+                  <span>{x}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="bg-ink-3 rounded-xl border border-panel/10 overflow-hidden shadow-sm">
+            <div className="px-4 py-2.5 border-b border-panel/10 flex items-center gap-2">
+              <div className="flex gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-panel/15" />
+                <div className="w-2.5 h-2.5 rounded-full bg-panel/15" />
+                <div className="w-2.5 h-2.5 rounded-full bg-panel/15" />
+              </div>
+              <span className="text-[11px] font-mono text-panel/50 ml-2">$ trustrender render</span>
+            </div>
+            <pre className="px-5 py-4 text-[12.5px] font-mono leading-[1.6] text-panel/85 overflow-x-auto whitespace-pre">
+{`pip install "trustrender[render]"
+
+trustrender render \\
+  invoice.j2.typ data.json \\
+  -o invoice.pdf \\
+  --zugferd en16931
+
+# or run audit + drift detection
+trustrender audit \\
+  invoice.j2.typ data.json \\
+  --baseline-dir ./baselines`}
+            </pre>
+          </div>
+        </div>
+      </FadeUp>
+    </Section>
   )
 }
 
@@ -666,6 +750,7 @@ export default function App() {
       <Stats />
       <WhatItChecks />
       <EndToEnd />
+      <RenderEngine />
       <Scope />
       <FinalCTA />
       <Footer />
