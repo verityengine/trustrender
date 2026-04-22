@@ -434,6 +434,125 @@ _GUIDELINE_IDS = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Canonical → ZUGFeRD shape bridge
+# ---------------------------------------------------------------------------
+
+
+def to_zugferd_data(
+    canonical: dict,
+    *,
+    seller: dict,
+    payment: dict,
+    tax_rate: float,
+    invoice_type: str = "380",
+    referenced_invoice: str | None = None,
+) -> dict:
+    """Bridge canonical invoice dict → ZUGFeRD-shaped dict ready for XML build.
+
+    TrustRender's canonical schema (sender/recipient, top-level amounts) is
+    designed for human-readable invoice rendering. The ZUGFeRD/EN 16931 XML
+    schema needs a different shape: seller/buyer, per-line tax rates, an
+    aggregate tax_entries summary, and explicit payment details.
+
+    This function does the structural translation. Callers must supply the
+    regulatory metadata that no billing platform (Stripe, Shopify, etc.)
+    includes in its export:
+
+    Args:
+        canonical: The ``canonical`` field returned by ``validate_invoice()``.
+        seller: Seller details required by EN 16931. Required keys:
+            ``name``, ``address``, ``city``, ``postal_code``, ``country``,
+            ``vat_id``. Optional: ``email``, ``phone``.
+        payment: Payment details. Required key: ``means`` (one of
+            ``"credit_transfer"``, ``"direct_debit"``).
+            Optional: ``iban``, ``bic``.
+        tax_rate: Single applicable VAT rate as a percent (e.g., ``19`` for 19%).
+            Mixed-rate invoices not supported in v1.
+        invoice_type: ``"380"`` (invoice, default) or ``"381"`` (credit note).
+        referenced_invoice: Original invoice number, required for credit notes (381).
+
+    Returns:
+        Dict ready to pass to ``build_invoice_xml()``. Use
+        ``validate_zugferd_invoice_data()`` first to catch missing fields
+        before XML generation.
+
+    Raises:
+        ValueError: If canonical is missing required fields or seller/payment
+            don't have the keys EN 16931 needs. Errors fail loud at translation
+            time so they surface before drafthorse runs.
+
+    Example::
+
+        from trustrender import validate_invoice
+        from trustrender.adapters import from_stripe
+        from trustrender.zugferd import to_zugferd_data, build_invoice_xml
+
+        result = validate_invoice(from_stripe(stripe_invoice))
+        zugferd_data = to_zugferd_data(
+            result["canonical"],
+            seller={
+                "name": "NovaTech Solutions GmbH",
+                "address": "Hauptstr. 5", "city": "Berlin",
+                "postal_code": "10115", "country": "DE",
+                "vat_id": "DE123456789",
+            },
+            payment={"means": "credit_transfer", "iban": "DE89370400440532013000"},
+            tax_rate=19,
+        )
+        xml = build_invoice_xml(zugferd_data)
+    """
+    if not isinstance(canonical, dict):
+        raise ValueError(f"canonical must be a dict, got {type(canonical).__name__}")
+    if not isinstance(seller, dict):
+        raise ValueError("seller must be a dict")
+    if not isinstance(payment, dict):
+        raise ValueError("payment must be a dict")
+
+    recipient = canonical.get("recipient") or {}
+    extras = canonical.get("extras") or {}
+
+    # Buyer is recipient + structured address fields (which the adapters preserve in extras)
+    buyer = {
+        "name": recipient.get("name", ""),
+        "address": recipient.get("address", ""),
+        "city": extras.get("recipient.city", ""),
+        "postal_code": extras.get("recipient.postal_code", ""),
+        "country": extras.get("recipient.country", ""),
+    }
+
+    # Per-line tax rate (single rate in v1)
+    items = [{**item, "tax_rate": tax_rate} for item in canonical.get("items", [])]
+
+    # Aggregate tax entry — a single VAT bucket since v1 is single-rate only
+    subtotal = canonical.get("subtotal", 0)
+    tax_amount = canonical.get("tax_amount", 0)
+    tax_entries = [{"rate": tax_rate, "basis": subtotal, "amount": tax_amount}]
+
+    out = {
+        "invoice_number": canonical.get("invoice_number", ""),
+        "invoice_date": canonical.get("invoice_date", ""),
+        "due_date": canonical.get("due_date", ""),
+        "currency": canonical.get("currency", "EUR"),
+        "invoice_type": invoice_type,
+        "seller": seller,
+        "buyer": buyer,
+        "items": items,
+        "subtotal": subtotal,
+        "tax_amount": tax_amount,
+        "tax_total": tax_amount,
+        "total": canonical.get("total", 0),
+        "tax_entries": tax_entries,
+        "payment": payment,
+        "notes": canonical.get("notes", ""),
+    }
+
+    if referenced_invoice:
+        out["referenced_invoice"] = referenced_invoice
+
+    return out
+
+
 def build_invoice_xml(data: dict, *, profile: str = "en16931") -> bytes:
     """Convert TrustRender invoice data dict to CII XML bytes.
 

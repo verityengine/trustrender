@@ -112,12 +112,14 @@ Requires Python 3.11+.
 from trustrender import validate_invoice
 from trustrender.adapters import from_stripe
 
-# Raw Stripe API response → validated canonical invoice
-result = validate_invoice(from_stripe(raw_stripe_response), zugferd=True)
+# Raw Stripe API response → canonical invoice (structural validation)
+result = validate_invoice(from_stripe(raw_stripe_response))
 
-if result["render_ready"] and result.get("zugferd_ready"):
+if result["render_ready"]:
     canonical = result["canonical"]
-    # safe to hand off to factur-x / drafthorse
+    # canonical is now ready for either:
+    #   - your own template renderer (most users)
+    #   - the to_zugferd_data() bridge → drafthorse / factur-x (see end-to-end example below)
 else:
     for error in result["errors"]:
         print(f"BLOCKED: {error['message']}")
@@ -130,7 +132,8 @@ else:
 - `errors`: list of blocking issues with rule_id, path, expected/actual
 - `warnings`: advisory issues
 - `normalizations`: field-level provenance (what was renamed, coerced, computed)
-- `zugferd_ready`: bool (if `zugferd=True`)
+
+The `zugferd=True` flag is also accepted but only useful if your input is already in ZUGFeRD shape (with `seller`/`buyer`/`tax_entries`/`payment` keys). For Stripe and Shopify, use the `to_zugferd_data()` bridge after `validate_invoice()` instead — see the end-to-end example below.
 
 Also works with messy data from any source:
 
@@ -180,23 +183,46 @@ Parses string amounts to floats, combines first_name + last_name, maps order fie
 
 [`examples/with_drafthorse_facturx.py`](examples/with_drafthorse_facturx.py) runs the full pipeline:
 
-1. Raw Stripe payload → TrustRender adapter + validation
-2. Add the regulatory metadata Stripe doesn't ship (VAT ID, payment IBAN, tax entries)
-3. drafthorse builds UN/CEFACT CII XML
-4. factur-x embeds the XML into a PDF/A-3b container
-5. Verify with `xml_check_xsd(flavor="factur-x", level="en16931")` — passes
+```python
+from trustrender import validate_invoice
+from trustrender.adapters import from_stripe
+from trustrender.zugferd import to_zugferd_data, build_invoice_xml, apply_zugferd
 
-Output: a 15 KB Factur-X invoice PDF that validates against the EN 16931 XSD.
+# 1. Adapt + validate the Stripe payload (canonical structure check)
+result = validate_invoice(from_stripe(stripe_invoice))
+
+# 2. Bridge canonical → ZUGFeRD shape with the three things Stripe never includes:
+#    seller VAT/address, payment IBAN, applicable tax rate
+zugferd_data = to_zugferd_data(
+    result["canonical"],
+    seller={"name": "...", "address": "...", "city": "...",
+            "postal_code": "...", "country": "DE", "vat_id": "DE..."},
+    payment={"means": "credit_transfer", "iban": "DE..."},
+    tax_rate=19,
+)
+# Real EN 16931 contract validation runs here — catches anything XML build would reject.
+
+# 3. drafthorse builds UN/CEFACT CII XML
+xml_bytes = build_invoice_xml(zugferd_data)
+
+# 4. factur-x embeds the XML into a PDF/A-3b container
+factur_x_pdf = apply_zugferd(your_visual_pdf_bytes, xml_bytes, lang="de")
+```
+
+Output: a 15 KB Factur-X invoice PDF that validates against the EN 16931 XSD ([sample committed at `examples/invoice_facturx.pdf`](examples/invoice_facturx.pdf)).
 
 ```
 $ python examples/with_drafthorse_facturx.py
-Step 1: Adapt + validate via TrustRender    → status=ready
-Step 2: Build CII XML via drafthorse        → 8,290 bytes of CII XML
-Step 3: Render visual PDF                   → 1,599 bytes
-Step 4: Embed CII XML as PDF/A-3b           → 14,936 bytes
-Step 5: Verify with factur-x library        → ✓ passes EN 16931 XSD
+Step 1: Adapt + validate via TrustRender (canonical structure)  → status=ready
+Step 2: Bridge canonical → ZUGFeRD shape (one call)             → passes EN 16931 contract validation
+Step 3: Build CII XML via drafthorse                            → 8,312 bytes of CII XML
+Step 4: Render visual PDF (your template)                       → 1,599 bytes
+Step 5: Embed CII XML as PDF/A-3b                               → 15,004 bytes
+Step 6: Verify with factur-x library                            → ✓ passes EN 16931 XSD
 ✓ factur-x.xml is embedded in the PDF
 ```
+
+What's TrustRender vs what's you: the seller VAT, payment IBAN, and tax rate come from your billing setup — Stripe's API doesn't include them, and TrustRender doesn't invent them. Everything else is automatic.
 
 ## What it normalizes
 
@@ -242,39 +268,24 @@ trustrender serve --templates <dir> [--port 8190]
 trustrender doctor [--smoke]
 ```
 
-## Integration with factur-x / drafthorse
-
-TrustRender validates and normalizes. You generate and embed with the library of your choice.
-
-```python
-from trustrender import validate_invoice
-
-# Step 1: Validate with TrustRender
-result = validate_invoice(messy_data, zugferd=True)
-if not result["render_ready"] or not result["zugferd_ready"]:
-    raise ValueError(f"Invoice blocked: {result['errors']}")
-
-# Step 2: Use the canonical payload with drafthorse or factur-x
-canonical = result["canonical"]
-# ... your existing ZUGFeRD generation code here
-```
-
 ## EN 16931 e-invoicing (narrow scope)
 
-Catches many document-level and ZUGFeRD/EN 16931 readiness issues before embedding. Currently supports:
+Catches structural and contract-level EN 16931 issues before drafthorse builds the XML. Currently supports:
 
 - **Domestic German B2B invoices** with standard VAT, EUR, SEPA payment
-- Single or mixed VAT rates (7% + 19%)
+- Single VAT rate per invoice (mixed rates not yet supported in the bridge)
 - Invoice type 380 and credit note 381
-- PDF/A-3b with embedded CII XML (requires `trustrender[render]`)
+- PDF/A-3b with embedded CII XML via `apply_zugferd()` (wraps `factur-x.attach_xml`)
 
-Not supported (fails loudly): reverse charge, cross-border, allowances/charges, non-EUR currencies.
+Not supported, fails loudly: reverse charge, cross-border, allowances/charges, non-EUR currencies, non-DE seller country.
+
+What still slips past TrustRender: things only the official Schematron rules catch (cross-field business rules, value range checks). Run [`xml_check_xsd`](https://github.com/akretion/factur-x) and `xml_check_schematron` on the produced XML for full compliance certainty.
 
 See [docs/einvoice-scope.md](docs/einvoice-scope.md) for the full scope matrix.
 
-## Optional: PDF rendering
+## Optional: PDF rendering (legacy)
 
-If you also want TrustRender to generate PDFs (not just validate):
+TrustRender also includes a Jinja2 + Typst PDF render engine — the original product before the validation pivot. It is kept for users who want a single package that does both data validation and PDF rendering, but it is not part of the validation wedge and most users should use their own template engine and just hand TrustRender the data.
 
 ```
 pip install "trustrender[render]"
@@ -286,9 +297,10 @@ Rendering uses Typst — no browser, no Chromium. Fast and deterministic.
 ## What this is not
 
 - Not a full AP automation platform
-- Not an e-invoice compliance certification
+- Not an e-invoice compliance certification (run Schematron on the output XML for that)
 - Not an AI-powered data fixer (all corrections are deterministic)
-- Not a replacement for factur-x or drafthorse — it's the validation layer you run before them
+- Not a replacement for factur-x or drafthorse — it's the validation layer you run before them, plus thin wrappers around their entry points
+- Not a billing platform replacement — it expects you already collect payment via Stripe / Shopify / something else
 
 ## Development
 

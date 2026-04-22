@@ -4,11 +4,12 @@ Proves the full chain works. Produces invoice_facturx.pdf — a real PDF/A-3b
 document with embedded EN 16931 CII XML, ready for German B2B e-invoicing.
 
 What each library does in this pipeline:
-  - TrustRender:  adapt + validate the source payload, give you a canonical dict
-  - You:          add the regulatory metadata TrustRender doesn't compute
-                  (seller VAT ID, payment IBAN, per-line tax rates, tax entries)
-  - drafthorse:   turn the enriched dict into UN/CEFACT CII XML
+  - TrustRender:  adapt + validate Stripe payload, bridge canonical → ZUGFeRD
+                  shape, run full EN 16931 readiness checks before XML build
+  - drafthorse:   turn the ZUGFeRD-shaped dict into UN/CEFACT CII XML
   - factur-x:     embed the XML into a PDF/A-3b container
+  - You:          provide the regulatory metadata Stripe doesn't ship
+                  (seller VAT ID, payment IBAN, applicable tax rate)
 
 Requires: pip install trustrender fpdf2
 
@@ -21,7 +22,12 @@ from fpdf import FPDF
 
 from trustrender import validate_invoice
 from trustrender.adapters import from_stripe
-from trustrender.zugferd import apply_zugferd, build_invoice_xml
+from trustrender.zugferd import (
+    apply_zugferd,
+    build_invoice_xml,
+    to_zugferd_data,
+    validate_zugferd_invoice_data,
+)
 
 # ── Step 1: Raw Stripe API response ──────────────────────────────────
 # Pretend we just pulled this from stripe.Invoice.retrieve("in_...")
@@ -53,24 +59,22 @@ stripe_invoice = {
     "sender": {"name": "NovaTech Solutions GmbH"},
 }
 
-print("Step 1: Adapt + validate via TrustRender")
+print("Step 1: Adapt + validate via TrustRender (canonical structure)")
 adapted = from_stripe(stripe_invoice)
-adapted["tax_rate"] = 19  # German MwSt — Stripe doesn't include this
 result = validate_invoice(adapted)
-
 assert result["render_ready"], f"Validation failed: {result['errors']}"
 print(f"  → status={result['status']}, render_ready={result['render_ready']}")
-canonical = result["canonical"]
 
 
-# ── Step 2: Add the regulatory metadata Stripe doesn't ship ──────────
-# TrustRender canonical is data-shape correct. For ZUGFeRD/Factur-X you
-# also need: seller VAT ID, payment details, per-line tax_rate, tax_entries.
-# In a real integration these come from your billing setup, not from Stripe.
+# ── Step 2: Bridge to ZUGFeRD shape with regulatory metadata ─────────
+# These three things — seller VAT/address, payment IBAN, applicable tax rate —
+# are the only fields Stripe doesn't ship that ZUGFeRD requires.
+# Everything else flows through from the canonical dict automatically.
 
-zugferd_data = {
-    **canonical,
-    "seller": {
+print("Step 2: Bridge canonical → ZUGFeRD shape (one call)")
+zugferd_data = to_zugferd_data(
+    result["canonical"],
+    seller={
         "name": "NovaTech Solutions GmbH",
         "address": "Hauptstr. 5",
         "city": "Berlin",
@@ -79,38 +83,31 @@ zugferd_data = {
         "vat_id": "DE123456789",
         "email": "billing@novatech.example",
     },
-    "buyer": {
-        "name": canonical["recipient"]["name"],
-        "address": "Industriestr. 42",
-        "city": canonical["extras"]["recipient.city"],
-        "postal_code": canonical["extras"]["recipient.postal_code"],
-        "country": canonical["extras"]["recipient.country"],
-    },
-    "items": [
-        {**item, "tax_rate": 19} for item in canonical["items"]
-    ],
-    "tax_entries": [
-        {"rate": 19, "basis": canonical["subtotal"], "amount": canonical["tax_amount"]}
-    ],
-    "tax_total": canonical["tax_amount"],
-    "payment": {
+    payment={
         "means": "credit_transfer",
         "iban": "DE89370400440532013000",
         "bic": "COBADEFFXXX",
     },
-}
+    tax_rate=19,  # German MwSt
+)
+
+# Run real EN 16931 validation BEFORE drafthorse touches it
+errors = validate_zugferd_invoice_data(zugferd_data)
+assert not errors, f"EN 16931 validation failed: {[(e.path, e.message) for e in errors]}"
+print(f"  → ZUGFeRD shape passes EN 16931 contract validation")
 
 
 # ── Step 3: Build CII XML via drafthorse (TrustRender wraps it) ──────
 
-print("Step 2: Build CII XML via drafthorse")
+print("Step 3: Build CII XML via drafthorse")
 xml_bytes = build_invoice_xml(zugferd_data, profile="en16931")
-print(f"  → {len(xml_bytes):,} bytes of UN/CEFACT CII XML generated")
+print(f"  → {len(xml_bytes):,} bytes of UN/CEFACT CII XML")
 
 
 # ── Step 4: Generate a visual PDF (your invoice template, simplified) ─
 
-print("Step 3: Render visual PDF (this would be YOUR invoice template)")
+print("Step 4: Render visual PDF (this would be YOUR invoice template)")
+canonical = result["canonical"]
 pdf = FPDF()
 pdf.add_page()
 pdf.set_font("Helvetica", "B", 18)
@@ -141,7 +138,7 @@ for item in canonical["items"]:
 pdf.ln(4)
 pdf.cell(150, 6, "Subtotal", align="R")
 pdf.cell(35, 6, f"EUR {canonical['subtotal']:,.2f}", align="R", new_x="LMARGIN", new_y="NEXT")
-pdf.cell(150, 6, f"VAT (19%)", align="R")
+pdf.cell(150, 6, "VAT (19%)", align="R")
 pdf.cell(35, 6, f"EUR {canonical['tax_amount']:,.2f}", align="R", new_x="LMARGIN", new_y="NEXT")
 pdf.set_font("Helvetica", "B", 11)
 pdf.cell(150, 6, "Total", align="R")
@@ -153,7 +150,7 @@ print(f"  → {len(visual_pdf_bytes):,} bytes of visual PDF")
 
 # ── Step 5: Embed XML into PDF via factur-x (TrustRender wraps it) ───
 
-print("Step 4: Embed CII XML into PDF as Factur-X / PDF/A-3b")
+print("Step 5: Embed CII XML into PDF as Factur-X / PDF/A-3b")
 factur_x_pdf = apply_zugferd(visual_pdf_bytes, xml_bytes, lang="de")
 print(f"  → {len(factur_x_pdf):,} bytes of Factur-X compliant PDF")
 
@@ -165,19 +162,15 @@ out_path.write_bytes(factur_x_pdf)
 print(f"\nWrote {out_path}")
 
 # Verify XML is XSD-valid using factur-x library
-try:
-    from facturx import xml_check_xsd
-    print("\nStep 5: Verify with factur-x library")
-    # xml_check_xsd returns True on success, raises on failure
-    is_valid = xml_check_xsd(xml_bytes, flavor="factur-x", level="en16931")
-    print(f"  ✓ XML passes EN 16931 XSD validation: {is_valid}")
-except ImportError:
-    print("\n(install factur-x for XSD verification: pip install factur-x)")
-except Exception as exc:
-    print(f"  ✗ Verification raised: {exc}")
+print("\nStep 6: Verify with factur-x library")
+from facturx import xml_check_xsd
+
+is_valid = xml_check_xsd(xml_bytes, flavor="factur-x", level="en16931")
+print(f"  ✓ XML passes EN 16931 XSD validation: {is_valid}")
 
 # Verify the PDF actually contains an embedded file
 from pypdf import PdfReader
+
 reader = PdfReader(out_path)
 embedded = reader.attachments
 print(f"\nEmbedded files in PDF: {list(embedded.keys())}")

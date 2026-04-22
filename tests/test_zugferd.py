@@ -12,6 +12,7 @@ from trustrender.errors import ErrorCode, TrustRenderError
 from trustrender.zugferd import (
     apply_zugferd,
     build_invoice_xml,
+    to_zugferd_data,
     validate_zugferd_invoice_data,
 )
 
@@ -810,3 +811,128 @@ class TestZeroTaxRateRejection:
         data["items"][0]["tax_rate"] = 0
         verdict = preflight("examples/einvoice.j2.typ", data, zugferd="en16931")
         assert verdict.ready is False
+
+
+# ---------------------------------------------------------------------------
+# to_zugferd_data() bridge — canonical → ZUGFeRD shape
+# ---------------------------------------------------------------------------
+
+
+class TestToZugferdData:
+    """The bridge that closes the gap between TrustRender's canonical schema
+    (sender/recipient, top-level amounts) and the EN 16931 schema (seller/buyer,
+    per-line tax rates, tax_entries, payment).
+    """
+
+    def _canonical(self) -> dict:
+        from trustrender import validate_invoice
+        from trustrender.adapters.stripe import from_stripe
+
+        raw = json.loads((EXAMPLES / "demo_stripe_ready.json").read_text())
+        result = validate_invoice(from_stripe(raw))
+        return result["canonical"]
+
+    def _seller(self) -> dict:
+        return {
+            "name": "NovaTech Solutions GmbH",
+            "address": "Hauptstr. 5",
+            "city": "Berlin",
+            "postal_code": "10115",
+            "country": "DE",
+            "vat_id": "DE123456789",
+        }
+
+    def _payment(self) -> dict:
+        return {"means": "credit_transfer", "iban": "DE89370400440532013000", "bic": "COBADEFFXXX"}
+
+    def test_produces_zugferd_valid_dict(self):
+        """The bridged dict passes validate_zugferd_invoice_data with no errors."""
+        zd = to_zugferd_data(
+            self._canonical(),
+            seller=self._seller(),
+            payment=self._payment(),
+            tax_rate=19,
+        )
+        errors = validate_zugferd_invoice_data(zd)
+        assert errors == [], f"unexpected EN 16931 errors: {[(e.path, e.message) for e in errors]}"
+
+    def test_bridges_recipient_to_buyer(self):
+        zd = to_zugferd_data(
+            self._canonical(),
+            seller=self._seller(),
+            payment=self._payment(),
+            tax_rate=19,
+        )
+        assert zd["buyer"]["name"] == "Rheingold Maschinenbau GmbH"
+        assert zd["buyer"]["country"] == "DE"
+        assert zd["buyer"]["postal_code"] == "70173"
+
+    def test_propagates_tax_rate_to_each_line(self):
+        zd = to_zugferd_data(
+            self._canonical(),
+            seller=self._seller(),
+            payment=self._payment(),
+            tax_rate=19,
+        )
+        assert all(item["tax_rate"] == 19 for item in zd["items"])
+
+    def test_builds_single_tax_entry(self):
+        canonical = self._canonical()
+        zd = to_zugferd_data(canonical, seller=self._seller(), payment=self._payment(), tax_rate=19)
+        assert len(zd["tax_entries"]) == 1
+        entry = zd["tax_entries"][0]
+        assert entry["rate"] == 19
+        assert entry["basis"] == canonical["subtotal"]
+        assert entry["amount"] == canonical["tax_amount"]
+
+    def test_xml_roundtrip(self):
+        """Bridged dict → drafthorse → XSD-valid CII XML."""
+        from facturx import xml_check_xsd
+
+        zd = to_zugferd_data(
+            self._canonical(),
+            seller=self._seller(),
+            payment=self._payment(),
+            tax_rate=19,
+        )
+        xml = build_invoice_xml(zd)
+        assert xml_check_xsd(xml, flavor="factur-x", level="en16931") is True
+
+    def test_credit_note_requires_referenced_invoice(self):
+        zd = to_zugferd_data(
+            self._canonical(),
+            seller=self._seller(),
+            payment=self._payment(),
+            tax_rate=19,
+            invoice_type="381",
+            referenced_invoice="INV-2026-0042",
+        )
+        assert zd["invoice_type"] == "381"
+        assert zd["referenced_invoice"] == "INV-2026-0042"
+        # And it should still validate
+        assert validate_zugferd_invoice_data(zd) == []
+
+    def test_rejects_non_dict_canonical(self):
+        with pytest.raises(ValueError, match="canonical must be a dict"):
+            to_zugferd_data("not a dict", seller={}, payment={}, tax_rate=19)
+
+    def test_rejects_non_dict_seller(self):
+        with pytest.raises(ValueError, match="seller must be a dict"):
+            to_zugferd_data({}, seller="x", payment={}, tax_rate=19)
+
+    def test_rejects_non_dict_payment(self):
+        with pytest.raises(ValueError, match="payment must be a dict"):
+            to_zugferd_data({}, seller={}, payment="x", tax_rate=19)
+
+    def test_missing_seller_fields_surface_in_zugferd_errors(self):
+        """Bridge passes seller through; missing fields surface as proper EN 16931 errors."""
+        zd = to_zugferd_data(
+            self._canonical(),
+            seller={"name": "Acme"},  # incomplete
+            payment=self._payment(),
+            tax_rate=19,
+        )
+        errors = validate_zugferd_invoice_data(zd)
+        paths = {e.path for e in errors}
+        assert "seller.address" in paths
+        assert "seller.vat_id" in paths
