@@ -7,17 +7,17 @@ from pathlib import Path
 
 import pytest
 
-from trustrender.adapters.stripe import from_stripe
-from trustrender.adapters.shopify import from_shopify
 from trustrender import validate_invoice
+from trustrender.adapters.shopify import from_shopify
+from trustrender.adapters.stripe import from_stripe
 
 FIXTURES = Path(__file__).parent / "fixtures" / "adapters"
 
 
 # ── from_stripe: structural transformation ───────────────────────────
 
-class TestStripeAdapter:
 
+class TestStripeAdapter:
     def test_invoice_number(self):
         result = from_stripe({"number": "INV-001"})
         assert result["invoice_number"] == "INV-001"
@@ -38,23 +38,27 @@ class TestStripeAdapter:
         assert result["currency"] == "USD"
 
     def test_customer_name_and_email(self):
-        result = from_stripe({
-            "customer_name": "Acme Corp",
-            "customer_email": "billing@acme.com",
-        })
+        result = from_stripe(
+            {
+                "customer_name": "Acme Corp",
+                "customer_email": "billing@acme.com",
+            }
+        )
         assert result["recipient"]["name"] == "Acme Corp"
         assert result["recipient"]["email"] == "billing@acme.com"
 
     def test_customer_address_flattened_and_structured(self):
-        result = from_stripe({
-            "customer_address": {
-                "line1": "123 Main St",
-                "city": "Chicago",
-                "state": "IL",
-                "postal_code": "60601",
-                "country": "US",
-            },
-        })
+        result = from_stripe(
+            {
+                "customer_address": {
+                    "line1": "123 Main St",
+                    "city": "Chicago",
+                    "state": "IL",
+                    "postal_code": "60601",
+                    "country": "US",
+                },
+            }
+        )
         # Flattened string for canonical address field
         addr = result["recipient"]["address"]
         assert "123 Main St" in addr
@@ -66,28 +70,32 @@ class TestStripeAdapter:
         assert result["recipient"]["country"] == "US"
 
     def test_expanded_customer_object(self):
-        result = from_stripe({
-            "customer": {
-                "name": "Expanded Corp",
-                "email": "expanded@corp.com",
-            },
-        })
+        result = from_stripe(
+            {
+                "customer": {
+                    "name": "Expanded Corp",
+                    "email": "expanded@corp.com",
+                },
+            }
+        )
         assert result["recipient"]["name"] == "Expanded Corp"
         assert result["recipient"]["email"] == "expanded@corp.com"
 
     def test_line_items_extracted(self):
-        result = from_stripe({
-            "lines": {
-                "data": [
-                    {
-                        "description": "Widget",
-                        "quantity": 2,
-                        "amount": 5000,
-                        "price": {"unit_amount": 2500},
-                    },
-                ],
-            },
-        })
+        result = from_stripe(
+            {
+                "lines": {
+                    "data": [
+                        {
+                            "description": "Widget",
+                            "quantity": 2,
+                            "amount": 5000,
+                            "price": {"unit_amount": 2500},
+                        },
+                    ],
+                },
+            }
+        )
         assert len(result["items"]) == 1
         item = result["items"][0]
         assert item["description"] == "Widget"
@@ -117,11 +125,13 @@ class TestStripeAdapter:
 
     def test_sender_takes_priority_over_vendor(self):
         """First valid dict wins: sender > vendor > seller."""
-        result = from_stripe({
-            "number": "INV-001",
-            "sender": {"name": "Sender"},
-            "vendor": {"name": "Vendor"},
-        })
+        result = from_stripe(
+            {
+                "number": "INV-001",
+                "sender": {"name": "Sender"},
+                "vendor": {"name": "Vendor"},
+            }
+        )
         assert result["sender"]["name"] == "Sender"
 
     def test_non_dict_sender_ignored(self):
@@ -149,8 +159,8 @@ class TestStripeAdapter:
 
 # ── Full fixture: end-to-end ─────────────────────────────────────────
 
-class TestStripeEndToEnd:
 
+class TestStripeEndToEnd:
     def test_full_fixture_validates(self):
         """Full Stripe invoice fixture → adapter → validate → pass (except missing sender)."""
         raw = json.loads((FIXTURES / "stripe_invoice.json").read_text())
@@ -203,7 +213,6 @@ class TestStripeEndToEnd:
 
     def test_zugferd_xml_with_stripe_data(self):
         """from_stripe → validate → build_invoice_xml should work with full data."""
-        from trustrender.zugferd import validate_zugferd_invoice_data
 
         raw = json.loads((FIXTURES / "stripe_invoice.json").read_text())
         adapted = from_stripe(raw)
@@ -240,8 +249,8 @@ class TestStripeEndToEnd:
 
 # ── from_shopify: structural transformation ──────────────────────────
 
-class TestShopifyAdapter:
 
+class TestShopifyAdapter:
     def test_order_number_from_name(self):
         result = from_shopify({"name": "#1047"})
         assert result["invoice_number"] == "1047"
@@ -251,11 +260,13 @@ class TestShopifyAdapter:
         assert result["invoice_number"] == "1047"
 
     def test_amounts_strings_to_floats(self):
-        result = from_shopify({
-            "subtotal_price": "100.00",
-            "total_tax": "19.00",
-            "total_price": "119.00",
-        })
+        result = from_shopify(
+            {
+                "subtotal_price": "100.00",
+                "total_tax": "19.00",
+                "total_price": "119.00",
+            }
+        )
         assert result["subtotal"] == 100.00
         assert result["tax_amount"] == 19.00
         assert result["total"] == 119.00
@@ -269,39 +280,47 @@ class TestShopifyAdapter:
         assert result["currency"] == "EUR"
 
     def test_customer_name_combined(self):
-        result = from_shopify({
-            "customer": {"first_name": "Klaus", "last_name": "Berger"},
-        })
+        result = from_shopify(
+            {
+                "customer": {"first_name": "Klaus", "last_name": "Berger"},
+            }
+        )
         assert result["recipient"]["name"] == "Klaus Berger"
 
     def test_customer_email(self):
-        result = from_shopify({
-            "customer": {"first_name": "A", "last_name": "B", "email": "a@b.com"},
-        })
+        result = from_shopify(
+            {
+                "customer": {"first_name": "A", "last_name": "B", "email": "a@b.com"},
+            }
+        )
         assert result["recipient"]["email"] == "a@b.com"
 
     def test_billing_address_flattened_and_structured(self):
-        result = from_shopify({
-            "billing_address": {
-                "address1": "Werkstr. 15",
-                "city": "Düsseldorf",
-                "province": "NRW",
-                "zip": "40210",
-                "country": "Germany",
-                "country_code": "DE",
-            },
-        })
+        result = from_shopify(
+            {
+                "billing_address": {
+                    "address1": "Werkstr. 15",
+                    "city": "Düsseldorf",
+                    "province": "NRW",
+                    "zip": "40210",
+                    "country": "Germany",
+                    "country_code": "DE",
+                },
+            }
+        )
         assert "Werkstr. 15" in result["recipient"]["address"]
         assert result["recipient"]["city"] == "Düsseldorf"
         assert result["recipient"]["postal_code"] == "40210"
         assert result["recipient"]["country"] == "DE"
 
     def test_line_items_mapped(self):
-        result = from_shopify({
-            "line_items": [
-                {"title": "Widget", "quantity": 3, "price": "25.00"},
-            ],
-        })
+        result = from_shopify(
+            {
+                "line_items": [
+                    {"title": "Widget", "quantity": 3, "price": "25.00"},
+                ],
+            }
+        )
         assert len(result["items"]) == 1
         item = result["items"][0]
         assert item["description"] == "Widget"
@@ -331,9 +350,11 @@ class TestShopifyAdapter:
         assert "subtotal" not in result
 
     def test_tax_rate_from_tax_lines(self):
-        result = from_shopify({
-            "tax_lines": [{"title": "VAT", "price": "19.00", "rate": 0.19}],
-        })
+        result = from_shopify(
+            {
+                "tax_lines": [{"title": "VAT", "price": "19.00", "rate": 0.19}],
+            }
+        )
         assert result["tax_rate"] == 0.19
 
     def test_rejects_non_dict(self):
@@ -342,17 +363,19 @@ class TestShopifyAdapter:
 
     def test_billing_address_name_fallback(self):
         """If customer has no name, use billing_address.name."""
-        result = from_shopify({
-            "customer": {"email": "test@test.com"},
-            "billing_address": {"name": "Klaus Berger"},
-        })
+        result = from_shopify(
+            {
+                "customer": {"email": "test@test.com"},
+                "billing_address": {"name": "Klaus Berger"},
+            }
+        )
         assert result["recipient"]["name"] == "Klaus Berger"
 
 
 # ── Shopify end-to-end ───────────────────────────────────────────────
 
-class TestShopifyEndToEnd:
 
+class TestShopifyEndToEnd:
     def test_full_fixture_validates(self):
         raw = json.loads((FIXTURES / "shopify_order.json").read_text())
         adapted = from_shopify(raw)

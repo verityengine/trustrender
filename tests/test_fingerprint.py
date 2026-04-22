@@ -5,13 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
 from trustrender.fingerprint import (
-    ChangeSet,
-    FieldChange,
-    FileChange,
-    FileHash,
     InputFingerprint,
     compare,
     compute_fingerprint,
@@ -163,7 +157,9 @@ class TestCompare:
         data = _load_data()
         fp1 = compute_fingerprint(EXAMPLES / "invoice.j2.typ", data)
         fp2 = compute_fingerprint(
-            EXAMPLES / "invoice.j2.typ", data, zugferd_profile="en16931",
+            EXAMPLES / "invoice.j2.typ",
+            data,
+            zugferd_profile="en16931",
         )
         cs = compare(fp1, fp2, data, data)
         assert "config" in cs.change_categories

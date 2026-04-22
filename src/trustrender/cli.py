@@ -9,7 +9,6 @@ from pathlib import Path
 
 from . import TrustRenderError, __version__, validate_invoice
 
-
 # ---------------------------------------------------------------------------
 # Shared argument factories
 # ---------------------------------------------------------------------------
@@ -62,9 +61,23 @@ def main(argv: list[str] | None = None) -> int:
     # ── Core: validation (no render deps required) ──
     validate_cmd = sub.add_parser("validate", help="Validate invoice data before Factur-X/ZUGFeRD embedding")
     validate_cmd.add_argument("data", help="Path to JSON invoice data (use '-' for stdin)")
-    validate_cmd.add_argument("--source", choices=["stripe", "shopify"], help="Apply source adapter before validation (e.g. --source stripe)")
-    validate_cmd.add_argument("--zugferd", action="store_true", help="Run ZUGFeRD EN 16931 readiness checks")
-    validate_cmd.add_argument("--format", choices=["text", "json"], default="text", dest="output_format", help="Output format (default: text)")
+    validate_cmd.add_argument(
+        "--source",
+        choices=["stripe", "shopify"],
+        help="Apply source adapter before validation (e.g. --source stripe)",
+    )
+    validate_cmd.add_argument(
+        "--zugferd",
+        action="store_true",
+        help="Run ZUGFeRD EN 16931 readiness checks",
+    )
+    validate_cmd.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        dest="output_format",
+        help="Output format (default: text)",
+    )
 
     ingest_cmd = sub.add_parser("ingest", help="Normalize messy invoice JSON into canonical payload")
     ingest_cmd.add_argument("data", help="Path to JSON data file (use '-' for stdin)")
@@ -96,12 +109,8 @@ def main(argv: list[str] | None = None) -> int:
         default=os.environ.get("TRUSTRENDER_TEMPLATES_DIR"),
         help="Template directory root (or set TRUSTRENDER_TEMPLATES_DIR env var)",
     )
-    serve_cmd.add_argument(
-        "--port", type=int, default=8190, help="Port to listen on (default: 8190)"
-    )
-    serve_cmd.add_argument(
-        "--host", default="127.0.0.1", help="Host to bind to (default: 127.0.0.1)"
-    )
+    serve_cmd.add_argument("--port", type=int, default=8190, help="Port to listen on (default: 8190)")
+    serve_cmd.add_argument("--host", default="127.0.0.1", help="Host to bind to (default: 127.0.0.1)")
     serve_cmd.add_argument("--debug", action="store_true", help="Enable debug mode")
     _add_font_path(serve_cmd)
     serve_cmd.add_argument(
@@ -307,9 +316,11 @@ def _run_validate(args: argparse.Namespace) -> int:
     if getattr(args, "source", None):
         if args.source == "stripe":
             from .adapters.stripe import from_stripe
+
             raw = from_stripe(raw)
         elif args.source == "shopify":
             from .adapters.shopify import from_shopify
+
             raw = from_shopify(raw)
 
     result = validate_invoice(raw, zugferd=args.zugferd)
@@ -373,25 +384,25 @@ def _print_validation_result(result: dict) -> None:
                 # items[N].line_total mismatch
                 print(f"  {path.replace('.line_total', '')} total is wrong")
                 print(f"    You entered ${float(actual):,.2f} but math says ${float(expected):,.2f}")
-                print(f"    Fix the line total or the price/quantity.")
+                print("    Fix the line total or the price/quantity.")
             elif "subtotal" in rule and expected and actual:
-                print(f"  Subtotal is wrong")
+                print("  Subtotal is wrong")
                 print(f"    Lines add up to ${float(expected):,.2f} but you listed ${float(actual):,.2f}")
             elif "total" in rule and expected and actual:
-                print(f"  Total is wrong")
+                print("  Total is wrong")
                 print(f"    Subtotal + tax = ${float(expected):,.2f} but you listed ${float(actual):,.2f}")
             elif "sender_name" in rule:
-                print(f"  Missing vendor/sender name")
-                print(f"    Add a sender.name field to your invoice data.")
+                print("  Missing vendor/sender name")
+                print("    Add a sender.name field to your invoice data.")
             elif "recipient_name" in rule:
-                print(f"  Missing recipient/buyer name")
-                print(f"    Add a recipient.name field to your invoice data.")
+                print("  Missing recipient/buyer name")
+                print("    Add a recipient.name field to your invoice data.")
             elif "invoice_number" in rule:
-                print(f"  Missing invoice number")
-                print(f"    Add an invoice_number field to your invoice data.")
+                print("  Missing invoice number")
+                print("    Add an invoice_number field to your invoice data.")
             elif "items" in rule:
-                print(f"  No line items")
-                print(f"    Add at least one item with description, quantity, and unit_price.")
+                print("  No line items")
+                print("    Add at least one item with description, quantity, and unit_price.")
             else:
                 print(f"  [{rule}] {msg}")
                 if path:
@@ -465,7 +476,9 @@ def _run_ingest(args: argparse.Namespace) -> int:
 
 def _print_ingest_summary(report, verbose: bool = False) -> None:
     """Print a human-readable ingest summary to stderr."""
-    err = lambda s="": print(s, file=sys.stderr)
+
+    def err(s: str = "") -> None:
+        print(s, file=sys.stderr)
 
     aliases = [n for n in report.normalizations if n.source == "alias"]
     computed = [n for n in report.normalizations if n.source == "computed"]
@@ -530,7 +543,6 @@ def _print_ingest_summary(report, verbose: bool = False) -> None:
 def _run_quickstart() -> int:
     """Demo the ingest-to-render pipeline on real-world invoice data."""
     import json
-    import shutil
 
     from .invoice_ingest import ingest_invoice
 
@@ -555,13 +567,14 @@ def _run_quickstart() -> int:
     (outdir / "stripe_invoice.json").write_text(json.dumps(stripe_data, indent=2) + "\n")
     (outdir / "broken_invoice.json").write_text(json.dumps(broken_data, indent=2) + "\n")
 
-    err = lambda s="": print(s, file=sys.stderr)
+    def err(s: str = "") -> None:
+        print(s, file=sys.stderr)
 
     err()
     err(f"  Created {outdir}/")
-    err(f"    quickbooks_invoice.json")
-    err(f"    stripe_invoice.json")
-    err(f"    broken_invoice.json")
+    err("    quickbooks_invoice.json")
+    err("    stripe_invoice.json")
+    err("    broken_invoice.json")
 
     # --- Step 1: Ingest the QuickBooks sample ---
     err()
@@ -599,7 +612,7 @@ def _run_quickstart() -> int:
 
     # --- Done ---
     err()
-    err(f"  Done.")
+    err("  Done.")
     if (outdir / "invoice.pdf").exists():
         err(f"  Open {outdir}/invoice.pdf to see the result.")
     err(f"  Run: trustrender ingest {outdir}/stripe_invoice.json")
@@ -788,9 +801,9 @@ def _resolve_hints(template_name: str):
 
 def _run_audit(args: argparse.Namespace) -> int:
     """Render with full audit: fingerprint, drift, semantic."""
-    from . import audit, AuditResult
-
     import json as json_mod
+
+    from . import audit
 
     template_path = Path(args.template)
     data_path = Path(args.data)
@@ -805,8 +818,7 @@ def _run_audit(args: argparse.Namespace) -> int:
     semantic_hints = _resolve_hints(template_path.name) if args.semantic else None
     if args.semantic and semantic_hints is None:
         print(
-            f"warning: no semantic hints configured for '{template_path.name}'"
-            " — skipping semantic checks",
+            f"warning: no semantic hints configured for '{template_path.name}' — skipping semantic checks",
             file=sys.stderr,
         )
 
@@ -888,9 +900,9 @@ def _run_audit(args: argparse.Namespace) -> int:
 
 def _run_baseline(args: argparse.Namespace) -> int:
     """Manage render baselines."""
-    from . import audit
-
     import json as json_mod
+
+    from . import audit
 
     if args.baseline_action is None:
         print("error: specify 'save' or 'check'", file=sys.stderr)
@@ -943,7 +955,7 @@ def _run_baseline(args: argparse.Namespace) -> int:
 
         if result.drift_result is None:
             print(f"No baseline found for {template_path.name}")
-            print(f"  Run 'trustrender baseline save' first")
+            print("  Run 'trustrender baseline save' first")
             return 1
 
         dr = result.drift_result
@@ -981,8 +993,7 @@ def _run_preflight(args: argparse.Namespace) -> int:
         semantic_hints = _resolve_hints(template_path.name)
         if semantic_hints is None:
             print(
-                f"warning: no semantic hints configured for '{template_path.name}'"
-                " — skipping semantic checks",
+                f"warning: no semantic hints configured for '{template_path.name}' — skipping semantic checks",
                 file=sys.stderr,
             )
 
@@ -991,7 +1002,8 @@ def _run_preflight(args: argparse.Namespace) -> int:
     strict = getattr(args, "strict", False)
     resolved_fonts = _build_font_paths(getattr(args, "font_paths", None))
     verdict = preflight(
-        template_path, data,
+        template_path,
+        data,
         font_paths=resolved_fonts,
         zugferd=args.zugferd,
         semantic_hints=semantic_hints,

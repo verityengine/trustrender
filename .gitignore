@@ -40,3 +40,14 @@ htmlcov/
 # TrustRender temp render artifacts
 _trustrender_*.typ
 examples/_trustrender_*.typ
+
+# Node / website build
+node_modules/
+website/dist/
+website/test-results/
+test-results/
+
+# Internal docs (not for public repo)
+docs/FOUNDER_MEMO.md
+docs/COMPETITIVE_COMPARISON.md
+docs/competitive-comparison.html

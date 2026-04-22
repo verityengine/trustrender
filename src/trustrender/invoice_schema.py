@@ -12,10 +12,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
 
-
 # ---------------------------------------------------------------------------
 # Provenance tracking
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class FieldProvenance:
@@ -23,9 +23,9 @@ class FieldProvenance:
 
     canonical_name: str
     source: Literal["exact", "alias", "computed", "default", "missing"]
-    original_key: str | None = None      # the messy key name, if alias
-    original_value: str | None = None    # before coercion, as string
-    message: str | None = None           # human-readable explanation
+    original_key: str | None = None  # the messy key name, if alias
+    original_value: str | None = None  # before coercion, as string
+    message: str | None = None  # human-readable explanation
 
     def to_dict(self) -> dict:
         d: dict = {"canonical_name": self.canonical_name, "source": self.source}
@@ -41,6 +41,7 @@ class FieldProvenance:
 # ---------------------------------------------------------------------------
 # Canonical schema dataclasses
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class Address:
@@ -74,8 +75,8 @@ class LineItem:
 class CanonicalInvoice:
     # Identity (required)
     invoice_number: str = ""
-    invoice_date: str = ""       # YYYY-MM-DD
-    due_date: str = ""           # YYYY-MM-DD
+    invoice_date: str = ""  # YYYY-MM-DD
+    due_date: str = ""  # YYYY-MM-DD
     sender: Address = field(default_factory=Address)
     recipient: Address = field(default_factory=Address)
     items: list[LineItem] = field(default_factory=list)

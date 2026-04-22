@@ -41,10 +41,10 @@ from pathlib import Path
 
 from . import __version__
 
-
 # ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ProvenanceRecord:
@@ -95,6 +95,7 @@ class VerificationResult:
 # Hashing
 # ---------------------------------------------------------------------------
 
+
 def _hash_bytes(data: bytes) -> str:
     """SHA-256 hash of raw bytes."""
     return f"sha256:{hashlib.sha256(data).hexdigest()}"
@@ -122,6 +123,7 @@ def _compute_proof(
 # ---------------------------------------------------------------------------
 # Provenance creation
 # ---------------------------------------------------------------------------
+
 
 def create_provenance(
     template_path: str | os.PathLike,
@@ -214,6 +216,7 @@ def extract_provenance(pdf_bytes: bytes) -> ProvenanceRecord | None:
 # Verification
 # ---------------------------------------------------------------------------
 
+
 def verify_provenance(
     pdf_bytes: bytes,
     template_path: str | os.PathLike,
@@ -249,7 +252,10 @@ def verify_provenance(
 
     # Verify the proof itself (tamper detection)
     expected_proof = _compute_proof(
-        record.engine_version, record.template_hash, record.data_hash, record.timestamp,
+        record.engine_version,
+        record.template_hash,
+        record.data_hash,
+        record.timestamp,
     )
     if record.proof != expected_proof:
         return VerificationResult(verified=False, record=record, reason="proof_mismatch")

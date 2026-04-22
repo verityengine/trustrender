@@ -34,18 +34,18 @@ from typing import Literal
 
 from . import __version__
 
-
 # ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class FileHash:
     """Hash of a single file with size for quick comparison."""
 
-    path: str       # Relative to template dir (or absolute for fonts)
-    sha256: str     # "sha256:<hex>"
-    size: int       # Bytes
+    path: str  # Relative to template dir (or absolute for fonts)
+    sha256: str  # "sha256:<hex>"
+    size: int  # Bytes
 
 
 @dataclass(frozen=True)
@@ -58,13 +58,13 @@ class InputFingerprint:
 
     # Content hashes
     template_hash: FileHash
-    include_hashes: tuple[FileHash, ...]     # Sorted by path
-    asset_hashes: tuple[FileHash, ...]       # Sorted by path
-    font_hashes: tuple[FileHash, ...]        # Sorted by path
-    data_hash: str                           # "sha256:<hex>" of canonical JSON
+    include_hashes: tuple[FileHash, ...]  # Sorted by path
+    asset_hashes: tuple[FileHash, ...]  # Sorted by path
+    font_hashes: tuple[FileHash, ...]  # Sorted by path
+    data_hash: str  # "sha256:<hex>" of canonical JSON
 
     # Configuration
-    backend: str                             # "typst-py" or "typst-cli"
+    backend: str  # "typst-py" or "typst-cli"
     zugferd_profile: str | None
     provenance_enabled: bool
     validate_enabled: bool
@@ -74,8 +74,8 @@ class InputFingerprint:
     typst_version: str
 
     # Computed identity
-    fingerprint: str                         # SHA-256 of all above
-    created_at: str                          # ISO 8601
+    fingerprint: str  # SHA-256 of all above
+    created_at: str  # ISO 8601
 
     def to_dict(self) -> dict:
         """Serialize to a JSON-compatible dict."""
@@ -119,14 +119,15 @@ class InputFingerprint:
 # Change types
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class FieldChange:
     """One changed field in the data payload between two renders."""
 
-    path: str                                    # "items[3].unit_price"
+    path: str  # "items[3].unit_price"
     change_type: Literal["added", "removed", "modified"]
-    old_value: str | None                        # JSON repr, truncated
-    new_value: str | None                        # JSON repr, truncated
+    old_value: str | None  # JSON repr, truncated
+    new_value: str | None  # JSON repr, truncated
 
 
 @dataclass
@@ -164,8 +165,12 @@ class ChangeSet:
     @property
     def has_changes(self) -> bool:
         return bool(
-            self.data_changes or self.template_changes or self.asset_changes
-            or self.font_changes or self.config_changes or self.environment_changes
+            self.data_changes
+            or self.template_changes
+            or self.asset_changes
+            or self.font_changes
+            or self.config_changes
+            or self.environment_changes
         )
 
     @property
@@ -192,33 +197,24 @@ class ChangeSet:
             "baseline_fingerprint": self.baseline_fingerprint,
             "current_fingerprint": self.current_fingerprint,
             "data_changes": [
-                {"path": c.path, "change_type": c.change_type,
-                 "old_value": c.old_value, "new_value": c.new_value}
+                {"path": c.path, "change_type": c.change_type, "old_value": c.old_value, "new_value": c.new_value}
                 for c in self.data_changes
             ],
             "template_changes": [
-                {"path": c.path, "change_type": c.change_type,
-                 "old_hash": c.old_hash, "new_hash": c.new_hash}
+                {"path": c.path, "change_type": c.change_type, "old_hash": c.old_hash, "new_hash": c.new_hash}
                 for c in self.template_changes
             ],
             "asset_changes": [
-                {"path": c.path, "change_type": c.change_type,
-                 "old_hash": c.old_hash, "new_hash": c.new_hash}
-                for c in self.asset_changes
+                {"path": c.path, "change_type": c.change_type, "old_hash": c.old_hash, "new_hash": c.new_hash} for c in self.asset_changes
             ],
             "font_changes": [
-                {"path": c.path, "change_type": c.change_type,
-                 "old_hash": c.old_hash, "new_hash": c.new_hash}
-                for c in self.font_changes
+                {"path": c.path, "change_type": c.change_type, "old_hash": c.old_hash, "new_hash": c.new_hash} for c in self.font_changes
             ],
             "config_changes": [
-                {"path": c.key, "change_type": "modified",
-                 "old_value": c.old_value, "new_value": c.new_value}
-                for c in self.config_changes
+                {"path": c.key, "change_type": "modified", "old_value": c.old_value, "new_value": c.new_value} for c in self.config_changes
             ],
             "environment_changes": [
-                {"path": c.key, "change_type": "modified",
-                 "old_value": c.old_value, "new_value": c.new_value}
+                {"path": c.key, "change_type": "modified", "old_value": c.old_value, "new_value": c.new_value}
                 for c in self.environment_changes
             ],
         }
@@ -228,6 +224,7 @@ class ChangeSet:
 # Hashing helpers (reuse patterns from provenance.py)
 # ---------------------------------------------------------------------------
 
+
 def _hash_bytes(data: bytes) -> str:
     """SHA-256 hash of raw bytes."""
     return f"sha256:{hashlib.sha256(data).hexdigest()}"
@@ -236,7 +233,10 @@ def _hash_bytes(data: bytes) -> str:
 def _canonical_json(data: dict) -> bytes:
     """Canonical JSON for deterministic hashing."""
     return json.dumps(
-        data, sort_keys=True, separators=(",", ":"), ensure_ascii=True,
+        data,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
     ).encode()
 
 
@@ -328,6 +328,7 @@ def _get_typst_version() -> str:
     # Try typst-py first
     try:
         import typst as _typst
+
         if hasattr(_typst, "__version__"):
             return str(_typst.__version__)
     except ImportError:
@@ -359,6 +360,7 @@ def _get_backend_name() -> str:
 
     try:
         import typst as _typst  # noqa: F401
+
         return "typst-py"
     except ImportError:
         return "typst-cli"
@@ -368,10 +370,14 @@ def _get_backend_name() -> str:
 # Fingerprint identity computation
 # ---------------------------------------------------------------------------
 
+
 def _compute_identity(fp_data: dict) -> str:
     """Compute the overall fingerprint hash from all fields."""
     canonical = json.dumps(
-        fp_data, sort_keys=True, separators=(",", ":"), ensure_ascii=True,
+        fp_data,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
     ).encode()
     return f"sha256:{hashlib.sha256(canonical).hexdigest()}"
 
@@ -379,6 +385,7 @@ def _compute_identity(fp_data: dict) -> str:
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def compute_fingerprint(
     template_path: str | os.PathLike,
@@ -485,6 +492,7 @@ def compute_fingerprint(
 # Change detection
 # ---------------------------------------------------------------------------
 
+
 def _truncate(value: object, max_len: int = 200) -> str:
     """JSON-serialize and truncate a value for display."""
     try:
@@ -492,7 +500,7 @@ def _truncate(value: object, max_len: int = 200) -> str:
     except (TypeError, ValueError):
         s = str(value)
     if len(s) > max_len:
-        return s[:max_len - 3] + "..."
+        return s[: max_len - 3] + "..."
     return s
 
 
@@ -511,19 +519,23 @@ def _diff_dicts(
         in_new = key in new
 
         if in_old and not in_new:
-            changes.append(FieldChange(
-                path=path,
-                change_type="removed",
-                old_value=_truncate(old[key]),
-                new_value=None,
-            ))
+            changes.append(
+                FieldChange(
+                    path=path,
+                    change_type="removed",
+                    old_value=_truncate(old[key]),
+                    new_value=None,
+                )
+            )
         elif not in_old and in_new:
-            changes.append(FieldChange(
-                path=path,
-                change_type="added",
-                old_value=None,
-                new_value=_truncate(new[key]),
-            ))
+            changes.append(
+                FieldChange(
+                    path=path,
+                    change_type="added",
+                    old_value=None,
+                    new_value=_truncate(new[key]),
+                )
+            )
         else:
             old_val = old[key]
             new_val = new[key]
@@ -532,12 +544,14 @@ def _diff_dicts(
             elif isinstance(old_val, list) and isinstance(new_val, list):
                 changes.extend(_diff_lists(old_val, new_val, path))
             elif old_val != new_val:
-                changes.append(FieldChange(
-                    path=path,
-                    change_type="modified",
-                    old_value=_truncate(old_val),
-                    new_value=_truncate(new_val),
-                ))
+                changes.append(
+                    FieldChange(
+                        path=path,
+                        change_type="modified",
+                        old_value=_truncate(old_val),
+                        new_value=_truncate(new_val),
+                    )
+                )
 
     return changes
 
@@ -554,19 +568,23 @@ def _diff_lists(
     for i in range(max_len):
         path = f"{prefix}[{i}]"
         if i >= len(old):
-            changes.append(FieldChange(
-                path=path,
-                change_type="added",
-                old_value=None,
-                new_value=_truncate(new[i]),
-            ))
+            changes.append(
+                FieldChange(
+                    path=path,
+                    change_type="added",
+                    old_value=None,
+                    new_value=_truncate(new[i]),
+                )
+            )
         elif i >= len(new):
-            changes.append(FieldChange(
-                path=path,
-                change_type="removed",
-                old_value=_truncate(old[i]),
-                new_value=None,
-            ))
+            changes.append(
+                FieldChange(
+                    path=path,
+                    change_type="removed",
+                    old_value=_truncate(old[i]),
+                    new_value=None,
+                )
+            )
         else:
             old_val = old[i]
             new_val = new[i]
@@ -575,12 +593,14 @@ def _diff_lists(
             elif isinstance(old_val, list) and isinstance(new_val, list):
                 changes.extend(_diff_lists(old_val, new_val, path))
             elif old_val != new_val:
-                changes.append(FieldChange(
-                    path=path,
-                    change_type="modified",
-                    old_value=_truncate(old_val),
-                    new_value=_truncate(new_val),
-                ))
+                changes.append(
+                    FieldChange(
+                        path=path,
+                        change_type="modified",
+                        old_value=_truncate(old_val),
+                        new_value=_truncate(new_val),
+                    )
+                )
 
     return changes
 
@@ -599,21 +619,32 @@ def _diff_file_hashes(
         in_old = path in old_by_path
         in_new = path in new_by_path
         if in_old and not in_new:
-            changes.append(FileChange(
-                path=path, change_type="removed",
-                old_hash=old_by_path[path].sha256, new_hash=None,
-            ))
+            changes.append(
+                FileChange(
+                    path=path,
+                    change_type="removed",
+                    old_hash=old_by_path[path].sha256,
+                    new_hash=None,
+                )
+            )
         elif not in_old and in_new:
-            changes.append(FileChange(
-                path=path, change_type="added",
-                old_hash=None, new_hash=new_by_path[path].sha256,
-            ))
+            changes.append(
+                FileChange(
+                    path=path,
+                    change_type="added",
+                    old_hash=None,
+                    new_hash=new_by_path[path].sha256,
+                )
+            )
         elif old_by_path[path].sha256 != new_by_path[path].sha256:
-            changes.append(FileChange(
-                path=path, change_type="modified",
-                old_hash=old_by_path[path].sha256,
-                new_hash=new_by_path[path].sha256,
-            ))
+            changes.append(
+                FileChange(
+                    path=path,
+                    change_type="modified",
+                    old_hash=old_by_path[path].sha256,
+                    new_hash=new_by_path[path].sha256,
+                )
+            )
 
     return changes
 
@@ -642,17 +673,17 @@ def compare(
 
     # Template changes
     if baseline.template_hash.sha256 != current.template_hash.sha256:
-        cs.template_changes.append(FileChange(
-            path=current.template_hash.path,
-            change_type="modified",
-            old_hash=baseline.template_hash.sha256,
-            new_hash=current.template_hash.sha256,
-        ))
+        cs.template_changes.append(
+            FileChange(
+                path=current.template_hash.path,
+                change_type="modified",
+                old_hash=baseline.template_hash.sha256,
+                new_hash=current.template_hash.sha256,
+            )
+        )
 
     # Include changes
-    cs.template_changes.extend(
-        _diff_file_hashes(baseline.include_hashes, current.include_hashes)
-    )
+    cs.template_changes.extend(_diff_file_hashes(baseline.include_hashes, current.include_hashes))
 
     # Asset changes
     cs.asset_changes = _diff_file_hashes(baseline.asset_hashes, current.asset_hashes)
@@ -666,12 +697,14 @@ def compare(
             cs.data_changes = _diff_dicts(baseline_data, current_data)
         else:
             # Can only report hash changed, not which fields
-            cs.data_changes = [FieldChange(
-                path="(data)",
-                change_type="modified",
-                old_value=baseline.data_hash,
-                new_value=current.data_hash,
-            )]
+            cs.data_changes = [
+                FieldChange(
+                    path="(data)",
+                    change_type="modified",
+                    old_value=baseline.data_hash,
+                    new_value=current.data_hash,
+                )
+            ]
 
     # Config changes
     config_fields = [
@@ -682,9 +715,13 @@ def compare(
     ]
     for key, old_val, new_val in config_fields:
         if old_val != new_val:
-            cs.config_changes.append(ConfigChange(
-                key=key, old_value=old_val, new_value=new_val,
-            ))
+            cs.config_changes.append(
+                ConfigChange(
+                    key=key,
+                    old_value=old_val,
+                    new_value=new_val,
+                )
+            )
 
     # Environment changes
     env_fields = [
@@ -693,8 +730,12 @@ def compare(
     ]
     for key, old_val, new_val in env_fields:
         if old_val != new_val:
-            cs.environment_changes.append(ConfigChange(
-                key=key, old_value=old_val, new_value=new_val,
-            ))
+            cs.environment_changes.append(
+                ConfigChange(
+                    key=key,
+                    old_value=old_val,
+                    new_value=new_val,
+                )
+            )
 
     return cs

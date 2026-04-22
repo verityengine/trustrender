@@ -10,9 +10,8 @@ from pathlib import Path
 import pytest
 
 from trustrender import AuditResult, TrustRenderError, audit, render
-from trustrender.fingerprint import InputFingerprint, compare
-from trustrender.regression import DriftResult, load_baseline, save_baseline
-from trustrender.semantic import INVOICE_HINTS, SemanticHints
+from trustrender.regression import load_baseline
+from trustrender.semantic import INVOICE_HINTS
 
 EXAMPLES = Path(__file__).parent.parent / "examples"
 
@@ -24,6 +23,7 @@ def _load_data(name: str = "invoice_data.json") -> dict:
 # ---------------------------------------------------------------------------
 # Basic audit() tests
 # ---------------------------------------------------------------------------
+
 
 class TestAuditBasic:
     def test_audit_returns_pdf(self):
@@ -79,12 +79,14 @@ class TestAuditBasic:
 # Baseline save/check cycle via audit()
 # ---------------------------------------------------------------------------
 
+
 class TestAuditBaselineCycle:
     def test_save_then_check_passes(self, tmp_path):
         data = _load_data()
         # Save baseline
         result1 = audit(
-            EXAMPLES / "invoice.j2.typ", data,
+            EXAMPLES / "invoice.j2.typ",
+            data,
             baseline_dir=tmp_path,
             save_baseline=True,
         )
@@ -92,7 +94,8 @@ class TestAuditBaselineCycle:
 
         # Check against baseline (same data)
         result2 = audit(
-            EXAMPLES / "invoice.j2.typ", data,
+            EXAMPLES / "invoice.j2.typ",
+            data,
             baseline_dir=tmp_path,
         )
         assert result2.drift_result is not None
@@ -102,7 +105,8 @@ class TestAuditBaselineCycle:
     def test_modified_data_detects_changes(self, tmp_path):
         data = _load_data()
         audit(
-            EXAMPLES / "invoice.j2.typ", data,
+            EXAMPLES / "invoice.j2.typ",
+            data,
             baseline_dir=tmp_path,
             save_baseline=True,
         )
@@ -111,7 +115,8 @@ class TestAuditBaselineCycle:
         data2 = _load_data()
         data2["invoice_number"] = "INV-CHANGED-999"
         result = audit(
-            EXAMPLES / "invoice.j2.typ", data2,
+            EXAMPLES / "invoice.j2.typ",
+            data2,
             baseline_dir=tmp_path,
         )
         assert result.change_set is not None
@@ -121,7 +126,8 @@ class TestAuditBaselineCycle:
     def test_baseline_dir_without_save(self, tmp_path):
         """Providing baseline_dir without saving first returns no drift."""
         result = audit(
-            EXAMPLES / "invoice.j2.typ", _load_data(),
+            EXAMPLES / "invoice.j2.typ",
+            _load_data(),
             baseline_dir=tmp_path,
         )
         # No baseline saved yet, so drift_result is None
@@ -130,12 +136,10 @@ class TestAuditBaselineCycle:
     def test_overwrite_baseline(self, tmp_path):
         data = _load_data()
         # Save initial baseline
-        audit(EXAMPLES / "invoice.j2.typ", data,
-              baseline_dir=tmp_path, save_baseline=True)
+        audit(EXAMPLES / "invoice.j2.typ", data, baseline_dir=tmp_path, save_baseline=True)
 
         # Save again (overwrite)
-        audit(EXAMPLES / "invoice.j2.typ", data,
-              baseline_dir=tmp_path, save_baseline=True)
+        audit(EXAMPLES / "invoice.j2.typ", data, baseline_dir=tmp_path, save_baseline=True)
 
         # Should still load
         bl = load_baseline(tmp_path, "invoice.j2.typ")
@@ -145,6 +149,7 @@ class TestAuditBaselineCycle:
 # ---------------------------------------------------------------------------
 # Audit with all options enabled
 # ---------------------------------------------------------------------------
+
 
 class TestAuditAllOptions:
     def test_validate_and_audit(self):
@@ -166,6 +171,7 @@ class TestAuditAllOptions:
         assert result.fingerprint.provenance_enabled is True
         # PDF should have provenance metadata
         from trustrender.provenance import extract_provenance
+
         prov = extract_provenance(result.pdf_bytes)
         assert prov is not None
 
@@ -173,7 +179,8 @@ class TestAuditAllOptions:
         """All options enabled simultaneously."""
         data = _load_data()
         result = audit(
-            EXAMPLES / "invoice.j2.typ", data,
+            EXAMPLES / "invoice.j2.typ",
+            data,
             validate=True,
             provenance=True,
             baseline_dir=tmp_path,
@@ -188,7 +195,8 @@ class TestAuditAllOptions:
 
         # Now check against saved baseline
         result2 = audit(
-            EXAMPLES / "invoice.j2.typ", data,
+            EXAMPLES / "invoice.j2.typ",
+            data,
             validate=True,
             provenance=True,
             baseline_dir=tmp_path,
@@ -201,6 +209,7 @@ class TestAuditAllOptions:
 # ---------------------------------------------------------------------------
 # Error paths
 # ---------------------------------------------------------------------------
+
 
 class TestAuditErrors:
     def test_missing_template(self):
@@ -226,14 +235,18 @@ class TestAuditErrors:
 # All example templates via audit()
 # ---------------------------------------------------------------------------
 
+
 class TestAuditAllExamples:
-    @pytest.mark.parametrize("template,data_file", [
-        ("invoice.j2.typ", "invoice_data.json"),
-        ("statement.j2.typ", "statement_data.json"),
-        ("receipt.j2.typ", "receipt_data.json"),
-        ("letter.j2.typ", "letter_data.json"),
-        ("report.j2.typ", "report_data.json"),
-    ])
+    @pytest.mark.parametrize(
+        "template,data_file",
+        [
+            ("invoice.j2.typ", "invoice_data.json"),
+            ("statement.j2.typ", "statement_data.json"),
+            ("receipt.j2.typ", "receipt_data.json"),
+            ("letter.j2.typ", "letter_data.json"),
+            ("report.j2.typ", "report_data.json"),
+        ],
+    )
     def test_audit_every_example(self, template, data_file):
         template_path = EXAMPLES / template
         if not template_path.exists():
@@ -243,11 +256,14 @@ class TestAuditAllExamples:
         assert len(result.pdf_bytes) > 0
         assert result.fingerprint.fingerprint.startswith("sha256:")
 
-    @pytest.mark.parametrize("template,data_file", [
-        ("invoice.j2.typ", "invoice_data.json"),
-        ("statement.j2.typ", "statement_data.json"),
-        ("receipt.j2.typ", "receipt_data.json"),
-    ])
+    @pytest.mark.parametrize(
+        "template,data_file",
+        [
+            ("invoice.j2.typ", "invoice_data.json"),
+            ("statement.j2.typ", "statement_data.json"),
+            ("receipt.j2.typ", "receipt_data.json"),
+        ],
+    )
     def test_full_cycle_every_template(self, tmp_path, template, data_file):
         """Save baseline, then check — should pass for same data."""
         template_path = EXAMPLES / template
@@ -264,6 +280,7 @@ class TestAuditAllExamples:
 # ---------------------------------------------------------------------------
 # CLI integration tests
 # ---------------------------------------------------------------------------
+
 
 class TestCLI:
     def _run_cli(self, *args: str) -> subprocess.CompletedProcess:
@@ -307,7 +324,8 @@ class TestCLI:
 
     def test_audit_missing_template(self):
         result = self._run_cli(
-            "audit", "nonexistent.j2.typ",
+            "audit",
+            "nonexistent.j2.typ",
             str(EXAMPLES / "invoice_data.json"),
         )
         assert result.returncode != 0
@@ -325,30 +343,36 @@ class TestCLI:
 
         # Save
         result = self._run_cli(
-            "baseline", "save",
+            "baseline",
+            "save",
             str(EXAMPLES / "invoice.j2.typ"),
             str(EXAMPLES / "invoice_data.json"),
-            "--baseline-dir", bl_dir,
+            "--baseline-dir",
+            bl_dir,
         )
         assert result.returncode == 0
         assert "Baseline saved" in result.stdout
 
         # Check
         result = self._run_cli(
-            "baseline", "check",
+            "baseline",
+            "check",
             str(EXAMPLES / "invoice.j2.typ"),
             str(EXAMPLES / "invoice_data.json"),
-            "--baseline-dir", bl_dir,
+            "--baseline-dir",
+            bl_dir,
         )
         assert result.returncode == 0
         assert "PASS" in result.stdout
 
     def test_baseline_check_no_baseline(self, tmp_path):
         result = self._run_cli(
-            "baseline", "check",
+            "baseline",
+            "check",
             str(EXAMPLES / "invoice.j2.typ"),
             str(EXAMPLES / "invoice_data.json"),
-            "--baseline-dir", str(tmp_path),
+            "--baseline-dir",
+            str(tmp_path),
         )
         assert result.returncode == 1
         assert "No baseline found" in result.stdout
@@ -368,7 +392,8 @@ class TestCLI:
             "audit",
             str(EXAMPLES / "invoice.j2.typ"),
             str(EXAMPLES / "invoice_data.json"),
-            "-o", out,
+            "-o",
+            out,
         )
         assert result.returncode == 0
         assert Path(out).exists()
@@ -381,7 +406,8 @@ class TestCLI:
             "audit",
             str(EXAMPLES / "invoice.j2.typ"),
             str(EXAMPLES / "invoice_data.json"),
-            "--baseline-dir", bl_dir,
+            "--baseline-dir",
+            bl_dir,
             "--save-baseline",
         )
         assert result.returncode == 0
@@ -392,7 +418,8 @@ class TestCLI:
             "audit",
             str(EXAMPLES / "invoice.j2.typ"),
             str(EXAMPLES / "invoice_data.json"),
-            "--baseline-dir", bl_dir,
+            "--baseline-dir",
+            bl_dir,
         )
         assert result.returncode == 0
         assert "No input changes detected" in result.stdout

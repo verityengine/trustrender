@@ -3,17 +3,13 @@
 from __future__ import annotations
 
 import json
-import tempfile
 from pathlib import Path
-
-import pytest
 
 from trustrender import render
 from trustrender.fingerprint import compute_fingerprint
 from trustrender.regression import (
-    DriftBaseline,
-    DriftResult,
     _SCHEMA_VERSION,
+    DriftBaseline,
     _extract_embedded_fonts,
     check_drift,
     load_baseline,
@@ -70,7 +66,10 @@ class TestSaveAndLoadBaseline:
         fp = compute_fingerprint(EXAMPLES / "invoice.j2.typ", data)
         pdf = _render_invoice(data)
         bl = save_baseline(
-            tmp_path, "invoice.j2.typ", fp, pdf,
+            tmp_path,
+            "invoice.j2.typ",
+            fp,
+            pdf,
             render_duration_ms=150,
             zugferd_valid=None,
             contract_valid=True,
@@ -123,9 +122,7 @@ class TestDriftChecks:
         # Fake a baseline with different page count
         raw = json.loads((tmp_path / "invoice.j2.typ" / "latest.json").read_text())
         raw["page_count"] = (raw["page_count"] or 1) + 2
-        (tmp_path / "invoice.j2.typ" / "latest.json").write_text(
-            json.dumps(raw, indent=2)
-        )
+        (tmp_path / "invoice.j2.typ" / "latest.json").write_text(json.dumps(raw, indent=2))
 
         result = check_drift(tmp_path, "invoice.j2.typ", fp, pdf)
         assert result is not None
@@ -142,9 +139,7 @@ class TestDriftChecks:
 
         raw = json.loads((tmp_path / "invoice.j2.typ" / "latest.json").read_text())
         raw["page_count"] = (raw["page_count"] or 1) + 10
-        (tmp_path / "invoice.j2.typ" / "latest.json").write_text(
-            json.dumps(raw, indent=2)
-        )
+        (tmp_path / "invoice.j2.typ" / "latest.json").write_text(json.dumps(raw, indent=2))
 
         result = check_drift(tmp_path, "invoice.j2.typ", fp, pdf)
         assert result.has_errors
@@ -158,15 +153,10 @@ class TestDriftChecks:
         # Fake baseline with very different file size
         raw = json.loads((tmp_path / "invoice.j2.typ" / "latest.json").read_text())
         raw["pdf_size"] = len(pdf) * 3  # 200% larger baseline
-        (tmp_path / "invoice.j2.typ" / "latest.json").write_text(
-            json.dumps(raw, indent=2)
-        )
+        (tmp_path / "invoice.j2.typ" / "latest.json").write_text(json.dumps(raw, indent=2))
 
         result = check_drift(tmp_path, "invoice.j2.typ", fp, pdf)
-        size_findings = [
-            f for f in result.findings
-            if f.check_name in ("file_size_drift", "file_size_spike")
-        ]
+        size_findings = [f for f in result.findings if f.check_name in ("file_size_drift", "file_size_spike")]
         assert len(size_findings) >= 1
 
     def test_render_failure_drift(self, tmp_path):
@@ -177,7 +167,10 @@ class TestDriftChecks:
 
         # Simulate render failure
         result = check_drift(
-            tmp_path, "invoice.j2.typ", fp, b"",
+            tmp_path,
+            "invoice.j2.typ",
+            fp,
+            b"",
             render_success=False,
         )
         render_findings = [f for f in result.findings if f.check_name == "render_success"]
@@ -189,12 +182,18 @@ class TestDriftChecks:
         fp = compute_fingerprint(EXAMPLES / "invoice.j2.typ", data)
         pdf = _render_invoice(data)
         save_baseline(
-            tmp_path, "invoice.j2.typ", fp, pdf,
+            tmp_path,
+            "invoice.j2.typ",
+            fp,
+            pdf,
             contract_valid=True,
         )
 
         result = check_drift(
-            tmp_path, "invoice.j2.typ", fp, pdf,
+            tmp_path,
+            "invoice.j2.typ",
+            fp,
+            pdf,
             contract_valid=False,
         )
         contract_findings = [f for f in result.findings if f.check_name == "contract_status_change"]
@@ -254,15 +253,11 @@ class TestEmbeddedFontDrift:
         # Manipulate baseline to have different fonts
         raw = json.loads((tmp_path / "invoice.j2.typ" / "latest.json").read_text())
         raw["embedded_fonts"] = ["Libertinus-Regular", "Libertinus-Bold"]
-        (tmp_path / "invoice.j2.typ" / "latest.json").write_text(
-            json.dumps(raw, indent=2)
-        )
+        (tmp_path / "invoice.j2.typ" / "latest.json").write_text(json.dumps(raw, indent=2))
 
         result = check_drift(tmp_path, "invoice.j2.typ", fp, pdf)
         assert result is not None
-        font_findings = [
-            f for f in result.findings if f.check_name == "embedded_fonts_changed"
-        ]
+        font_findings = [f for f in result.findings if f.check_name == "embedded_fonts_changed"]
         assert len(font_findings) == 1
         assert font_findings[0].severity == "warning"
         assert "removed" in font_findings[0].message
@@ -280,15 +275,11 @@ class TestEmbeddedFontDrift:
         raw = json.loads((tmp_path / "invoice.j2.typ" / "latest.json").read_text())
         del raw["embedded_fonts"]
         raw["schema_version"] = 1
-        (tmp_path / "invoice.j2.typ" / "latest.json").write_text(
-            json.dumps(raw, indent=2)
-        )
+        (tmp_path / "invoice.j2.typ" / "latest.json").write_text(json.dumps(raw, indent=2))
 
         result = check_drift(tmp_path, "invoice.j2.typ", fp, pdf)
         assert result is not None
-        font_findings = [
-            f for f in result.findings if f.check_name == "embedded_fonts_changed"
-        ]
+        font_findings = [f for f in result.findings if f.check_name == "embedded_fonts_changed"]
         assert len(font_findings) == 0
 
     def test_no_font_drift_same_render(self, tmp_path):
@@ -299,9 +290,7 @@ class TestEmbeddedFontDrift:
         save_baseline(tmp_path, "invoice.j2.typ", fp, pdf)
 
         result = check_drift(tmp_path, "invoice.j2.typ", fp, pdf)
-        font_findings = [
-            f for f in result.findings if f.check_name == "embedded_fonts_changed"
-        ]
+        font_findings = [f for f in result.findings if f.check_name == "embedded_fonts_changed"]
         assert len(font_findings) == 0
 
     def test_font_extraction_empty_pdf(self):

@@ -5,8 +5,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
 from trustrender.readiness import preflight
 
 EXAMPLES = Path(__file__).parent.parent / "examples"
@@ -101,7 +99,9 @@ class TestPreflightCompliance:
         data = _load_data("einvoice")
         data["currency"] = "USD"
         verdict = preflight(
-            EXAMPLES / "einvoice.j2.typ", data, zugferd="en16931",
+            EXAMPLES / "einvoice.j2.typ",
+            data,
+            zugferd="en16931",
         )
         assert verdict.ready is False
         assert any("USD" in e.message for e in verdict.errors)
@@ -226,10 +226,10 @@ class TestPreflightFontParsing:
     def test_parse_multiple_declarations(self):
         from trustrender.readiness import _parse_declared_fonts
 
-        source = '''
+        source = """
 #set text(font: "Inter")
 #show heading: set text(font: "Inter")
-'''
+"""
         stacks = _parse_declared_fonts(source)
         assert len(stacks) == 2
         assert all(s == ["Inter"] for s in stacks)
@@ -327,9 +327,7 @@ class TestSchematronInPreflight:
             zugferd="en16931",
         )
         assert verdict.ready is True
-        schematron_errors = [
-            i for i in verdict.errors if i.check == "schematron_validation"
-        ]
+        schematron_errors = [i for i in verdict.errors if i.check == "schematron_validation"]
         assert len(schematron_errors) == 0
 
     def test_schematron_in_render_pipeline(self):
@@ -345,7 +343,7 @@ class TestSchematronInPreflight:
         from unittest.mock import patch
 
         # Simulate facturx not installed for Schematron import
-        original_import = __builtins__.__import__ if hasattr(__builtins__, '__import__') else __import__
+        original_import = __builtins__.__import__ if hasattr(__builtins__, "__import__") else __import__
 
         def mock_import(name, *args, **kwargs):
             if name == "facturx.facturx":
@@ -358,7 +356,5 @@ class TestSchematronInPreflight:
                 _load_data("einvoice"),
                 zugferd="en16931",
             )
-        schematron_warns = [
-            i for i in verdict.warnings if i.check == "schematron_validation"
-        ]
+        schematron_warns = [i for i in verdict.warnings if i.check == "schematron_validation"]
         assert len(schematron_warns) >= 1

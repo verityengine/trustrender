@@ -93,8 +93,7 @@ class TestFontEmbedding:
         """Invoice template embeds Inter — proves bundled font is actually used."""
         pdf = render(EXAMPLES / "invoice.j2.typ", INVOICE_DATA)
         assert _pdf_contains_font(pdf, "Inter"), (
-            "Invoice PDF should embed Inter (bundled font). "
-            "If this fails, bundled font resolution may be broken."
+            "Invoice PDF should embed Inter (bundled font). If this fails, bundled font resolution may be broken."
         )
 
     def test_bad_font_does_not_embed_requested(self):
@@ -104,9 +103,7 @@ class TestFontEmbedding:
         not a permanent upstream guarantee.
         """
         pdf = render(FIXTURES / "bad_font.j2.typ", {"title": "Test"})
-        assert not _pdf_contains_font(pdf, "NonExistentFontFamilyXYZ123"), (
-            "PDF should not contain the non-existent font name"
-        )
+        assert not _pdf_contains_font(pdf, "NonExistentFontFamilyXYZ123"), "PDF should not contain the non-existent font name"
 
     def test_bad_font_renders_successfully(self):
         """Missing-font template renders without error (silent fallback)."""
@@ -124,9 +121,7 @@ class TestFontEmbedding:
         assert pdf[:5] == b"%PDF-"
         # The simple fixture does not set a font, so Typst uses its default.
         # We verify it does NOT embed Inter (since Inter is not requested).
-        assert not _pdf_contains_font(pdf, "Inter"), (
-            "Simple fixture should not embed Inter — it does not request it"
-        )
+        assert not _pdf_contains_font(pdf, "Inter"), "Simple fixture should not embed Inter — it does not request it"
 
 
 # ---------------------------------------------------------------------------
@@ -154,9 +149,7 @@ class TestFontPrecedence:
             INVOICE_DATA,
             font_paths=["/nonexistent/but/harmless"],
         )
-        assert _pdf_contains_font(pdf, "Inter"), (
-            "Invoice should still embed Inter even with extra font_paths"
-        )
+        assert _pdf_contains_font(pdf, "Inter"), "Invoice should still embed Inter even with extra font_paths"
 
     def test_env_var_font_path_changes_behavior(self, tmp_path, monkeypatch):
         """TRUSTRENDER_FONT_PATH env var actually changes font resolution behavior.
@@ -221,9 +214,7 @@ class TestCrossBackendFontParity:
         """Both backends embed Inter for invoice template."""
         monkeypatch.setenv("TRUSTRENDER_BACKEND", backend_name)
         pdf = render(EXAMPLES / "invoice.j2.typ", INVOICE_DATA)
-        assert _pdf_contains_font(pdf, "Inter"), (
-            f"Invoice should embed Inter under {backend_name} backend"
-        )
+        assert _pdf_contains_font(pdf, "Inter"), f"Invoice should embed Inter under {backend_name} backend"
 
     @pytest.mark.parametrize("backend_name", BOTH_BACKENDS)
     def test_missing_font_falls_back_silently(self, backend_name, monkeypatch):
@@ -321,7 +312,4 @@ class TestSilentFallback:
         if not has_libertinus:
             # If Libertinus is not found, the fallback font changed upstream.
             # This is not a failure — just a signal to update documentation.
-            pytest.skip(
-                "Libertinus not found in fallback PDF — Typst may have "
-                "changed its default fallback font. Update documentation."
-            )
+            pytest.skip("Libertinus not found in fallback PDF — Typst may have changed its default fallback font. Update documentation.")

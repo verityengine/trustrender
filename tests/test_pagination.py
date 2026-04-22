@@ -13,7 +13,6 @@ import io
 import json
 from pathlib import Path
 
-import pytest
 from pypdf import PdfReader
 
 import trustrender

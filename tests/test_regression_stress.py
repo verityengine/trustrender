@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
 import pytest
@@ -11,10 +10,10 @@ import pytest
 from trustrender import render
 from trustrender.fingerprint import InputFingerprint, compute_fingerprint
 from trustrender.regression import (
+    _SCHEMA_VERSION,
     DriftBaseline,
     DriftFinding,
     DriftResult,
-    _SCHEMA_VERSION,
     _check_file_size,
     _check_page_count,
     _check_render_success,
@@ -46,6 +45,7 @@ def _make_fp(data: dict | None = None) -> InputFingerprint:
 # ---------------------------------------------------------------------------
 # Threshold boundary tests
 # ---------------------------------------------------------------------------
+
 
 class TestFileSizeThresholds:
     """Test exact threshold boundaries for file size drift."""
@@ -190,6 +190,7 @@ class TestPageCountThresholds:
 # Render success transitions
 # ---------------------------------------------------------------------------
 
+
 class TestRenderSuccessTransitions:
     def _make_baseline(self, success: bool) -> DriftBaseline:
         return DriftBaseline(
@@ -239,6 +240,7 @@ class TestRenderSuccessTransitions:
 # Corrupted baseline files
 # ---------------------------------------------------------------------------
 
+
 class TestCorruptedBaselines:
     def test_invalid_json(self, tmp_path):
         bl_dir = tmp_path / "invoice.j2.typ"
@@ -268,6 +270,7 @@ class TestCorruptedBaselines:
 # Baseline overwrite behavior
 # ---------------------------------------------------------------------------
 
+
 class TestBaselineOverwrite:
     def test_save_twice_overwrites(self, tmp_path):
         data = _load_data()
@@ -286,6 +289,7 @@ class TestBaselineOverwrite:
 # ---------------------------------------------------------------------------
 # PDF page count extraction
 # ---------------------------------------------------------------------------
+
 
 class TestPageCountExtraction:
     def test_real_pdf(self):
@@ -307,6 +311,7 @@ class TestPageCountExtraction:
 # DriftResult properties
 # ---------------------------------------------------------------------------
 
+
 class TestDriftResultProperties:
     def test_passed_when_no_findings(self):
         r = DriftResult(baseline_id="test")
@@ -317,16 +322,18 @@ class TestDriftResultProperties:
     def test_failed_with_error(self):
         r = DriftResult(
             baseline_id="test",
-            findings=[DriftFinding(
-                check_name="test",
-                severity="error",
-                category="structure",
-                message="bad",
-                baseline_value=None,
-                current_value=None,
-                deterministic=True,
-                confidence="high",
-            )],
+            findings=[
+                DriftFinding(
+                    check_name="test",
+                    severity="error",
+                    category="structure",
+                    message="bad",
+                    baseline_value=None,
+                    current_value=None,
+                    deterministic=True,
+                    confidence="high",
+                )
+            ],
         )
         assert r.passed is False
         assert r.has_errors is True
@@ -334,16 +341,18 @@ class TestDriftResultProperties:
     def test_passed_with_warning_only(self):
         r = DriftResult(
             baseline_id="test",
-            findings=[DriftFinding(
-                check_name="test",
-                severity="warning",
-                category="size",
-                message="drift",
-                baseline_value=None,
-                current_value=None,
-                deterministic=True,
-                confidence="high",
-            )],
+            findings=[
+                DriftFinding(
+                    check_name="test",
+                    severity="warning",
+                    category="size",
+                    message="drift",
+                    baseline_value=None,
+                    current_value=None,
+                    deterministic=True,
+                    confidence="high",
+                )
+            ],
         )
         assert r.passed is True  # Warnings don't block
         assert r.has_warnings is True
@@ -353,16 +362,20 @@ class TestDriftResultProperties:
 # All example templates with baseline save/check cycle
 # ---------------------------------------------------------------------------
 
+
 class TestAllExamplesBaselineCycle:
     """Save and check baseline for every example template."""
 
-    @pytest.mark.parametrize("template,data_file", [
-        ("invoice.j2.typ", "invoice_data.json"),
-        ("statement.j2.typ", "statement_data.json"),
-        ("receipt.j2.typ", "receipt_data.json"),
-        ("letter.j2.typ", "letter_data.json"),
-        ("report.j2.typ", "report_data.json"),
-    ])
+    @pytest.mark.parametrize(
+        "template,data_file",
+        [
+            ("invoice.j2.typ", "invoice_data.json"),
+            ("statement.j2.typ", "statement_data.json"),
+            ("receipt.j2.typ", "receipt_data.json"),
+            ("letter.j2.typ", "letter_data.json"),
+            ("report.j2.typ", "report_data.json"),
+        ],
+    )
     def test_save_then_check_passes(self, tmp_path, template, data_file):
         template_path = EXAMPLES / template
         if not template_path.exists():
@@ -377,11 +390,14 @@ class TestAllExamplesBaselineCycle:
         assert result is not None
         assert result.passed
 
-    @pytest.mark.parametrize("template,data_file", [
-        ("invoice.j2.typ", "invoice_data.json"),
-        ("statement.j2.typ", "statement_data.json"),
-        ("receipt.j2.typ", "receipt_data.json"),
-    ])
+    @pytest.mark.parametrize(
+        "template,data_file",
+        [
+            ("invoice.j2.typ", "invoice_data.json"),
+            ("statement.j2.typ", "statement_data.json"),
+            ("receipt.j2.typ", "receipt_data.json"),
+        ],
+    )
     def test_modified_data_detects_something(self, tmp_path, template, data_file):
         """Modifying data and re-rendering should detect some kind of drift."""
         template_path = EXAMPLES / template
@@ -407,6 +423,7 @@ class TestAllExamplesBaselineCycle:
 # ---------------------------------------------------------------------------
 # DriftBaseline schema evolution
 # ---------------------------------------------------------------------------
+
 
 class TestSchemaEvolution:
     def test_old_schema_without_version_loads(self, tmp_path):

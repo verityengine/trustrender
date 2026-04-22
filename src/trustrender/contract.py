@@ -71,6 +71,7 @@ class InferenceResult:
     is_partial: bool = False
     unresolved_includes: list[str] = field(default_factory=list)
 
+
 # -----------------------------------------------------------------------
 # Constants
 # -----------------------------------------------------------------------
@@ -473,9 +474,7 @@ class _ASTWalker:
     def _visit_MarkSafe(self, node: nodes.MarkSafe, *, guarded: bool) -> None:
         self._visit(node.expr, guarded=guarded)
 
-    def _visit_MarkSafeIfAutoescape(
-        self, node: nodes.MarkSafeIfAutoescape, *, guarded: bool
-    ) -> None:
+    def _visit_MarkSafeIfAutoescape(self, node: nodes.MarkSafeIfAutoescape, *, guarded: bool) -> None:
         self._visit(node.expr, guarded=guarded)
 
     # -- field registration -------------------------------------------
@@ -521,9 +520,7 @@ class _ASTWalker:
                     current.children[attr].required = True
             if i < len(attrs) - 1:
                 # Intermediate node must be an object.
-                current.children[attr].expected_type = _merge_type(
-                    current.children[attr].expected_type, OBJECT
-                )
+                current.children[attr].expected_type = _merge_type(current.children[attr].expected_type, OBJECT)
             current = current.children[attr]
 
     def _upgrade_list_to_object(self, list_name: str, element_attrs: list[list[str]]) -> None:
@@ -551,9 +548,7 @@ class _ASTWalker:
                         required=True,
                     )
                 if i < len(chain) - 1:
-                    current.children[attr].expected_type = _merge_type(
-                        current.children[attr].expected_type, OBJECT
-                    )
+                    current.children[attr].expected_type = _merge_type(current.children[attr].expected_type, OBJECT)
                 current = current.children[attr]
 
 

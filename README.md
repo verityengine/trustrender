@@ -1,5 +1,10 @@
 # TrustRender
 
+[![PyPI](https://img.shields.io/pypi/v/trustrender.svg)](https://pypi.org/project/trustrender/)
+[![Python](https://img.shields.io/pypi/pyversions/trustrender.svg)](https://pypi.org/project/trustrender/)
+[![Tests](https://img.shields.io/github/actions/workflow/status/verityengine/trustrender/ci.yml?branch=main&label=tests)](https://github.com/verityengine/trustrender/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
 Validate and normalize billing data before Factur-X/ZUGFeRD embedding.
 
 ## Quick start

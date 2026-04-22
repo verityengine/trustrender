@@ -43,6 +43,7 @@ _SCHEMA_VERSION = 2
 # Data structures
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class DriftBaseline:
     """Stored baseline for drift comparison.
@@ -53,7 +54,7 @@ class DriftBaseline:
 
     schema_version: int
     baseline_id: str
-    created_at: str                          # ISO 8601
+    created_at: str  # ISO 8601
     template_file: str
     trustrender_version: str
 
@@ -61,14 +62,14 @@ class DriftBaseline:
     fingerprint_json: dict
 
     # Output characteristics
-    pdf_size: int                            # Bytes
-    page_count: int | None                   # From pypdf if available
+    pdf_size: int  # Bytes
+    page_count: int | None  # From pypdf if available
     render_success: bool
-    render_duration_ms: int | None           # Wall clock, advisory only
+    render_duration_ms: int | None  # Wall clock, advisory only
 
     # Compliance status
-    zugferd_valid: bool | None               # None if not applicable
-    contract_valid: bool | None              # None if not applicable
+    zugferd_valid: bool | None  # None if not applicable
+    contract_valid: bool | None  # None if not applicable
 
     # Semantic baseline
     semantic_issue_count: int
@@ -124,7 +125,7 @@ class DriftFinding:
     message: str
     baseline_value: str | None
     current_value: str | None
-    deterministic: bool                      # True = exact comparison
+    deterministic: bool  # True = exact comparison
     confidence: Literal["high", "medium", "low"]
 
 
@@ -135,9 +136,7 @@ class DriftResult:
     baseline_id: str
     findings: list[DriftFinding] = field(default_factory=list)
     checks_run: list[str] = field(default_factory=list)
-    checked_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    checked_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     @property
     def has_errors(self) -> bool:
@@ -177,10 +176,12 @@ class DriftResult:
 # PDF page count helper
 # ---------------------------------------------------------------------------
 
+
 def _get_page_count(pdf_bytes: bytes) -> int | None:
     """Extract page count from PDF bytes using pypdf."""
     try:
         from pypdf import PdfReader
+
         reader = PdfReader(BytesIO(pdf_bytes))
         return len(reader.pages)
     except Exception:
@@ -210,11 +211,7 @@ def _extract_embedded_fonts(pdf_bytes: bytes) -> set[str] | None:
             if font_dict is None:
                 continue
             for font_ref in font_dict.values():
-                font_obj = (
-                    font_ref.get_object()
-                    if hasattr(font_ref, "get_object")
-                    else font_ref
-                )
+                font_obj = font_ref.get_object() if hasattr(font_ref, "get_object") else font_ref
                 base_font = font_obj.get("/BaseFont")
                 if base_font is None:
                     continue
@@ -236,6 +233,7 @@ def _extract_embedded_fonts(pdf_bytes: bytes) -> set[str] | None:
 # Drift checks
 # ---------------------------------------------------------------------------
 
+
 def _check_render_success(
     baseline: DriftBaseline,
     render_success: bool,
@@ -243,27 +241,31 @@ def _check_render_success(
 ) -> None:
     """Check if render success status changed."""
     if baseline.render_success and not render_success:
-        findings.append(DriftFinding(
-            check_name="render_success",
-            severity="error",
-            category="structure",
-            message="Render now fails (was successful in baseline)",
-            baseline_value="success",
-            current_value="failure",
-            deterministic=True,
-            confidence="high",
-        ))
+        findings.append(
+            DriftFinding(
+                check_name="render_success",
+                severity="error",
+                category="structure",
+                message="Render now fails (was successful in baseline)",
+                baseline_value="success",
+                current_value="failure",
+                deterministic=True,
+                confidence="high",
+            )
+        )
     elif not baseline.render_success and render_success:
-        findings.append(DriftFinding(
-            check_name="render_success",
-            severity="info",
-            category="structure",
-            message="Render now succeeds (was failing in baseline)",
-            baseline_value="failure",
-            current_value="success",
-            deterministic=True,
-            confidence="high",
-        ))
+        findings.append(
+            DriftFinding(
+                check_name="render_success",
+                severity="info",
+                category="structure",
+                message="Render now succeeds (was failing in baseline)",
+                baseline_value="failure",
+                current_value="success",
+                deterministic=True,
+                confidence="high",
+            )
+        )
 
 
 def _check_page_count(
@@ -289,16 +291,18 @@ def _check_page_count(
     else:
         return
 
-    findings.append(DriftFinding(
-        check_name="page_count_change",
-        severity=severity,
-        category="structure",
-        message=f"Page count {direction} by {abs_diff} (baseline: {baseline.page_count}, current: {current_page_count})",
-        baseline_value=str(baseline.page_count),
-        current_value=str(current_page_count),
-        deterministic=True,
-        confidence="high",
-    ))
+    findings.append(
+        DriftFinding(
+            check_name="page_count_change",
+            severity=severity,
+            category="structure",
+            message=f"Page count {direction} by {abs_diff} (baseline: {baseline.page_count}, current: {current_page_count})",
+            baseline_value=str(baseline.page_count),
+            current_value=str(current_page_count),
+            deterministic=True,
+            confidence="high",
+        )
+    )
 
 
 def _check_file_size(
@@ -314,27 +318,31 @@ def _check_file_size(
     pct_change = abs(ratio - 1.0) * 100
 
     if pct_change > 50:
-        findings.append(DriftFinding(
-            check_name="file_size_spike",
-            severity="error",
-            category="size",
-            message=f"PDF size changed by {pct_change:.0f}% (baseline: {baseline.pdf_size} bytes, current: {current_size} bytes)",
-            baseline_value=str(baseline.pdf_size),
-            current_value=str(current_size),
-            deterministic=True,
-            confidence="high",
-        ))
+        findings.append(
+            DriftFinding(
+                check_name="file_size_spike",
+                severity="error",
+                category="size",
+                message=f"PDF size changed by {pct_change:.0f}% (baseline: {baseline.pdf_size} bytes, current: {current_size} bytes)",
+                baseline_value=str(baseline.pdf_size),
+                current_value=str(current_size),
+                deterministic=True,
+                confidence="high",
+            )
+        )
     elif pct_change > 20:
-        findings.append(DriftFinding(
-            check_name="file_size_drift",
-            severity="warning",
-            category="size",
-            message=f"PDF size changed by {pct_change:.0f}% (baseline: {baseline.pdf_size} bytes, current: {current_size} bytes)",
-            baseline_value=str(baseline.pdf_size),
-            current_value=str(current_size),
-            deterministic=True,
-            confidence="high",
-        ))
+        findings.append(
+            DriftFinding(
+                check_name="file_size_drift",
+                severity="warning",
+                category="size",
+                message=f"PDF size changed by {pct_change:.0f}% (baseline: {baseline.pdf_size} bytes, current: {current_size} bytes)",
+                baseline_value=str(baseline.pdf_size),
+                current_value=str(current_size),
+                deterministic=True,
+                confidence="high",
+            )
+        )
 
 
 def _check_contract_status(
@@ -347,16 +355,18 @@ def _check_contract_status(
         return
 
     if baseline.contract_valid and not contract_valid:
-        findings.append(DriftFinding(
-            check_name="contract_status_change",
-            severity="error",
-            category="compliance",
-            message="Contract validation now fails (was passing in baseline)",
-            baseline_value="valid",
-            current_value="invalid",
-            deterministic=True,
-            confidence="high",
-        ))
+        findings.append(
+            DriftFinding(
+                check_name="contract_status_change",
+                severity="error",
+                category="compliance",
+                message="Contract validation now fails (was passing in baseline)",
+                baseline_value="valid",
+                current_value="invalid",
+                deterministic=True,
+                confidence="high",
+            )
+        )
 
 
 def _check_zugferd_status(
@@ -369,16 +379,18 @@ def _check_zugferd_status(
         return
 
     if baseline.zugferd_valid and not zugferd_valid:
-        findings.append(DriftFinding(
-            check_name="zugferd_status_change",
-            severity="error",
-            category="compliance",
-            message="ZUGFeRD validation now fails (was passing in baseline)",
-            baseline_value="valid",
-            current_value="invalid",
-            deterministic=True,
-            confidence="high",
-        ))
+        findings.append(
+            DriftFinding(
+                check_name="zugferd_status_change",
+                severity="error",
+                category="compliance",
+                message="ZUGFeRD validation now fails (was passing in baseline)",
+                baseline_value="valid",
+                current_value="invalid",
+                deterministic=True,
+                confidence="high",
+            )
+        )
 
 
 def _check_embedded_fonts(
@@ -403,21 +415,24 @@ def _check_embedded_fonts(
     if added:
         parts.append(f"added {', '.join(sorted(added))}")
 
-    findings.append(DriftFinding(
-        check_name="embedded_fonts_changed",
-        severity="warning",
-        category="structure",
-        message=f"Embedded fonts changed: {'; '.join(parts)}",
-        baseline_value=", ".join(sorted(baseline_set)),
-        current_value=", ".join(sorted(current_fonts)),
-        deterministic=True,
-        confidence="high",
-    ))
+    findings.append(
+        DriftFinding(
+            check_name="embedded_fonts_changed",
+            severity="warning",
+            category="structure",
+            message=f"Embedded fonts changed: {'; '.join(parts)}",
+            baseline_value=", ".join(sorted(baseline_set)),
+            current_value=", ".join(sorted(current_fonts)),
+            deterministic=True,
+            confidence="high",
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
 # Baseline storage
 # ---------------------------------------------------------------------------
+
 
 def _baseline_dir_for_template(
     baseline_dir: Path,
@@ -485,9 +500,7 @@ def save_baseline(
 
     # Write latest
     latest_path = template_dir / "latest.json"
-    latest_path.write_text(
-        json.dumps(baseline.to_dict(), indent=2, ensure_ascii=False) + "\n"
-    )
+    latest_path.write_text(json.dumps(baseline.to_dict(), indent=2, ensure_ascii=False) + "\n")
 
     return baseline
 
@@ -517,6 +530,7 @@ def load_baseline(
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def check_drift(
     baseline_dir: str | os.PathLike,

@@ -6,14 +6,12 @@ auto-computation, unknown field classification, and semantic validation.
 
 from __future__ import annotations
 
-import pytest
-
 from trustrender.invoice_ingest import ingest_invoice
-
 
 # ---------------------------------------------------------------------------
 # Test 1: QuickBooks-style camelCase
 # ---------------------------------------------------------------------------
+
 
 class TestQuickBooksCamelCase:
     PAYLOAD = {
@@ -87,6 +85,7 @@ class TestQuickBooksCamelCase:
 # Test 2: Stripe-style flat with string amounts
 # ---------------------------------------------------------------------------
 
+
 class TestStripeStyleFlat:
     PAYLOAD = {
         "number": "INV-5678",
@@ -133,6 +132,7 @@ class TestStripeStyleFlat:
 # Test 3: Already canonical — zero normalizations
 # ---------------------------------------------------------------------------
 
+
 class TestAlreadyCanonical:
     PAYLOAD = {
         "invoice_number": "INV-0001",
@@ -178,6 +178,7 @@ class TestAlreadyCanonical:
 # ---------------------------------------------------------------------------
 # Test 4: Missing computed fields
 # ---------------------------------------------------------------------------
+
 
 class TestMissingComputedFields:
     PAYLOAD = {
@@ -228,6 +229,7 @@ class TestMissingComputedFields:
 # Test 5: Near-miss typos — suggestions only, never auto-mapped
 # ---------------------------------------------------------------------------
 
+
 class TestNearMissTypos:
     PAYLOAD = {
         "invioce_number": "INV-TYPO-001",  # typo
@@ -263,6 +265,7 @@ class TestNearMissTypos:
 # ---------------------------------------------------------------------------
 # Test 6: Extra CRM fields — all pass_through
 # ---------------------------------------------------------------------------
+
 
 class TestExtraCRMFields:
     PAYLOAD = {
@@ -310,6 +313,7 @@ class TestExtraCRMFields:
 # Test 7: Minimal flat API
 # ---------------------------------------------------------------------------
 
+
 class TestMinimalFlatAPI:
     PAYLOAD = {
         "number": "API-001",
@@ -349,6 +353,7 @@ class TestMinimalFlatAPI:
 # Test 8: Blocked — missing critical data
 # ---------------------------------------------------------------------------
 
+
 class TestBlockedMissingCritical:
     PAYLOAD = {
         "items": [
@@ -384,6 +389,7 @@ class TestBlockedMissingCritical:
 # ---------------------------------------------------------------------------
 # Test 9: European formats
 # ---------------------------------------------------------------------------
+
 
 class TestEuropeanFormats:
     PAYLOAD = {
@@ -435,6 +441,7 @@ class TestEuropeanFormats:
 # Test 10: Conflicting arithmetic — error, no override
 # ---------------------------------------------------------------------------
 
+
 class TestConflictingArithmetic:
     PAYLOAD = {
         "invoice_number": "INV-CONFLICT-001",
@@ -483,17 +490,21 @@ class TestConflictingArithmetic:
 # Integration: Report serialization
 # ---------------------------------------------------------------------------
 
+
 class TestReportSerialization:
     def test_to_dict_shape(self):
-        report = ingest_invoice({
-            "invoice_number": "SER-001",
-            "invoice_date": "2026-04-10",
-            "due_date": "2026-05-10",
-            "sender": {"name": "A", "address": "1"},
-            "recipient": {"name": "B", "address": "2"},
-            "items": [{"description": "X", "quantity": 1, "unit_price": 100, "line_total": 100, "num": 1}],
-            "subtotal": 100, "total": 100,
-        })
+        report = ingest_invoice(
+            {
+                "invoice_number": "SER-001",
+                "invoice_date": "2026-04-10",
+                "due_date": "2026-05-10",
+                "sender": {"name": "A", "address": "1"},
+                "recipient": {"name": "B", "address": "2"},
+                "items": [{"description": "X", "quantity": 1, "unit_price": 100, "line_total": 100, "num": 1}],
+                "subtotal": 100,
+                "total": 100,
+            }
+        )
         d = report.to_dict()
         assert "status" in d
         assert "render_ready" in d
@@ -516,34 +527,49 @@ class TestReportSerialization:
 # Integration: Template payload produces renderable shape
 # ---------------------------------------------------------------------------
 
+
 class TestTemplatePayloadShape:
     """Verify template_payload matches what invoice.j2.typ expects."""
 
     def test_has_required_keys(self):
-        report = ingest_invoice({
-            "invoice_number": "TPL-001",
-            "invoice_date": "2026-04-10",
-            "due_date": "2026-05-10",
-            "sender": {"name": "A Corp", "address": "1 St", "email": "a@a.com"},
-            "recipient": {"name": "B Corp", "address": "2 Ave", "email": "b@b.com"},
-            "items": [{"description": "Work", "quantity": 2, "unit_price": 500.0}],
-            "tax_rate": 8.5,
-        })
+        report = ingest_invoice(
+            {
+                "invoice_number": "TPL-001",
+                "invoice_date": "2026-04-10",
+                "due_date": "2026-05-10",
+                "sender": {"name": "A Corp", "address": "1 St", "email": "a@a.com"},
+                "recipient": {"name": "B Corp", "address": "2 Ave", "email": "b@b.com"},
+                "items": [{"description": "Work", "quantity": 2, "unit_price": 500.0}],
+                "tax_rate": 8.5,
+            }
+        )
         tp = report.template_payload
         # All keys expected by invoice.j2.typ
-        for key in ("invoice_number", "invoice_date", "due_date", "sender",
-                     "recipient", "items", "subtotal", "tax_rate", "tax_amount", "total"):
+        for key in (
+            "invoice_number",
+            "invoice_date",
+            "due_date",
+            "sender",
+            "recipient",
+            "items",
+            "subtotal",
+            "tax_rate",
+            "tax_amount",
+            "total",
+        ):
             assert key in tp, f"Missing key: {key}"
 
     def test_item_shape(self):
-        report = ingest_invoice({
-            "invoice_number": "TPL-002",
-            "invoice_date": "2026-04-10",
-            "due_date": "2026-05-10",
-            "sender": {"name": "A", "address": "1"},
-            "recipient": {"name": "B", "address": "2"},
-            "items": [{"description": "Svc", "quantity": 3, "unit_price": 100.0}],
-        })
+        report = ingest_invoice(
+            {
+                "invoice_number": "TPL-002",
+                "invoice_date": "2026-04-10",
+                "due_date": "2026-05-10",
+                "sender": {"name": "A", "address": "1"},
+                "recipient": {"name": "B", "address": "2"},
+                "items": [{"description": "Svc", "quantity": 3, "unit_price": 100.0}],
+            }
+        )
         item = report.template_payload["items"][0]
         assert "num" in item
         assert "description" in item
@@ -552,27 +578,31 @@ class TestTemplatePayloadShape:
         assert "amount" in item
 
     def test_amounts_are_display_strings(self):
-        report = ingest_invoice({
-            "invoice_number": "TPL-003",
-            "invoice_date": "2026-04-10",
-            "due_date": "2026-05-10",
-            "sender": {"name": "A", "address": "1"},
-            "recipient": {"name": "B", "address": "2"},
-            "items": [{"description": "X", "quantity": 1, "unit_price": 1234.56}],
-        })
+        report = ingest_invoice(
+            {
+                "invoice_number": "TPL-003",
+                "invoice_date": "2026-04-10",
+                "due_date": "2026-05-10",
+                "sender": {"name": "A", "address": "1"},
+                "recipient": {"name": "B", "address": "2"},
+                "items": [{"description": "X", "quantity": 1, "unit_price": 1234.56}],
+            }
+        )
         tp = report.template_payload
         assert "$1,234.56" in tp["subtotal"]
         assert "$1,234.56" in tp["total"]
 
     def test_dates_are_display_format(self):
-        report = ingest_invoice({
-            "invoice_number": "TPL-004",
-            "invoice_date": "2026-04-10",
-            "due_date": "2026-05-10",
-            "sender": {"name": "A", "address": "1"},
-            "recipient": {"name": "B", "address": "2"},
-            "items": [{"description": "X", "quantity": 1, "unit_price": 100.0}],
-        })
+        report = ingest_invoice(
+            {
+                "invoice_number": "TPL-004",
+                "invoice_date": "2026-04-10",
+                "due_date": "2026-05-10",
+                "sender": {"name": "A", "address": "1"},
+                "recipient": {"name": "B", "address": "2"},
+                "items": [{"description": "X", "quantity": 1, "unit_price": 100.0}],
+            }
+        )
         tp = report.template_payload
         assert tp["invoice_date"] == "April 10, 2026"
         assert tp["due_date"] == "May 10, 2026"
@@ -582,6 +612,7 @@ class TestTemplatePayloadShape:
 # Data-source tests for guided correction frontend
 # ---------------------------------------------------------------------------
 
+
 class TestGuidedCorrectionDataSources:
     """Validate that the backend produces the exact data structures
     the frontend guided correction system relies on."""
@@ -589,13 +620,15 @@ class TestGuidedCorrectionDataSources:
     def test_typo_payload_produces_near_match_with_suggestion(self):
         """Tier A requires unknown_fields with classification='near_match'
         and a suggestion that matches the blocked path."""
-        report = ingest_invoice({
-            "invioce_number": "INV-001",
-            "invoice_date": "2026-04-10",
-            "sender": {"name": "Acme"},
-            "recipeint": {"name": "Target", "email": "t@t.com"},
-            "items": [{"description": "X", "quantity": 1, "unit_price": 100}],
-        })
+        report = ingest_invoice(
+            {
+                "invioce_number": "INV-001",
+                "invoice_date": "2026-04-10",
+                "sender": {"name": "Acme"},
+                "recipeint": {"name": "Target", "email": "t@t.com"},
+                "items": [{"description": "X", "quantity": 1, "unit_price": 100}],
+            }
+        )
         # Must be blocked on invoice_number
         assert not report.render_ready
         blocked_rules = {e.rule_id for e in report.errors if e.severity == "blocked"}
@@ -612,29 +645,34 @@ class TestGuidedCorrectionDataSources:
 
     def test_missing_sender_no_near_match(self):
         """Tier B: blocked on sender.name with NO near_match in unknown_fields."""
-        report = ingest_invoice({
-            "invoice_number": "INV-002",
-            "invoice_date": "2026-04-10",
-            "recipient": {"name": "Client"},
-            "items": [{"description": "X", "quantity": 1, "unit_price": 100}],
-        })
+        report = ingest_invoice(
+            {
+                "invoice_number": "INV-002",
+                "invoice_date": "2026-04-10",
+                "recipient": {"name": "Client"},
+                "items": [{"description": "X", "quantity": 1, "unit_price": 100}],
+            }
+        )
         assert not report.render_ready
         blocked_rules = {e.rule_id for e in report.errors if e.severity == "blocked"}
         assert "identity.sender_name" in blocked_rules
 
         # No near-match for sender — nothing to rename
-        sender_matches = [u for u in report.unknown_fields
-                         if u.classification == "near_match" and u.suggestion in ("sender", "sender.name")]
+        sender_matches = [
+            u for u in report.unknown_fields if u.classification == "near_match" and u.suggestion in ("sender", "sender.name")
+        ]
         assert len(sender_matches) == 0
 
     def test_typo_plus_missing_sender_produces_both(self):
         """Mixed Tier A + Tier B: both near_match unknown_field AND blocked error."""
-        report = ingest_invoice({
-            "invioce_number": "INV-003",
-            "invoice_date": "2026-04-10",
-            "recipient": {"name": "Client"},
-            "items": [{"description": "X", "quantity": 1, "unit_price": 100}],
-        })
+        report = ingest_invoice(
+            {
+                "invioce_number": "INV-003",
+                "invoice_date": "2026-04-10",
+                "recipient": {"name": "Client"},
+                "items": [{"description": "X", "quantity": 1, "unit_price": 100}],
+            }
+        )
         assert not report.render_ready
 
         blocked_rules = {e.rule_id for e in report.errors if e.severity == "blocked"}

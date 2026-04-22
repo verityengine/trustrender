@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import difflib
 
-
 # ---------------------------------------------------------------------------
 # Alias maps: messy_name -> canonical_name
 # ---------------------------------------------------------------------------
@@ -27,19 +26,19 @@ TOP_LEVEL_ALIASES: dict[str, str] = {
     "number": "invoice_number",
     "ref": "invoice_number",
     "reference": "invoice_number",
-    "InvoiceRef": "invoice_number",      # ERP/generic PascalCase
+    "InvoiceRef": "invoice_number",  # ERP/generic PascalCase
     "invoice_ref": "invoice_number",
     "doc_number": "invoice_number",
-    "DocNumber": "invoice_number",    # QuickBooks
+    "DocNumber": "invoice_number",  # QuickBooks
     # invoice_date
     "invoiceDate": "invoice_date",
     "date": "invoice_date",
     "issued": "invoice_date",
     "issue_date": "invoice_date",
-    "TxnDate": "invoice_date",        # QuickBooks
+    "TxnDate": "invoice_date",  # QuickBooks
     # due_date
     "dueDate": "due_date",
-    "DueDate": "due_date",            # QuickBooks / common PascalCase
+    "DueDate": "due_date",  # QuickBooks / common PascalCase
     "payment_due": "due_date",
     "due": "due_date",
     "due_by": "due_date",
@@ -51,7 +50,7 @@ TOP_LEVEL_ALIASES: dict[str, str] = {
     "company": "sender",
     "biller": "sender",
     "issuer": "sender",
-    "business": "sender",             # Freshbooks
+    "business": "sender",  # Freshbooks
     # recipient
     "buyer": "recipient",
     "to": "recipient",
@@ -59,20 +58,20 @@ TOP_LEVEL_ALIASES: dict[str, str] = {
     "client": "recipient",
     "bill_to": "recipient",
     "billTo": "recipient",
-    "Contact": "recipient",           # Xero
+    "Contact": "recipient",  # Xero
     # items
     "line_items": "items",
     "lineItems": "items",
-    "LineItems": "items",             # Xero
+    "LineItems": "items",  # Xero
     "lines": "items",
-    "Line": "items",                  # QuickBooks
+    "Line": "items",  # QuickBooks
     "products": "items",
     "services": "items",
     "entries": "items",
     # subtotal
     "sub_total": "subtotal",
     "subTotal": "subtotal",
-    "SubTotal": "subtotal",           # Xero / QuickBooks
+    "SubTotal": "subtotal",  # Xero / QuickBooks
     "net_total": "subtotal",
     "net_amount": "subtotal",
     # tax_rate
@@ -84,7 +83,7 @@ TOP_LEVEL_ALIASES: dict[str, str] = {
     "tax": "tax_amount",
     "vat_amount": "tax_amount",
     "vat": "tax_amount",
-    "TotalTax": "tax_amount",         # Xero
+    "TotalTax": "tax_amount",  # Xero
     # total
     "grand_total": "total",
     "grandTotal": "total",
@@ -92,9 +91,9 @@ TOP_LEVEL_ALIASES: dict[str, str] = {
     "totalAmount": "total",
     "amount_due": "total",
     "balance_due": "total",
-    "TotalAmt": "total",              # QuickBooks
-    "Total": "total",                 # Xero
-    "total_due": "total",             # CSV exports
+    "TotalAmt": "total",  # QuickBooks
+    "Total": "total",  # Xero
+    "total_due": "total",  # CSV exports
     # payment_terms
     "paymentTerms": "payment_terms",
     "terms": "payment_terms",
@@ -103,11 +102,11 @@ TOP_LEVEL_ALIASES: dict[str, str] = {
     "remarks": "notes",
     "comments": "notes",
     "footer": "notes",
-    "CustomerMemo": "notes",          # QuickBooks
+    "CustomerMemo": "notes",  # QuickBooks
     # currency
     "currency_code": "currency",
     "currencyCode": "currency",
-    "CurrencyCode": "currency",       # Xero
+    "CurrencyCode": "currency",  # Xero
 }
 
 # Flat party fields: top-level keys that describe sender/recipient without nesting.
@@ -117,18 +116,18 @@ FLAT_SENDER_FIELDS: dict[str, str] = {
     "bill_from_name": "name",
     "bill_from_address": "address",
     "bill_from_email": "email",
-    "account_name": "name",           # Stripe
+    "account_name": "name",  # Stripe
     "account_email": "email",
-    "CompanyName": "name",            # QuickBooks
-    "CompanyEmail": "email",          # QuickBooks
+    "CompanyName": "name",  # QuickBooks
+    "CompanyEmail": "email",  # QuickBooks
 }
 
 FLAT_RECIPIENT_FIELDS: dict[str, str] = {
     "bill_to_name": "name",
     "bill_to_address": "address",
     "bill_to_email": "email",
-    "customer_name": "name",          # Stripe
-    "customer_email": "email",        # Stripe
+    "customer_name": "name",  # Stripe
+    "customer_email": "email",  # Stripe
 }
 
 # Party (sender/recipient) sub-field aliases
@@ -137,26 +136,26 @@ PARTY_ALIASES: dict[str, str] = {
     "companyName": "name",
     "business_name": "name",
     "organization": "name",
-    "Name": "name",                   # Xero Contact.Name / PascalCase
+    "Name": "name",  # Xero Contact.Name / PascalCase
     "street": "address",
     "address_line": "address",
     "address1": "address",
     "street_address": "address",
     "email_address": "email",
-    "EmailAddress": "email",          # Xero Contact.EmailAddress
+    "EmailAddress": "email",  # Xero Contact.EmailAddress
     "mail": "email",
 }
 
 # Line item sub-field aliases
 ITEM_ALIASES: dict[str, str] = {
     "desc": "description",
-    "Description": "description",    # Xero / QuickBooks PascalCase
+    "Description": "description",  # Xero / QuickBooks PascalCase
     "name": "description",
     "title": "description",
     "product": "description",
     "service": "description",
     "qty": "quantity",
-    "Quantity": "quantity",           # Xero / QuickBooks PascalCase
+    "Quantity": "quantity",  # Xero / QuickBooks PascalCase
     "count": "quantity",
     "units": "quantity",
     "price": "unit_price",
@@ -165,32 +164,42 @@ ITEM_ALIASES: dict[str, str] = {
     "unit_cost": "unit_price",
     "unitCost": "unit_price",
     "unitPrice": "unit_price",
-    "UnitPrice": "unit_price",          # PascalCase variant
+    "UnitPrice": "unit_price",  # PascalCase variant
     "price_per_unit": "unit_price",
     "total": "line_total",
     "lineTotal": "line_total",
     "line_amount": "line_total",
     "ext_price": "line_total",
     "amount": "line_total",
-    "Amount": "line_total",           # QuickBooks / PascalCase
+    "Amount": "line_total",  # QuickBooks / PascalCase
     "taxRate": "tax_rate",
     "vat": "tax_rate",
     "vat_rate": "tax_rate",
     "line_number": "num",
-    "LineNum": "num",                 # QuickBooks
+    "LineNum": "num",  # QuickBooks
     "position": "num",
     "pos": "num",
     "index": "num",
-    "UnitAmount": "unit_price",       # Xero
-    "LineAmount": "line_total",       # Xero
-    "unit_amount": "unit_price",      # Stripe (in cents — handled in coercion)
+    "UnitAmount": "unit_price",  # Xero
+    "LineAmount": "line_total",  # Xero
+    "unit_amount": "unit_price",  # Stripe (in cents — handled in coercion)
 }
 
 # All canonical field names (for near-match detection)
 CANONICAL_TOP_LEVEL = {
-    "invoice_number", "invoice_date", "due_date", "sender", "recipient",
-    "items", "subtotal", "tax_rate", "tax_amount", "total",
-    "currency", "payment_terms", "notes",
+    "invoice_number",
+    "invoice_date",
+    "due_date",
+    "sender",
+    "recipient",
+    "items",
+    "subtotal",
+    "tax_rate",
+    "tax_amount",
+    "total",
+    "currency",
+    "payment_terms",
+    "notes",
 }
 
 CANONICAL_PARTY = {"name", "address", "email"}
@@ -198,15 +207,27 @@ CANONICAL_PARTY = {"name", "address", "email"}
 CANONICAL_ITEM = {"description", "quantity", "unit_price", "line_total", "num", "tax_rate"}
 
 # Suspicious field name fragments — might be important business fields
-_SUSPICIOUS_FRAGMENTS = frozenset({
-    "total", "amount", "price", "tax", "vat", "balance",
-    "due", "pay", "discount", "fee", "charge",
-})
+_SUSPICIOUS_FRAGMENTS = frozenset(
+    {
+        "total",
+        "amount",
+        "price",
+        "tax",
+        "vat",
+        "balance",
+        "due",
+        "pay",
+        "discount",
+        "fee",
+        "charge",
+    }
+)
 
 
 # ---------------------------------------------------------------------------
 # Resolution functions
 # ---------------------------------------------------------------------------
+
 
 def resolve_top_level(key: str) -> str | None:
     """Resolve a top-level field name to its canonical name.

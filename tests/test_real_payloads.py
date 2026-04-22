@@ -61,10 +61,12 @@ def test_real_payload(payload_path: Path, capsys) -> None:
 
     print(f"\n{payload_path.stem}")
     print(f"  status={report.status}  render_ready={report.render_ready}  failure={failure_type}")
-    print(f"  blocked={len(blocked)}  warnings={len(report.warnings)}  "
-          f"normalizations={len(report.normalizations)}  "
-          f"unknown={len(report.unknown_fields)}  "
-          f"computed={len(report.computed_fields)}")
+    print(
+        f"  blocked={len(blocked)}  warnings={len(report.warnings)}  "
+        f"normalizations={len(report.normalizations)}  "
+        f"unknown={len(report.unknown_fields)}  "
+        f"computed={len(report.computed_fields)}"
+    )
     if blocked:
         for e in blocked:
             print(f"  ! [{e.rule_id}] {e.message}")

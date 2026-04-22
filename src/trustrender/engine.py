@@ -21,9 +21,9 @@ import time
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
-logger = logging.getLogger("trustrender.engine")
-
 from .errors import ErrorCode, TrustRenderError
+
+logger = logging.getLogger("trustrender.engine")
 
 
 def _classify_typst_error(message: str) -> ErrorCode:
@@ -180,8 +180,7 @@ class TypstCliBackend:
             )
         except FileNotFoundError:
             raise TrustRenderError(
-                f"Typst CLI not found at '{self._bin}'. "
-                f"Install Typst (https://typst.app) or set TRUSTRENDER_BACKEND=typst-py",
+                f"Typst CLI not found at '{self._bin}'. Install Typst (https://typst.app) or set TRUSTRENDER_BACKEND=typst-py",
                 code=ErrorCode.BACKEND_ERROR,
                 stage="compilation",
             )
@@ -278,7 +277,10 @@ def compile_typst_file(
     backend = backend or get_backend()
     try:
         return backend.compile(
-            path, format="pdf", font_paths=font_paths, timeout=timeout,
+            path,
+            format="pdf",
+            font_paths=font_paths,
+            timeout=timeout,
             pdf_standards=pdf_standards,
         )
     except TrustRenderError as exc:

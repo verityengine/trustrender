@@ -35,8 +35,6 @@ from trustrender import render
 from trustrender.readiness import preflight
 from trustrender.semantic import (
     INVOICE_HINTS,
-    RECEIPT_HINTS,
-    STATEMENT_HINTS,
     SemanticHints,
     validate_semantics,
 )
@@ -52,6 +50,7 @@ def assert_valid_pdf(pdf_bytes: bytes):
 # ---------------------------------------------------------------------------
 # Invoice base data helper
 # ---------------------------------------------------------------------------
+
 
 def _invoice_data(**overrides):
     data = {
@@ -140,6 +139,7 @@ RECEIPT_TEMPLATE = EXAMPLES / "receipt.j2.typ"
 # Verdict: should allow, with warning (semantic layer warns, render OK)
 # ===================================================================
 
+
 class TestMalformedDates:
     """Date fields with values that don't match standard formats."""
 
@@ -201,6 +201,7 @@ class TestMalformedDates:
 # Verdict: should allow, no warning (render) / should warn (semantic)
 # ===================================================================
 
+
 class TestMixedLocaleCurrency:
     """Currency values with different symbols, formats, and conventions."""
 
@@ -224,9 +225,7 @@ class TestMixedLocaleCurrency:
         # This is a real gap — documented in ugly-data-findings.md.
         report = validate_semantics(data, INVOICE_HINTS)
         # Verify no warnings fire (confirming the gap)
-        assert len(report.issues) == 0, (
-            f"Expected no warnings (gap: ₹ is invisible), got: {report.issues}"
-        )
+        assert len(report.issues) == 0, f"Expected no warnings (gap: ₹ is invisible), got: {report.issues}"
 
     def test_brazilian_real(self):
         """R$ prefix — two-char currency symbol."""
@@ -283,6 +282,7 @@ class TestMixedLocaleCurrency:
 # Verdict: should allow, no warning (render must handle gracefully)
 # ===================================================================
 
+
 class TestControlCharacters:
     """Strings with control characters, null bytes, zero-width chars."""
 
@@ -309,19 +309,19 @@ class TestControlCharacters:
     def test_zero_width_space(self):
         """Zero-width space (U+200B) — invisible but present."""
         data = _invoice_data()
-        data["sender"]["name"] = "Sender\u200BCo"
+        data["sender"]["name"] = "Sender\u200bCo"
         assert_valid_pdf(render(INVOICE_TEMPLATE, data))
 
     def test_zero_width_joiner(self):
         """Zero-width joiner (U+200D)."""
         data = _invoice_data()
-        data["sender"]["name"] = "A\u200DB Corp"
+        data["sender"]["name"] = "A\u200dB Corp"
         assert_valid_pdf(render(INVOICE_TEMPLATE, data))
 
     def test_non_breaking_space(self):
         """Non-breaking space (U+00A0)."""
         data = _invoice_data()
-        data["items"][0]["description"] = "Item\u00A0Description"
+        data["items"][0]["description"] = "Item\u00a0Description"
         assert_valid_pdf(render(INVOICE_TEMPLATE, data))
 
     def test_null_byte_in_string(self):
@@ -342,6 +342,7 @@ class TestControlCharacters:
 # 4. RTL TEXT
 # Verdict: should allow, no warning (render must produce valid PDF)
 # ===================================================================
+
 
 class TestRTLText:
     """Arabic and Hebrew text in various fields."""
@@ -395,6 +396,7 @@ class TestRTLText:
 # 5. VERY LARGE INTEGERS / PRECISION LOSS
 # Verdict: should allow, no warning (but check for precision loss)
 # ===================================================================
+
 
 class TestLargeIntegers:
     """Totals above 2^53, 15+ digit amounts, extreme precision."""
@@ -452,6 +454,7 @@ class TestLargeIntegers:
 # Verdict: should allow, no warning (templates reference specific keys)
 # ===================================================================
 
+
 class TestDuplicateSemanticKeys:
     """Data with both 'total' and 'grand_total', or 'tax' and 'tax_amount'."""
 
@@ -491,6 +494,7 @@ class TestDuplicateSemanticKeys:
 # 7. NUMERIC EDGE CASES
 # Verdict: mixed — some should allow, some should warn
 # ===================================================================
+
 
 class TestNumericEdgeCases:
     """Booleans, scientific notation, NaN, Infinity, negative zero."""
@@ -563,6 +567,7 @@ class TestNumericEdgeCases:
 # Verdict: should allow, no warning (extra fields ignored by template)
 # ===================================================================
 
+
 class TestInconsistentItemSchemas:
     """List items where some have extra fields or missing optional fields."""
 
@@ -610,6 +615,7 @@ class TestInconsistentItemSchemas:
 # Verdict: should allow, with warning (arithmetic check catches drift)
 # ===================================================================
 
+
 class TestRoundingAccumulation:
     """Many items where individual rounding is correct but sum drifts."""
 
@@ -618,13 +624,15 @@ class TestRoundingAccumulation:
         But what about $33.333... per item?"""
         items = []
         for i in range(1, 51):
-            items.append({
-                "num": i,
-                "description": f"Item {i}",
-                "qty": 1,
-                "unit_price": "$33.33",
-                "amount": "$33.33",
-            })
+            items.append(
+                {
+                    "num": i,
+                    "description": f"Item {i}",
+                    "qty": 1,
+                    "unit_price": "$33.33",
+                    "amount": "$33.33",
+                }
+            )
         data = _invoice_data()
         data["items"] = items
         # Correct sum: 50 * 33.33 = 1666.50
@@ -683,6 +691,7 @@ class TestRoundingAccumulation:
 # Verdict: should allow, no warning
 # ===================================================================
 
+
 class TestZeroValues:
     """Items with zero quantity, zero price, or zero amount."""
 
@@ -729,6 +738,7 @@ class TestZeroValues:
 # 11. TYPE CONFUSION
 # Verdict: mixed — should allow (render) but some should warn (semantic)
 # ===================================================================
+
 
 class TestTypeConfusion:
     """String versions of special values: 'true', 'false', 'null', '0', ''."""
@@ -795,23 +805,14 @@ class TestTypeConfusion:
 # Verdict: should allow, no warning
 # ===================================================================
 
+
 class TestDeepNesting:
     """Data with deeply nested structures — extra depth beyond template needs."""
 
     def test_deeply_nested_sender(self):
         """Sender with extra nested metadata."""
         data = _invoice_data()
-        data["sender"]["metadata"] = {
-            "level1": {
-                "level2": {
-                    "level3": {
-                        "level4": {
-                            "level5": "deep value"
-                        }
-                    }
-                }
-            }
-        }
+        data["sender"]["metadata"] = {"level1": {"level2": {"level3": {"level4": {"level5": "deep value"}}}}}
         assert_valid_pdf(render(INVOICE_TEMPLATE, data))
 
     def test_items_with_nested_metadata(self):
@@ -828,6 +829,7 @@ class TestDeepNesting:
 # 13. PREFLIGHT-SPECIFIC UGLY PAYLOADS
 # Tests both preflight() and render() to verify surface consistency
 # ===================================================================
+
 
 class TestPreflightUglyPayloads:
     """Preflight-specific edge cases — data that passes contract but fails semantic,
@@ -915,7 +917,8 @@ class TestPreflightUglyPayloads:
         data = _invoice_data()
         data["sender"]["name"] = "Acme\x00Corp"
         verdict = preflight(
-            INVOICE_TEMPLATE, data,
+            INVOICE_TEMPLATE,
+            data,
             semantic_hints=INVOICE_HINTS,
         )
         assert verdict.ready  # Warnings don't block
@@ -926,7 +929,7 @@ class TestPreflightUglyPayloads:
     def test_contaminated_text_renders_with_warning(self):
         """Zero-width space in description: render succeeds, semantic warns."""
         data = _invoice_data()
-        data["items"][0]["description"] = "Widget\u200BPro"
+        data["items"][0]["description"] = "Widget\u200bPro"
         # Render succeeds — text anomaly is warning-only
         assert_valid_pdf(render(INVOICE_TEMPLATE, data))
         # Semantic layer catches it

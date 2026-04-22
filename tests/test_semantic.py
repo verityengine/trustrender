@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from trustrender.semantic import (
     INVOICE_HINTS,
     LETTER_HINTS,
@@ -278,7 +276,6 @@ class TestReceiptHints:
         """Receipt fixture passes RECEIPT_HINTS without issues."""
         import json
         from pathlib import Path
-        from trustrender.semantic import RECEIPT_HINTS
 
         examples = Path(__file__).parent.parent / "examples"
         data = json.loads((examples / "receipt_data.json").read_text())
@@ -287,7 +284,6 @@ class TestReceiptHints:
 
     def test_receipt_bad_total_warns(self):
         """Receipt with wrong total triggers arithmetic warning."""
-        from trustrender.semantic import RECEIPT_HINTS
 
         data = {
             "company": {"name": "Test"},
@@ -310,7 +306,6 @@ class TestReceiptHints:
 
     def test_receipt_non_numeric_amount_warns(self):
         """Receipt item with non-numeric amount triggers warning."""
-        from trustrender.semantic import RECEIPT_HINTS
 
         data = {
             "company": {"name": "Test"},
@@ -334,7 +329,6 @@ class TestStatementHints:
         """Statement fixture passes STATEMENT_HINTS without issues."""
         import json
         from pathlib import Path
-        from trustrender.semantic import STATEMENT_HINTS
 
         examples = Path(__file__).parent.parent / "examples"
         data = json.loads((examples / "statement_data.json").read_text())
@@ -343,7 +337,6 @@ class TestStatementHints:
 
     def test_statement_aging_mismatch_warns(self):
         """Aging totals that don't sum to aging.total trigger warning."""
-        from trustrender.semantic import STATEMENT_HINTS
 
         data = {
             "customer": {"name": "Test", "account_number": "A-001"},
@@ -366,7 +359,6 @@ class TestStatementHints:
 
     def test_statement_balance_mismatch_warns(self):
         """opening + charges + payments != closing triggers warning."""
-        from trustrender.semantic import STATEMENT_HINTS
 
         data = {
             "customer": {"name": "Test", "account_number": "A-001"},
@@ -457,41 +449,48 @@ class TestReconciliation:
 class TestHintAutoDetection:
     def test_invoice_detected(self):
         from trustrender.cli import _resolve_hints
+
         hints = _resolve_hints("invoice.j2.typ")
         assert hints is not None
         assert hints.line_items_path == "items"
 
     def test_einvoice_detected(self):
         from trustrender.cli import _resolve_hints
+
         hints = _resolve_hints("einvoice.j2.typ")
         assert hints is not None
 
     def test_receipt_detected(self):
         from trustrender.cli import _resolve_hints
+
         hints = _resolve_hints("receipt.j2.typ")
         assert hints is not None
         assert hints.line_total_field == "amount"
 
     def test_statement_detected(self):
         from trustrender.cli import _resolve_hints
+
         hints = _resolve_hints("statement.j2.typ")
         assert hints is not None
         assert hints.reconciliations is not None
 
     def test_letter_detected(self):
         from trustrender.cli import _resolve_hints
+
         hints = _resolve_hints("letter.j2.typ")
         assert hints is not None
         assert "sender.name" in hints.nonempty_fields
 
     def test_report_detected(self):
         from trustrender.cli import _resolve_hints
+
         hints = _resolve_hints("report.j2.typ")
         assert hints is not None
         assert "title" in hints.nonempty_fields
 
     def test_unknown_returns_none(self):
         from trustrender.cli import _resolve_hints
+
         hints = _resolve_hints("custom_widget.j2.typ")
         assert hints is None
 
@@ -623,7 +622,7 @@ class TestTextAnomalyDetection:
         assert "form feed" in anomalies[0].message
 
     def test_zero_width_space_warns(self):
-        data = {"name": "Acme\u200BCorp"}
+        data = {"name": "Acme\u200bCorp"}
         hints = SemanticHints(text_check_fields=["name"])
         report = validate_semantics(data, hints=hints)
         anomalies = [i for i in report.issues if i.category == "text_anomaly"]
@@ -631,7 +630,7 @@ class TestTextAnomalyDetection:
         assert "zero-width space" in anomalies[0].message
 
     def test_bom_warns(self):
-        data = {"name": "\uFEFFAcme Corp"}
+        data = {"name": "\ufeffAcme Corp"}
         hints = SemanticHints(text_check_fields=["name"])
         report = validate_semantics(data, hints=hints)
         anomalies = [i for i in report.issues if i.category == "text_anomaly"]
@@ -700,7 +699,7 @@ class TestTextAnomalyDetection:
 
     def test_dot_path_resolved(self):
         """Nested dot paths like sender.name are resolved."""
-        data = {"sender": {"name": "Acme\u200BCorp"}}
+        data = {"sender": {"name": "Acme\u200bCorp"}}
         hints = SemanticHints(text_check_fields=["sender.name"])
         report = validate_semantics(data, hints=hints)
         anomalies = [i for i in report.issues if i.category == "text_anomaly"]
@@ -709,7 +708,7 @@ class TestTextAnomalyDetection:
 
     def test_multiple_anomalies_in_one_field(self):
         """Multiple different problematic chars produce separate warnings."""
-        data = {"name": "A\x00B\u200CC"}
+        data = {"name": "A\x00B\u200cC"}
         hints = SemanticHints(text_check_fields=["name"])
         report = validate_semantics(data, hints=hints)
         anomalies = [i for i in report.issues if i.category == "text_anomaly"]
@@ -734,20 +733,19 @@ class TestStrictPartialContracts:
         """strict=True promotes partial-contract warnings to errors."""
         import tempfile
         from pathlib import Path
+
         from trustrender.readiness import preflight
 
         # Create a template with a dynamic include
         with tempfile.NamedTemporaryFile(suffix=".j2.typ", mode="w", delete=False) as f:
-            f.write('{% include some_var %}\n{{ title }}')
+            f.write("{% include some_var %}\n{{ title }}")
             f.flush()
             template_path = Path(f.name)
 
         try:
             verdict = preflight(template_path, {"title": "Test"}, strict=True)
             assert not verdict.ready
-            partial_errors = [
-                i for i in verdict.errors if i.check == "partial_contract"
-            ]
+            partial_errors = [i for i in verdict.errors if i.check == "partial_contract"]
             assert len(partial_errors) >= 1
         finally:
             template_path.unlink()
@@ -756,19 +754,18 @@ class TestStrictPartialContracts:
         """Default (strict=False) keeps partial contracts as warnings."""
         import tempfile
         from pathlib import Path
+
         from trustrender.readiness import preflight
 
         with tempfile.NamedTemporaryFile(suffix=".j2.typ", mode="w", delete=False) as f:
-            f.write('{% include some_var %}\n{{ title }}')
+            f.write("{% include some_var %}\n{{ title }}")
             f.flush()
             template_path = Path(f.name)
 
         try:
             verdict = preflight(template_path, {"title": "Test"})
             assert verdict.ready  # Warnings don't block
-            partial_warnings = [
-                i for i in verdict.warnings if i.check == "partial_contract"
-            ]
+            partial_warnings = [i for i in verdict.warnings if i.check == "partial_contract"]
             assert len(partial_warnings) >= 1
         finally:
             template_path.unlink()
@@ -776,15 +773,15 @@ class TestStrictPartialContracts:
     def test_strict_no_effect_on_complete_contract(self):
         """strict=True on a complete contract still returns ready=True."""
         from pathlib import Path
+
         from trustrender.readiness import preflight
 
         examples = Path(__file__).parent.parent / "examples"
         import json
+
         data = json.loads((examples / "invoice_data.json").read_text())
         verdict = preflight(examples / "invoice.j2.typ", data, strict=True)
-        partial = [
-            i for i in verdict.errors if i.check == "partial_contract"
-        ]
+        partial = [i for i in verdict.errors if i.check == "partial_contract"]
         assert len(partial) == 0
 
 

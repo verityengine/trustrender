@@ -12,10 +12,6 @@ Routes:
 
 from __future__ import annotations
 
-import json
-import os
-from pathlib import Path
-
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse
 from starlette.routing import Route
@@ -360,6 +356,7 @@ async def dashboard_page(request: Request) -> HTMLResponse:
 # ---------------------------------------------------------------------------
 # Route factory
 # ---------------------------------------------------------------------------
+
 
 def dashboard_routes() -> list[Route]:
     """Return the dashboard routes to mount in the Starlette app."""

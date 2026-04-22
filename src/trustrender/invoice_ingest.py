@@ -47,10 +47,10 @@ from trustrender.invoice_schema import (
     LineItem,
 )
 
-
 # ---------------------------------------------------------------------------
 # Report data structures
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ValidationResult:
@@ -142,7 +142,7 @@ _DATE_FORMATS = [
 ]
 
 # European decimal pattern: ends with comma + 1-2 digits
-_EUROPEAN_DECIMAL_RE = re.compile(r'^-?[\d.]+,\d{1,2}$')
+_EUROPEAN_DECIMAL_RE = re.compile(r"^-?[\d.]+,\d{1,2}$")
 
 
 def _try_parse_number(value: object) -> float | None:
@@ -156,18 +156,18 @@ def _try_parse_number(value: object) -> float | None:
     if not cleaned:
         return None
     # Strip currency symbols and whitespace
-    cleaned = re.sub(r'[€$£¥\s]', '', cleaned)
+    cleaned = re.sub(r"[€$£¥\s]", "", cleaned)
     # Strip trailing %
-    cleaned = cleaned.rstrip('%').strip()
+    cleaned = cleaned.rstrip("%").strip()
     # Handle European decimals: "1.234,56" -> "1234.56"
     if _EUROPEAN_DECIMAL_RE.match(cleaned):
-        cleaned = cleaned.replace('.', '').replace(',', '.')
+        cleaned = cleaned.replace(".", "").replace(",", ".")
     else:
         # Standard: strip commas as thousands separators
-        cleaned = cleaned.replace(',', '')
+        cleaned = cleaned.replace(",", "")
     # Handle negative in parens: (500.00) -> -500.00
-    if cleaned.startswith('(') and cleaned.endswith(')'):
-        cleaned = '-' + cleaned[1:-1]
+    if cleaned.startswith("(") and cleaned.endswith(")"):
+        cleaned = "-" + cleaned[1:-1]
     try:
         result = float(cleaned)
     except ValueError:
@@ -181,7 +181,7 @@ def _try_parse_date(value: str) -> str | None:
         return None
     value = value.strip()
     # Already ISO format
-    if re.match(r'^\d{4}-\d{2}-\d{2}$', value):
+    if re.match(r"^\d{4}-\d{2}-\d{2}$", value):
         return value
     for fmt in _DATE_FORMATS:
         try:
@@ -195,6 +195,7 @@ def _try_parse_date(value: str) -> str | None:
 # ---------------------------------------------------------------------------
 # Stage 0: Pre-process structural variations
 # ---------------------------------------------------------------------------
+
 
 def _preprocess_structure(
     data: dict,
@@ -214,27 +215,33 @@ def _preprocess_structure(
     if invoice_key is not None and isinstance(invoice_val, dict):
         other = {k: v for k, v in data.items() if k != invoice_key}
         data = {**invoice_val, **other}
-        normalizations.append(FieldProvenance(
-            canonical_name="(root)",
-            source="alias",
-            original_key=invoice_key,
-            message=f"unwrapped root key {invoice_key!r}",
-        ))
+        normalizations.append(
+            FieldProvenance(
+                canonical_name="(root)",
+                source="alias",
+                original_key=invoice_key,
+                message=f"unwrapped root key {invoice_key!r}",
+            )
+        )
 
     # 2. Nested list extraction: if any item-like key holds {"data": [...]} unwrap it
     for key in list(data.keys()):
         val = data[key]
-        if (isinstance(val, dict)
-                and "data" in val
-                and isinstance(val["data"], list)
-                and key in (set(TOP_LEVEL_ALIASES) | {"items", "lines", "Line", "LineItems"})):
+        if (
+            isinstance(val, dict)
+            and "data" in val
+            and isinstance(val["data"], list)
+            and key in (set(TOP_LEVEL_ALIASES) | {"items", "lines", "Line", "LineItems"})
+        ):
             data[key] = val["data"]
-            normalizations.append(FieldProvenance(
-                canonical_name="items",
-                source="alias",
-                original_key=key,
-                message=f"extracted {key}.data[] list ({len(data[key])} items)",
-            ))
+            normalizations.append(
+                FieldProvenance(
+                    canonical_name="items",
+                    source="alias",
+                    original_key=key,
+                    message=f"extracted {key}.data[] list ({len(data[key])} items)",
+                )
+            )
 
     # 3. Flat party synthesis: extract bill_from_*/account_* into sender/recipient objects
     sender_parts: dict[str, Any] = {}
@@ -246,22 +253,26 @@ def _preprocess_structure(
             sub_field = FLAT_SENDER_FIELDS[key]
             sender_parts[sub_field] = value
             consumed.append(key)
-            normalizations.append(FieldProvenance(
-                canonical_name=f"sender.{sub_field}",
-                source="alias",
-                original_key=key,
-                message=f"{key!r} -> sender.{sub_field!r}",
-            ))
+            normalizations.append(
+                FieldProvenance(
+                    canonical_name=f"sender.{sub_field}",
+                    source="alias",
+                    original_key=key,
+                    message=f"{key!r} -> sender.{sub_field!r}",
+                )
+            )
         elif key in FLAT_RECIPIENT_FIELDS:
             sub_field = FLAT_RECIPIENT_FIELDS[key]
             recipient_parts[sub_field] = value
             consumed.append(key)
-            normalizations.append(FieldProvenance(
-                canonical_name=f"recipient.{sub_field}",
-                source="alias",
-                original_key=key,
-                message=f"{key!r} -> recipient.{sub_field!r}",
-            ))
+            normalizations.append(
+                FieldProvenance(
+                    canonical_name=f"recipient.{sub_field}",
+                    source="alias",
+                    original_key=key,
+                    message=f"{key!r} -> recipient.{sub_field!r}",
+                )
+            )
 
     for key in consumed:
         del data[key]
@@ -279,6 +290,7 @@ def _preprocess_structure(
 # Stage 1: Resolve field names
 # ---------------------------------------------------------------------------
 
+
 def _resolve_field_names(
     data: dict,
     normalizations: list[FieldProvenance],
@@ -295,15 +307,14 @@ def _resolve_field_names(
                 value = _resolve_party_fields(value, canonical, normalizations)
             # Recurse into items list
             elif canonical == "items" and isinstance(value, list):
-                value = [
-                    _resolve_item_fields(item, i, normalizations)
-                    if isinstance(item, dict) else item
-                    for i, item in enumerate(value)
-                ]
+                value = [_resolve_item_fields(item, i, normalizations) if isinstance(item, dict) else item for i, item in enumerate(value)]
             resolved[canonical] = value
-            normalizations.append(FieldProvenance(
-                canonical_name=canonical, source="exact",
-            ))
+            normalizations.append(
+                FieldProvenance(
+                    canonical_name=canonical,
+                    source="exact",
+                )
+            )
             continue
 
         # Check alias map
@@ -316,17 +327,17 @@ def _resolve_field_names(
                     mapped_value = _resolve_party_fields(value, alias_target, normalizations)
                 elif alias_target == "items" and isinstance(value, list):
                     mapped_value = [
-                        _resolve_item_fields(item, i, normalizations)
-                        if isinstance(item, dict) else item
-                        for i, item in enumerate(value)
+                        _resolve_item_fields(item, i, normalizations) if isinstance(item, dict) else item for i, item in enumerate(value)
                     ]
                 resolved[alias_target] = mapped_value
-                normalizations.append(FieldProvenance(
-                    canonical_name=alias_target,
-                    source="alias",
-                    original_key=key,
-                    message=f"{key!r} -> {alias_target!r}",
-                ))
+                normalizations.append(
+                    FieldProvenance(
+                        canonical_name=alias_target,
+                        source="alias",
+                        original_key=key,
+                        message=f"{key!r} -> {alias_target!r}",
+                    )
+                )
             continue
 
         # Unknown field — keep for later classification
@@ -336,52 +347,66 @@ def _resolve_field_names(
 
 
 def _resolve_party_fields(
-    data: dict, parent: str, normalizations: list[FieldProvenance],
+    data: dict,
+    parent: str,
+    normalizations: list[FieldProvenance],
 ) -> dict:
     """Resolve aliases in a party (sender/recipient) sub-object."""
     resolved: dict = {}
     for key, value in data.items():
         if key in CANONICAL_PARTY:
             resolved[key] = value
-            normalizations.append(FieldProvenance(
-                canonical_name=f"{parent}.{key}", source="exact",
-            ))
+            normalizations.append(
+                FieldProvenance(
+                    canonical_name=f"{parent}.{key}",
+                    source="exact",
+                )
+            )
         else:
             alias_target = PARTY_ALIASES.get(key)
             if alias_target is not None and alias_target not in resolved:
                 resolved[alias_target] = value
-                normalizations.append(FieldProvenance(
-                    canonical_name=f"{parent}.{alias_target}",
-                    source="alias",
-                    original_key=key,
-                    message=f"{parent}.{key!r} -> {parent}.{alias_target!r}",
-                ))
+                normalizations.append(
+                    FieldProvenance(
+                        canonical_name=f"{parent}.{alias_target}",
+                        source="alias",
+                        original_key=key,
+                        message=f"{parent}.{key!r} -> {parent}.{alias_target!r}",
+                    )
+                )
             else:
                 resolved.setdefault("_unknown", {})[key] = value
     return resolved
 
 
 def _resolve_item_fields(
-    data: dict, index: int, normalizations: list[FieldProvenance],
+    data: dict,
+    index: int,
+    normalizations: list[FieldProvenance],
 ) -> dict:
     """Resolve aliases in a line item sub-object."""
     resolved: dict = {}
     for key, value in data.items():
         if key in CANONICAL_ITEM:
             resolved[key] = value
-            normalizations.append(FieldProvenance(
-                canonical_name=f"items[{index}].{key}", source="exact",
-            ))
+            normalizations.append(
+                FieldProvenance(
+                    canonical_name=f"items[{index}].{key}",
+                    source="exact",
+                )
+            )
         else:
             alias_target = ITEM_ALIASES.get(key)
             if alias_target is not None and alias_target not in resolved:
                 resolved[alias_target] = value
-                normalizations.append(FieldProvenance(
-                    canonical_name=f"items[{index}].{alias_target}",
-                    source="alias",
-                    original_key=key,
-                    message=f"items[{index}].{key!r} -> items[{index}].{alias_target!r}",
-                ))
+                normalizations.append(
+                    FieldProvenance(
+                        canonical_name=f"items[{index}].{alias_target}",
+                        source="alias",
+                        original_key=key,
+                        message=f"items[{index}].{key!r} -> items[{index}].{alias_target!r}",
+                    )
+                )
             else:
                 resolved.setdefault("_unknown", {})[key] = value
     return resolved
@@ -420,23 +445,27 @@ def _coerce_types(
             # Unwrap money dict before numeric parse: {amount: ..., code: ...} -> amount
             unwrapped = _unwrap_money_dict(original)
             if unwrapped is not original:
-                normalizations.append(FieldProvenance(
-                    canonical_name=field_name,
-                    source="alias",
-                    original_value=str(original),
-                    message=f"unwrapped money object {field_name!r}.amount -> scalar",
-                ))
+                normalizations.append(
+                    FieldProvenance(
+                        canonical_name=field_name,
+                        source="alias",
+                        original_value=str(original),
+                        message=f"unwrapped money object {field_name!r}.amount -> scalar",
+                    )
+                )
                 original = unwrapped
                 data[field_name] = unwrapped
             parsed = _try_parse_number(original)
             if parsed is not None and not isinstance(original, (int, float)):
                 data[field_name] = parsed
-                normalizations.append(FieldProvenance(
-                    canonical_name=field_name,
-                    source="alias",  # type coercion reported as normalization
-                    original_value=str(original),
-                    message=f"coerced {original!r} -> {parsed}",
-                ))
+                normalizations.append(
+                    FieldProvenance(
+                        canonical_name=field_name,
+                        source="alias",  # type coercion reported as normalization
+                        original_value=str(original),
+                        message=f"coerced {original!r} -> {parsed}",
+                    )
+                )
 
     # Date fields
     for field_name in _DATE_FIELDS:
@@ -446,12 +475,14 @@ def _coerce_types(
                 parsed = _try_parse_date(original)
                 if parsed is not None and parsed != original:
                     data[field_name] = parsed
-                    normalizations.append(FieldProvenance(
-                        canonical_name=field_name,
-                        source="alias",
-                        original_value=original,
-                        message=f"date {original!r} -> {parsed!r}",
-                    ))
+                    normalizations.append(
+                        FieldProvenance(
+                            canonical_name=field_name,
+                            source="alias",
+                            original_value=original,
+                            message=f"date {original!r} -> {parsed!r}",
+                        )
+                    )
 
     # Item-level numeric fields
     items = data.get("items", [])
@@ -464,23 +495,27 @@ def _coerce_types(
                 # Unwrap money dict before numeric parse
                 unwrapped = _unwrap_money_dict(original)
                 if unwrapped is not original:
-                    normalizations.append(FieldProvenance(
-                        canonical_name=f"items[{i}].{field_name}",
-                        source="alias",
-                        original_value=str(original),
-                        message=f"unwrapped money object items[{i}].{field_name!r}.amount -> scalar",
-                    ))
+                    normalizations.append(
+                        FieldProvenance(
+                            canonical_name=f"items[{i}].{field_name}",
+                            source="alias",
+                            original_value=str(original),
+                            message=f"unwrapped money object items[{i}].{field_name!r}.amount -> scalar",
+                        )
+                    )
                     original = unwrapped
                     item[field_name] = unwrapped
                 parsed = _try_parse_number(original)
                 if parsed is not None and not isinstance(original, (int, float)):
                     item[field_name] = parsed
-                    normalizations.append(FieldProvenance(
-                        canonical_name=f"items[{i}].{field_name}",
-                        source="alias",
-                        original_value=str(original),
-                        message=f"coerced {original!r} -> {parsed}",
-                    ))
+                    normalizations.append(
+                        FieldProvenance(
+                            canonical_name=f"items[{i}].{field_name}",
+                            source="alias",
+                            original_value=str(original),
+                            message=f"coerced {original!r} -> {parsed}",
+                        )
+                    )
 
     return data
 
@@ -488,6 +523,7 @@ def _coerce_types(
 # ---------------------------------------------------------------------------
 # Stage 3: Compute missing values
 # ---------------------------------------------------------------------------
+
 
 def _compute_missing(
     data: dict,
@@ -503,11 +539,13 @@ def _compute_missing(
             continue
         if "num" not in item or not item["num"]:
             item["num"] = i + 1
-            normalizations.append(FieldProvenance(
-                canonical_name=f"items[{i}].num",
-                source="computed",
-                message=f"auto-assigned item number {i + 1}",
-            ))
+            normalizations.append(
+                FieldProvenance(
+                    canonical_name=f"items[{i}].num",
+                    source="computed",
+                    message=f"auto-assigned item number {i + 1}",
+                )
+            )
             computed_fields.append(f"items[{i}].num")
 
     # Compute line_total if missing
@@ -520,28 +558,30 @@ def _compute_missing(
             if isinstance(qty, (int, float)) and isinstance(price, (int, float)):
                 computed = round(qty * price, 2)
                 item["line_total"] = computed
-                normalizations.append(FieldProvenance(
-                    canonical_name=f"items[{i}].line_total",
-                    source="computed",
-                    message=f"computed {qty} * {price} = {computed}",
-                ))
+                normalizations.append(
+                    FieldProvenance(
+                        canonical_name=f"items[{i}].line_total",
+                        source="computed",
+                        message=f"computed {qty} * {price} = {computed}",
+                    )
+                )
                 computed_fields.append(f"items[{i}].line_total")
 
     # Compute subtotal if missing
     if "subtotal" not in data or data.get("subtotal") is None:
         line_totals = [
-            item.get("line_total", 0)
-            for item in items
-            if isinstance(item, dict) and isinstance(item.get("line_total"), (int, float))
+            item.get("line_total", 0) for item in items if isinstance(item, dict) and isinstance(item.get("line_total"), (int, float))
         ]
         if line_totals:
             computed = round(sum(line_totals), 2)
             data["subtotal"] = computed
-            normalizations.append(FieldProvenance(
-                canonical_name="subtotal",
-                source="computed",
-                message=f"computed sum of {len(line_totals)} line totals = {computed}",
-            ))
+            normalizations.append(
+                FieldProvenance(
+                    canonical_name="subtotal",
+                    source="computed",
+                    message=f"computed sum of {len(line_totals)} line totals = {computed}",
+                )
+            )
             computed_fields.append("subtotal")
 
     # Compute tax_amount if missing and tax_rate is present
@@ -551,11 +591,13 @@ def _compute_missing(
         if isinstance(subtotal, (int, float)) and isinstance(tax_rate, (int, float)) and tax_rate > 0:
             computed = round(subtotal * tax_rate / 100, 2)
             data["tax_amount"] = computed
-            normalizations.append(FieldProvenance(
-                canonical_name="tax_amount",
-                source="computed",
-                message=f"computed {subtotal} * {tax_rate}% = {computed}",
-            ))
+            normalizations.append(
+                FieldProvenance(
+                    canonical_name="tax_amount",
+                    source="computed",
+                    message=f"computed {subtotal} * {tax_rate}% = {computed}",
+                )
+            )
             computed_fields.append("tax_amount")
 
     # Compute total if missing
@@ -567,21 +609,25 @@ def _compute_missing(
                 tax_amount = 0
             computed = round(subtotal + tax_amount, 2)
             data["total"] = computed
-            normalizations.append(FieldProvenance(
-                canonical_name="total",
-                source="computed",
-                message=f"computed {subtotal} + {tax_amount} = {computed}",
-            ))
+            normalizations.append(
+                FieldProvenance(
+                    canonical_name="total",
+                    source="computed",
+                    message=f"computed {subtotal} + {tax_amount} = {computed}",
+                )
+            )
             computed_fields.append("total")
 
     # Default currency
     if "currency" not in data or not data.get("currency"):
         data["currency"] = "USD"
-        normalizations.append(FieldProvenance(
-            canonical_name="currency",
-            source="default",
-            message="defaulted to USD",
-        ))
+        normalizations.append(
+            FieldProvenance(
+                canonical_name="currency",
+                source="default",
+                message="defaulted to USD",
+            )
+        )
         computed_fields.append("currency")
 
     return data
@@ -590,6 +636,7 @@ def _compute_missing(
 # ---------------------------------------------------------------------------
 # Stage 4: Classify unknown fields
 # ---------------------------------------------------------------------------
+
 
 def _classify_unknown_fields(
     data: dict,
@@ -604,20 +651,24 @@ def _classify_unknown_fields(
         match = find_near_match(key, CANONICAL_TOP_LEVEL)
         if match is not None:
             suggestion, distance = match
-            unknown_fields.append(UnknownField(
-                path=key,
-                value=value,
-                classification="near_match",
-                suggestion=suggestion,
-                edit_distance=distance,
-            ))
+            unknown_fields.append(
+                UnknownField(
+                    path=key,
+                    value=value,
+                    classification="near_match",
+                    suggestion=suggestion,
+                    edit_distance=distance,
+                )
+            )
         else:
             classification = classify_unknown(key)
-            unknown_fields.append(UnknownField(
-                path=key,
-                value=value,
-                classification=classification,
-            ))
+            unknown_fields.append(
+                UnknownField(
+                    path=key,
+                    value=value,
+                    classification=classification,
+                )
+            )
         extras[key] = value
 
     # Also collect unknown fields from party objects
@@ -630,16 +681,23 @@ def _classify_unknown_fields(
                 match = find_near_match(key, CANONICAL_PARTY)
                 if match is not None:
                     suggestion, distance = match
-                    unknown_fields.append(UnknownField(
-                        path=path, value=value, classification="near_match",
-                        suggestion=f"{party_key}.{suggestion}",
-                        edit_distance=distance,
-                    ))
+                    unknown_fields.append(
+                        UnknownField(
+                            path=path,
+                            value=value,
+                            classification="near_match",
+                            suggestion=f"{party_key}.{suggestion}",
+                            edit_distance=distance,
+                        )
+                    )
                 else:
-                    unknown_fields.append(UnknownField(
-                        path=path, value=value,
-                        classification=classify_unknown(key),
-                    ))
+                    unknown_fields.append(
+                        UnknownField(
+                            path=path,
+                            value=value,
+                            classification=classify_unknown(key),
+                        )
+                    )
                 extras[path] = value
 
     # Unknown fields from items
@@ -653,16 +711,23 @@ def _classify_unknown_fields(
             match = find_near_match(key, CANONICAL_ITEM)
             if match is not None:
                 suggestion, distance = match
-                unknown_fields.append(UnknownField(
-                    path=path, value=value, classification="near_match",
-                    suggestion=f"items[].{suggestion}",
-                    edit_distance=distance,
-                ))
+                unknown_fields.append(
+                    UnknownField(
+                        path=path,
+                        value=value,
+                        classification="near_match",
+                        suggestion=f"items[].{suggestion}",
+                        edit_distance=distance,
+                    )
+                )
             else:
-                unknown_fields.append(UnknownField(
-                    path=path, value=value,
-                    classification=classify_unknown(key),
-                ))
+                unknown_fields.append(
+                    UnknownField(
+                        path=path,
+                        value=value,
+                        classification=classify_unknown(key),
+                    )
+                )
             extras[path] = value
 
     data["_extras"] = extras
@@ -687,45 +752,53 @@ def _validate_semantics(
 
     invoice_number = data.get("invoice_number")
     if not invoice_number or (isinstance(invoice_number, str) and not invoice_number.strip()):
-        errors.append(ValidationResult(
-            rule_id="identity.invoice_number",
-            severity="blocked",
-            passed=False,
-            message="invoice_number is missing or empty — render blocked",
-            path="invoice_number",
-        ))
+        errors.append(
+            ValidationResult(
+                rule_id="identity.invoice_number",
+                severity="blocked",
+                passed=False,
+                message="invoice_number is missing or empty — render blocked",
+                path="invoice_number",
+            )
+        )
 
     items = data.get("items", [])
     if not items:
-        errors.append(ValidationResult(
-            rule_id="items.non_empty",
-            severity="blocked",
-            passed=False,
-            message="no line items — render blocked",
-            path="items",
-        ))
+        errors.append(
+            ValidationResult(
+                rule_id="items.non_empty",
+                severity="blocked",
+                passed=False,
+                message="no line items — render blocked",
+                path="items",
+            )
+        )
 
     # --- Blocked checks: identity ---
 
     sender = data.get("sender", {})
     if not isinstance(sender, dict) or not sender.get("name"):
-        errors.append(ValidationResult(
-            rule_id="identity.sender_name",
-            severity="blocked",
-            passed=False,
-            message="sender.name is missing or empty — render blocked",
-            path="sender.name",
-        ))
+        errors.append(
+            ValidationResult(
+                rule_id="identity.sender_name",
+                severity="blocked",
+                passed=False,
+                message="sender.name is missing or empty — render blocked",
+                path="sender.name",
+            )
+        )
 
     recipient = data.get("recipient", {})
     if not isinstance(recipient, dict) or not recipient.get("name"):
-        errors.append(ValidationResult(
-            rule_id="identity.recipient_name",
-            severity="blocked",
-            passed=False,
-            message="recipient.name is missing or empty — render blocked",
-            path="recipient.name",
-        ))
+        errors.append(
+            ValidationResult(
+                rule_id="identity.recipient_name",
+                severity="blocked",
+                passed=False,
+                message="recipient.name is missing or empty — render blocked",
+                path="recipient.name",
+            )
+        )
 
     # --- Blocked checks: arithmetic contradictions ---
     # A known arithmetic contradiction means the payload is internally inconsistent.
@@ -738,58 +811,61 @@ def _validate_semantics(
         qty = item.get("quantity")
         price = item.get("unit_price")
         lt = item.get("line_total")
-        if (isinstance(qty, (int, float)) and isinstance(price, (int, float))
-                and isinstance(lt, (int, float))):
+        if isinstance(qty, (int, float)) and isinstance(price, (int, float)) and isinstance(lt, (int, float)):
             expected = round(qty * price, 2)
             if abs(lt - expected) > _TOLERANCE:
-                errors.append(ValidationResult(
-                    rule_id="arithmetic.line_total",
-                    severity="blocked",
-                    passed=False,
-                    message=f"items[{i}].line_total ({lt}) != quantity ({qty}) * unit_price ({price}) = {expected} — render blocked",
-                    path=f"items[{i}].line_total",
-                    expected=str(expected),
-                    actual=str(lt),
-                ))
+                errors.append(
+                    ValidationResult(
+                        rule_id="arithmetic.line_total",
+                        severity="blocked",
+                        passed=False,
+                        message=f"items[{i}].line_total ({lt}) != quantity ({qty}) * unit_price ({price}) = {expected} — render blocked",
+                        path=f"items[{i}].line_total",
+                        expected=str(expected),
+                        actual=str(lt),
+                    )
+                )
 
     # Arithmetic: subtotal vs sum of line_totals
     subtotal = data.get("subtotal")
     if isinstance(subtotal, (int, float)) and items:
         line_totals = [
-            item.get("line_total", 0)
-            for item in items
-            if isinstance(item, dict) and isinstance(item.get("line_total"), (int, float))
+            item.get("line_total", 0) for item in items if isinstance(item, dict) and isinstance(item.get("line_total"), (int, float))
         ]
         if line_totals:
             expected_sub = round(sum(line_totals), 2)
             if abs(subtotal - expected_sub) > _TOLERANCE:
-                errors.append(ValidationResult(
-                    rule_id="arithmetic.subtotal",
-                    severity="blocked",
-                    passed=False,
-                    message=f"subtotal ({subtotal}) != sum of line totals ({expected_sub}) — render blocked",
-                    path="subtotal",
-                    expected=str(expected_sub),
-                    actual=str(subtotal),
-                ))
+                errors.append(
+                    ValidationResult(
+                        rule_id="arithmetic.subtotal",
+                        severity="blocked",
+                        passed=False,
+                        message=f"subtotal ({subtotal}) != sum of line totals ({expected_sub}) — render blocked",
+                        path="subtotal",
+                        expected=str(expected_sub),
+                        actual=str(subtotal),
+                    )
+                )
 
     # Arithmetic: total vs subtotal + tax_amount
     total = data.get("total")
     tax_amount = data.get("tax_amount", 0)
-    if (isinstance(total, (int, float)) and isinstance(subtotal, (int, float))):
+    if isinstance(total, (int, float)) and isinstance(subtotal, (int, float)):
         if not isinstance(tax_amount, (int, float)):
             tax_amount = 0
         expected_total = round(subtotal + tax_amount, 2)
         if abs(total - expected_total) > _TOLERANCE:
-            errors.append(ValidationResult(
-                rule_id="arithmetic.total",
-                severity="blocked",
-                passed=False,
-                message=f"total ({total}) != subtotal ({subtotal}) + tax_amount ({tax_amount}) = {expected_total} — render blocked",
-                path="total",
-                expected=str(expected_total),
-                actual=str(total),
-            ))
+            errors.append(
+                ValidationResult(
+                    rule_id="arithmetic.total",
+                    severity="blocked",
+                    passed=False,
+                    message=f"total ({total}) != subtotal ({subtotal}) + tax_amount ({tax_amount}) = {expected_total} — render blocked",
+                    path="total",
+                    expected=str(expected_total),
+                    actual=str(total),
+                )
+            )
 
     # --- Error checks: date format ---
 
@@ -798,13 +874,15 @@ def _validate_semantics(
         if isinstance(val, str) and val.strip():
             parsed = _try_parse_date(val)
             if parsed is None:
-                errors.append(ValidationResult(
-                    rule_id="date.parseable",
-                    severity="error",
-                    passed=False,
-                    message=f"{field_name} ({val!r}) is not a recognized date format",
-                    path=field_name,
-                ))
+                errors.append(
+                    ValidationResult(
+                        rule_id="date.parseable",
+                        severity="error",
+                        passed=False,
+                        message=f"{field_name} ({val!r}) is not a recognized date format",
+                        path=field_name,
+                    )
+                )
 
     # --- Warning checks ---
 
@@ -815,13 +893,15 @@ def _validate_semantics(
         inv_parsed = _try_parse_date(inv_date)
         due_parsed = _try_parse_date(due)
         if inv_parsed and due_parsed and due_parsed < inv_parsed:
-            warnings.append(ValidationResult(
-                rule_id="date.ordering",
-                severity="warning",
-                passed=False,
-                message=f"due_date ({due}) is before invoice_date ({inv_date})",
-                path="due_date",
-            ))
+            warnings.append(
+                ValidationResult(
+                    rule_id="date.ordering",
+                    severity="warning",
+                    passed=False,
+                    message=f"due_date ({due}) is before invoice_date ({inv_date})",
+                    path="due_date",
+                )
+            )
 
     # Negative amounts
     for i, item in enumerate(items):
@@ -830,18 +910,21 @@ def _validate_semantics(
         for field_name in ("quantity", "unit_price"):
             val = item.get(field_name)
             if isinstance(val, (int, float)) and val < 0:
-                warnings.append(ValidationResult(
-                    rule_id="items.positive_amounts",
-                    severity="warning",
-                    passed=False,
-                    message=f"items[{i}].{field_name} is negative ({val})",
-                    path=f"items[{i}].{field_name}",
-                ))
+                warnings.append(
+                    ValidationResult(
+                        rule_id="items.positive_amounts",
+                        severity="warning",
+                        passed=False,
+                        message=f"items[{i}].{field_name} is negative ({val})",
+                        path=f"items[{i}].{field_name}",
+                    )
+                )
 
 
 # ---------------------------------------------------------------------------
 # Stage 6: Build canonical
 # ---------------------------------------------------------------------------
+
 
 def _build_canonical(data: dict) -> CanonicalInvoice:
     """Construct CanonicalInvoice from resolved + coerced + computed data."""
@@ -878,13 +961,15 @@ def _build_canonical(data: dict) -> CanonicalInvoice:
     for item in raw_items:
         if not isinstance(item, dict):
             continue
-        items.append(LineItem(
-            description=str(item.get("description", "")),
-            quantity=_safe_float(item.get("quantity", 0)),
-            unit_price=_safe_float(item.get("unit_price", 0)),
-            line_total=_safe_float(item.get("line_total", 0)),
-            num=_safe_int(item.get("num", 0)),
-        ))
+        items.append(
+            LineItem(
+                description=str(item.get("description", "")),
+                quantity=_safe_float(item.get("quantity", 0)),
+                unit_price=_safe_float(item.get("unit_price", 0)),
+                line_total=_safe_float(item.get("line_total", 0)),
+                num=_safe_int(item.get("num", 0)),
+            )
+        )
 
     def _num(key: str) -> float:
         val = data.get(key, 0)
@@ -912,6 +997,7 @@ def _build_canonical(data: dict) -> CanonicalInvoice:
 # Public API
 # ---------------------------------------------------------------------------
 
+
 def ingest_invoice(data: dict) -> IngestionReport:
     """Ingest messy invoice data into a canonical renderable payload.
 
@@ -928,12 +1014,14 @@ def ingest_invoice(data: dict) -> IngestionReport:
             render_ready=False,
             canonical={},
             template_payload=None,
-            errors=[ValidationResult(
-                rule_id="input.type",
-                severity="blocked",
-                passed=False,
-                message="input must be a dict",
-            )],
+            errors=[
+                ValidationResult(
+                    rule_id="input.type",
+                    severity="blocked",
+                    passed=False,
+                    message="input must be a dict",
+                )
+            ],
         )
 
     # Work on a shallow copy to avoid mutating the caller's data
@@ -985,9 +1073,7 @@ def ingest_invoice(data: dict) -> IngestionReport:
     template_payload = canonical.to_template_shape() if render_ready else None
 
     # Filter normalizations: only alias/computed/default (not exact matches)
-    meaningful_normalizations = [
-        n for n in normalizations if n.source != "exact"
-    ]
+    meaningful_normalizations = [n for n in normalizations if n.source != "exact"]
 
     return IngestionReport(
         status=status,

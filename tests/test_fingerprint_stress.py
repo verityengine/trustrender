@@ -3,17 +3,12 @@
 from __future__ import annotations
 
 import json
-import os
-import tempfile
 from pathlib import Path
 
 import pytest
 
 from trustrender.fingerprint import (
     ChangeSet,
-    FieldChange,
-    FileChange,
-    FileHash,
     InputFingerprint,
     _diff_dicts,
     _diff_lists,
@@ -36,6 +31,7 @@ def _load_data(name: str = "invoice_data.json") -> dict:
 # ---------------------------------------------------------------------------
 # Empty / minimal inputs
 # ---------------------------------------------------------------------------
+
 
 class TestEmptyInputs:
     def test_empty_data_dict(self):
@@ -67,6 +63,7 @@ class TestEmptyInputs:
 # Non-ASCII and special characters
 # ---------------------------------------------------------------------------
 
+
 class TestUnicodeData:
     def test_unicode_values(self):
         data = {
@@ -94,13 +91,11 @@ class TestUnicodeData:
 # Large payloads
 # ---------------------------------------------------------------------------
 
+
 class TestLargePayloads:
     def test_many_items(self):
         """10,000 line items should fingerprint without issue."""
-        items = [
-            {"num": i, "desc": f"Item {i}", "qty": i, "price": i * 10.5}
-            for i in range(10_000)
-        ]
+        items = [{"num": i, "desc": f"Item {i}", "qty": i, "price": i * 10.5} for i in range(10_000)]
         data = {"items": items, "subtotal": sum(i["price"] for i in items)}
         fp = compute_fingerprint(EXAMPLES / "invoice.j2.typ", data)
         assert fp.data_hash.startswith("sha256:")
@@ -125,6 +120,7 @@ class TestLargePayloads:
 # ---------------------------------------------------------------------------
 # Data diff edge cases
 # ---------------------------------------------------------------------------
+
 
 class TestDiffEdgeCases:
     def test_diff_empty_to_populated(self):
@@ -197,6 +193,7 @@ class TestDiffEdgeCases:
 # Truncation
 # ---------------------------------------------------------------------------
 
+
 class TestTruncation:
     def test_short_value_not_truncated(self):
         assert _truncate("hello") == '"hello"'
@@ -219,6 +216,7 @@ class TestTruncation:
 # ---------------------------------------------------------------------------
 # File discovery edge cases
 # ---------------------------------------------------------------------------
+
 
 class TestFileDiscovery:
     def test_discover_includes_on_raw_typ(self, tmp_path):
@@ -261,6 +259,7 @@ class TestFileDiscovery:
 # Fingerprint serialization edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestSerializationEdgeCases:
     def test_from_dict_missing_optional(self):
         """zugferd_profile=None should round-trip."""
@@ -272,7 +271,8 @@ class TestSerializationEdgeCases:
 
     def test_from_dict_with_zugferd(self):
         fp = compute_fingerprint(
-            EXAMPLES / "invoice.j2.typ", {},
+            EXAMPLES / "invoice.j2.typ",
+            {},
             zugferd_profile="en16931",
         )
         d = fp.to_dict()
@@ -290,6 +290,7 @@ class TestSerializationEdgeCases:
 # Compare edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestCompareEdgeCases:
     def test_compare_same_object(self):
         fp = compute_fingerprint(EXAMPLES / "invoice.j2.typ", {})
@@ -300,7 +301,8 @@ class TestCompareEdgeCases:
         data = _load_data()
         fp1 = compute_fingerprint(EXAMPLES / "invoice.j2.typ", data)
         fp2 = compute_fingerprint(
-            EXAMPLES / "invoice.j2.typ", data,
+            EXAMPLES / "invoice.j2.typ",
+            data,
             zugferd_profile="en16931",
             provenance_enabled=True,
             validate_enabled=True,
@@ -318,7 +320,8 @@ class TestCompareEdgeCases:
         data2["invoice_number"] = "CHANGED"
         fp1 = compute_fingerprint(EXAMPLES / "invoice.j2.typ", data1)
         fp2 = compute_fingerprint(
-            EXAMPLES / "invoice.j2.typ", data2,
+            EXAMPLES / "invoice.j2.typ",
+            data2,
             zugferd_profile="en16931",
         )
         cs = compare(fp1, fp2, data1, data2)
@@ -330,6 +333,7 @@ class TestCompareEdgeCases:
 # ---------------------------------------------------------------------------
 # Hashing consistency
 # ---------------------------------------------------------------------------
+
 
 class TestHashingConsistency:
     def test_hash_bytes_deterministic(self):
@@ -363,16 +367,20 @@ class TestHashingConsistency:
 # All example templates
 # ---------------------------------------------------------------------------
 
+
 class TestAllExampleTemplates:
     """Fingerprint every example template to ensure no crashes."""
 
-    @pytest.mark.parametrize("template,data_file", [
-        ("invoice.j2.typ", "invoice_data.json"),
-        ("statement.j2.typ", "statement_data.json"),
-        ("receipt.j2.typ", "receipt_data.json"),
-        ("letter.j2.typ", "letter_data.json"),
-        ("report.j2.typ", "report_data.json"),
-    ])
+    @pytest.mark.parametrize(
+        "template,data_file",
+        [
+            ("invoice.j2.typ", "invoice_data.json"),
+            ("statement.j2.typ", "statement_data.json"),
+            ("receipt.j2.typ", "receipt_data.json"),
+            ("letter.j2.typ", "letter_data.json"),
+            ("report.j2.typ", "report_data.json"),
+        ],
+    )
     def test_example_fingerprints(self, template, data_file):
         template_path = EXAMPLES / template
         if not template_path.exists():

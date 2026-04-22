@@ -5,7 +5,6 @@ from __future__ import annotations
 import pytest
 
 from trustrender.semantic import (
-    INVOICE_HINTS,
     SemanticHints,
     SemanticReport,
     _resolve_path,
@@ -14,10 +13,10 @@ from trustrender.semantic import (
     validate_semantics,
 )
 
-
 # ---------------------------------------------------------------------------
 # Number parsing edge cases
 # ---------------------------------------------------------------------------
+
 
 class TestNumberParsing:
     def test_integer(self):
@@ -91,6 +90,7 @@ class TestNumberParsing:
 # Date parsing edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestDateParsing:
     def test_iso_format(self):
         assert _try_parse_date("2026-04-10") is True
@@ -130,6 +130,7 @@ class TestDateParsing:
 # Path resolution edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestPathResolution:
     def test_simple_key(self):
         assert _resolve_path({"a": 1}, "a") == 1
@@ -160,6 +161,7 @@ class TestPathResolution:
 # ---------------------------------------------------------------------------
 # Arithmetic edge cases
 # ---------------------------------------------------------------------------
+
 
 class TestArithmeticEdgeCases:
     def test_empty_items_list(self):
@@ -290,6 +292,7 @@ class TestArithmeticEdgeCases:
 # Numeric coercion edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestNumericCoercionEdgeCases:
     def test_nested_array_path(self):
         data = {"orders": [{"items": [{"qty": "five"}]}]}
@@ -333,6 +336,7 @@ class TestNumericCoercionEdgeCases:
 # Completeness edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestCompletenessEdgeCases:
     def test_nested_path(self):
         data = {"seller": {"name": ""}}
@@ -367,6 +371,7 @@ class TestCompletenessEdgeCases:
 # ---------------------------------------------------------------------------
 # Real invoice data
 # ---------------------------------------------------------------------------
+
 
 class TestRealInvoiceData:
     def test_invoice_data_with_full_hints(self):
@@ -419,6 +424,7 @@ class TestRealInvoiceData:
 # ---------------------------------------------------------------------------
 # All issues are warnings by default
 # ---------------------------------------------------------------------------
+
 
 class TestSeverityDefaults:
     def test_all_issues_are_warnings(self):

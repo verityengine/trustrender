@@ -27,12 +27,12 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError
 
-from .errors import ErrorCode, TrustRenderError
-
+from .errors import TrustRenderError
 
 # ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ReadinessIssue:
@@ -62,6 +62,7 @@ class ReadinessVerdict:
 # Individual stage checks
 # ---------------------------------------------------------------------------
 
+
 def _check_payload(
     template_path: Path,
     data: dict,
@@ -79,26 +80,30 @@ def _check_payload(
         result = infer_contract_with_metadata(template_path)
         errors = validate_data(result.contract, data)
         for e in errors:
-            issues.append(ReadinessIssue(
-                stage="payload",
-                check="contract_violation",
-                severity="error",
-                path=e.path,
-                message=e.message,
-            ))
+            issues.append(
+                ReadinessIssue(
+                    stage="payload",
+                    check="contract_violation",
+                    severity="error",
+                    path=e.path,
+                    message=e.message,
+                )
+            )
         if result.is_partial:
             # strict=True promotes partial-contract warnings to errors.
             # This blocks readiness when dynamic includes leave the contract
             # incomplete — callers who need certainty opt in.
             severity = "error" if strict else "warning"
             for inc in result.unresolved_includes:
-                issues.append(ReadinessIssue(
-                    stage="payload",
-                    check="partial_contract",
-                    severity=severity,
-                    path=inc,
-                    message=f"Contract is partial: include '{inc}' could not be resolved statically",
-                ))
+                issues.append(
+                    ReadinessIssue(
+                        stage="payload",
+                        check="partial_contract",
+                        severity=severity,
+                        path=inc,
+                        message=f"Contract is partial: include '{inc}' could not be resolved statically",
+                    )
+                )
     except TrustRenderError:
         # Template parse error — will be caught in template stage
         pass
@@ -122,14 +127,16 @@ def _check_template(
         source = template_path.read_text()
         env.parse(source)
     except TemplateSyntaxError as exc:
-        issues.append(ReadinessIssue(
-            stage="template",
-            check="syntax_error",
-            severity="error",
-            path=f"{template_path.name}:{exc.lineno}" if exc.lineno else template_path.name,
-            message=f"Jinja2 syntax error: {exc.message}",
-            line=exc.lineno,
-        ))
+        issues.append(
+            ReadinessIssue(
+                stage="template",
+                check="syntax_error",
+                severity="error",
+                path=f"{template_path.name}:{exc.lineno}" if exc.lineno else template_path.name,
+                message=f"Jinja2 syntax error: {exc.message}",
+                line=exc.lineno,
+            )
+        )
         return  # Can't check further if template doesn't parse
 
     # 2b. Asset existence check — find image paths in template source
@@ -154,13 +161,15 @@ def _check_template_assets(
             continue
         full_path = template_dir / image_path
         if not full_path.exists():
-            issues.append(ReadinessIssue(
-                stage="template",
-                check="asset_not_found",
-                severity="error",
-                path=image_path,
-                message=f"Image not found: {image_path}",
-            ))
+            issues.append(
+                ReadinessIssue(
+                    stage="template",
+                    check="asset_not_found",
+                    severity="error",
+                    path=image_path,
+                    message=f"Image not found: {image_path}",
+                )
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -173,7 +182,7 @@ _BUNDLED_FONT_FAMILIES = frozenset({"inter"})
 
 # Regex patterns for Typst font declarations
 _FONT_SINGLE_RE = re.compile(r'font:\s*"([^"]+)"')
-_FONT_STACK_RE = re.compile(r'font:\s*\(([^)]+)\)')
+_FONT_STACK_RE = re.compile(r"font:\s*\(([^)]+)\)")
 _FONT_NAME_RE = re.compile(r'"([^"]+)"')
 # Captures Jinja2 variable references in font declarations: font: "{{ field_name }}"
 _FONT_DYNAMIC_RE = re.compile(r'font:\s*"\{\{\s*([\w.]+)\s*\}\}"')
@@ -343,15 +352,17 @@ def _check_fonts(
             # Custom template or non-bundled font — might be a system font
             severity = "warning"
 
-        issues.append(ReadinessIssue(
-            stage="template",
-            check="missing_font",
-            severity=severity,
-            path=display,
-            message=f"Font not found in configured paths: {display}"
-            + (" (bundled font expected)" if bundled and first_font in _BUNDLED_FONT_FAMILIES else "")
-            + (" (may be available as system font)" if severity == "warning" else ""),
-        ))
+        issues.append(
+            ReadinessIssue(
+                stage="template",
+                check="missing_font",
+                severity=severity,
+                path=display,
+                message=f"Font not found in configured paths: {display}"
+                + (" (bundled font expected)" if bundled and first_font in _BUNDLED_FONT_FAMILIES else "")
+                + (" (may be available as system font)" if severity == "warning" else ""),
+            )
+        )
 
     # Check dynamic font declarations resolved from data
     if data is not None:
@@ -364,14 +375,16 @@ def _check_fonts(
                 severity = "error"
             else:
                 severity = "warning"
-            issues.append(ReadinessIssue(
-                stage="template",
-                check="missing_font",
-                severity=severity,
-                path=font_name,
-                message=f"Dynamic font not found in configured paths: {font_name}"
-                + (" (may be available as system font)" if severity == "warning" else ""),
-            ))
+            issues.append(
+                ReadinessIssue(
+                    stage="template",
+                    check="missing_font",
+                    severity=severity,
+                    path=font_name,
+                    message=f"Dynamic font not found in configured paths: {font_name}"
+                    + (" (may be available as system font)" if severity == "warning" else ""),
+                )
+            )
 
 
 def _check_environment(
@@ -385,13 +398,15 @@ def _check_environment(
     try:
         get_backend()
     except TrustRenderError:
-        issues.append(ReadinessIssue(
-            stage="environment",
-            check="no_backend",
-            severity="error",
-            path="backend",
-            message="No Typst backend available (install typst-py or typst CLI)",
-        ))
+        issues.append(
+            ReadinessIssue(
+                stage="environment",
+                check="no_backend",
+                severity="error",
+                path="backend",
+                message="No Typst backend available (install typst-py or typst CLI)",
+            )
+        )
 
     # 3b. PDF/A-3b support check when ZUGFeRD requested
     if zugferd:
@@ -400,13 +415,15 @@ def _check_environment(
 
             # Verify pdf_standards parameter is accepted
             if not hasattr(_typst, "compile"):
-                issues.append(ReadinessIssue(
-                    stage="environment",
-                    check="typst_version",
-                    severity="error",
-                    path="typst",
-                    message="typst-py does not support pdf_standards (upgrade to >=0.14)",
-                ))
+                issues.append(
+                    ReadinessIssue(
+                        stage="environment",
+                        check="typst_version",
+                        severity="error",
+                        path="typst",
+                        message="typst-py does not support pdf_standards (upgrade to >=0.14)",
+                    )
+                )
         except ImportError:
             # CLI backend — assume it supports --pdf-standard (Typst 0.14+)
             pass
@@ -427,13 +444,15 @@ def _check_compliance(
     # Check requested profile
     errors = validate_zugferd_invoice_data(data, profile=zugferd)
     for e in errors:
-        issues.append(ReadinessIssue(
-            stage="compliance",
-            check="zugferd_field",
-            severity="error",
-            path=e.path,
-            message=e.message,
-        ))
+        issues.append(
+            ReadinessIssue(
+                stage="compliance",
+                check="zugferd_field",
+                severity="error",
+                path=e.path,
+                message=e.message,
+            )
+        )
 
     # XSD + Schematron validation — only when field validation passes.
     if not errors:
@@ -443,42 +462,50 @@ def _check_compliance(
             xml_bytes = build_invoice_xml(data, profile=zugferd)
             xml_errors = validate_zugferd_xml(xml_bytes)
             if xml_errors is None:
-                issues.append(ReadinessIssue(
-                    stage="compliance",
-                    check="xsd_validation",
-                    severity="warning",
-                    path="facturx",
-                    message="facturx not installed — XSD/Schematron validation skipped",
-                ))
+                issues.append(
+                    ReadinessIssue(
+                        stage="compliance",
+                        check="xsd_validation",
+                        severity="warning",
+                        path="facturx",
+                        message="facturx not installed — XSD/Schematron validation skipped",
+                    )
+                )
             else:
                 for msg in xml_errors:
-                    issues.append(ReadinessIssue(
-                        stage="compliance",
-                        check="xsd_validation" if "XSD" in msg else "schematron_validation",
-                        severity="error",
-                        path="xml",
-                        message=msg,
-                    ))
+                    issues.append(
+                        ReadinessIssue(
+                            stage="compliance",
+                            check="xsd_validation" if "XSD" in msg else "schematron_validation",
+                            severity="error",
+                            path="xml",
+                            message=msg,
+                        )
+                    )
                 # Advisory: warn if Schematron specifically is unavailable
                 if not xml_errors:
                     try:
                         from facturx.facturx import xml_check_schematron  # noqa: F401
                     except ImportError:
-                        issues.append(ReadinessIssue(
-                            stage="compliance",
-                            check="schematron_validation",
-                            severity="warning",
-                            path="facturx",
-                            message="facturx.facturx not available — Schematron validation skipped",
-                        ))
+                        issues.append(
+                            ReadinessIssue(
+                                stage="compliance",
+                                check="schematron_validation",
+                                severity="warning",
+                                path="facturx",
+                                message="facturx.facturx not available — Schematron validation skipped",
+                            )
+                        )
         except Exception as exc:
-            issues.append(ReadinessIssue(
-                stage="compliance",
-                check="xml_generation",
-                severity="error",
-                path="xml",
-                message=f"XML generation failed: {exc}",
-            ))
+            issues.append(
+                ReadinessIssue(
+                    stage="compliance",
+                    check="xml_generation",
+                    severity="error",
+                    path="xml",
+                    message=f"XML generation failed: {exc}",
+                )
+            )
 
     # Profile eligibility — reuse the validation result from above
     if not errors:
@@ -488,6 +515,7 @@ def _check_compliance(
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def _check_text_safety(
     data: dict,
@@ -514,13 +542,15 @@ def _check_text_safety(
         if not isinstance(current, str):
             continue
         for problem in scan_text(current):
-            issues.append(ReadinessIssue(
-                stage="text_safety",
-                check="text_anomaly",
-                severity="warning",
-                path=path,
-                message=f"{problem} (auto-detected)",
-            ))
+            issues.append(
+                ReadinessIssue(
+                    stage="text_safety",
+                    check="text_anomaly",
+                    severity="warning",
+                    path=path,
+                    message=f"{problem} (auto-detected)",
+                )
+            )
 
 
 def _split_concrete_path(path: str) -> list[str | int]:
@@ -551,13 +581,15 @@ def _check_semantic(
 
     report = validate_semantics(data, hints=semantic_hints)
     for si in report.issues:
-        issues.append(ReadinessIssue(
-            stage="semantic",
-            check=si.category,
-            severity=si.severity,
-            path=si.path,
-            message=si.message,
-        ))
+        issues.append(
+            ReadinessIssue(
+                stage="semantic",
+                check=si.category,
+                severity=si.severity,
+                path=si.path,
+                message=si.message,
+            )
+        )
 
 
 def preflight(
@@ -604,13 +636,15 @@ def preflight(
 
     # Template exists?
     if not template_path.exists():
-        all_issues.append(ReadinessIssue(
-            stage="payload",
-            check="template_not_found",
-            severity="error",
-            path=str(template_path),
-            message=f"Template not found: {template_path}",
-        ))
+        all_issues.append(
+            ReadinessIssue(
+                stage="payload",
+                check="template_not_found",
+                severity="error",
+                path=str(template_path),
+                message=f"Template not found: {template_path}",
+            )
+        )
         errors = [i for i in all_issues if i.severity == "error"]
         warnings = [i for i in all_issues if i.severity == "warning"]
         return ReadinessVerdict(

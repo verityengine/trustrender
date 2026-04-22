@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
-import json
 import os
-import tempfile
 from pathlib import Path
 
 import pytest
 
 from trustrender import render
-from trustrender.errors import ErrorCode, TrustRenderError
-from trustrender.trace import RenderTrace, StageTrace, TraceStore, init_store
+from trustrender.errors import TrustRenderError
+from trustrender.trace import RenderTrace, StageTrace, init_store
 
 EXAMPLES = Path(__file__).parent.parent / "examples"
 

@@ -52,9 +52,7 @@ class TestTypstEscape:
         assert typst_escape("[{x}]") == "\\u{005b}\\u{007b}x\\u{007d}\\u{005d}"
 
     def test_escapes_all_together(self):
-        assert typst_escape("$100 #tag @ref a\\b {x} [y]") == (
-            "\\$100 \\#tag \\@ref a\\\\b \\u{007b}x\\u{007d} \\u{005b}y\\u{005d}"
-        )
+        assert typst_escape("$100 #tag @ref a\\b {x} [y]") == ("\\$100 \\#tag \\@ref a\\\\b \\u{007b}x\\u{007d} \\u{005b}y\\u{005d}")
 
     def test_passthrough_non_string(self):
         assert typst_escape(42) == 42
@@ -97,9 +95,7 @@ class TestTypstEscape:
         assert typst_escape("path/to/file") == "path/to/file"
 
     def test_line_start_after_newline(self):
-        assert typst_escape("line\n= head\n- item") == (
-            "line\n\\u{003d} head\n\\u{002d} item"
-        )
+        assert typst_escape("line\n= head\n- item") == ("line\n\\u{003d} head\n\\u{002d} item")
 
     def test_line_start_combined_with_other_escapes(self):
         assert typst_escape("= $100") == "\\u{003d} \\$100"
@@ -108,9 +104,7 @@ class TestTypstEscape:
         assert typst_escape("line\r\n= head") == "line\r\n\\u{003d} head"
 
     def test_multiple_line_starts(self):
-        assert typst_escape("= first\n= second") == (
-            "\\u{003d} first\n\\u{003d} second"
-        )
+        assert typst_escape("= first\n= second") == ("\\u{003d} first\n\\u{003d} second")
 
     def test_double_equals_only_first_escaped(self):
         """== heading — only the first = at line start is escaped, breaking markup."""
@@ -169,7 +163,7 @@ class TestRenderTemplate:
         )
         # Auto-escaping escapes the # to \#, which in a Typst string literal
         # produces a literal backslash+hash — ugly but safe.
-        assert '\\#read' in result
+        assert "\\#read" in result
 
     def test_code_mode_string_quote_breakout(self):
         """A double-quote in user data CAN break a code-mode string literal.
@@ -214,8 +208,7 @@ class TestRenderTemplate:
             for pattern in dangerous_patterns:
                 match = pattern.search(content)
                 assert match is None, (
-                    f"Built-in template {template.name} has code-mode interpolation: "
-                    f"{match.group()!r} — this is an injection risk"
+                    f"Built-in template {template.name} has code-mode interpolation: {match.group()!r} — this is an injection risk"
                 )
 
     def test_line_start_chars_in_render_path(self):

@@ -66,16 +66,13 @@ class TestInvoiceUglyData:
     def test_absurdly_long_company_name(self):
         data = self._base_data()
         data["sender"]["name"] = (
-            "The Extremely Long International Conglomerate of Business "
-            "Operations and Strategic Consulting Services Inc."
+            "The Extremely Long International Conglomerate of Business Operations and Strategic Consulting Services Inc."
         )
         assert_valid_pdf(render(self.TEMPLATE, data))
 
     def test_long_address(self):
         data = self._base_data()
-        data["recipient"]["address"] = (
-            "12345 North Southeast Boulevard, Building C, Suite 4200, Wing B, Floor 37"
-        )
+        data["recipient"]["address"] = "12345 North Southeast Boulevard, Building C, Suite 4200, Wing B, Floor 37"
         assert_valid_pdf(render(self.TEMPLATE, data))
 
     def test_unicode_company_and_items(self):
@@ -114,12 +111,7 @@ class TestInvoiceUglyData:
 
     def test_multiline_notes(self):
         data = self._base_data()
-        data["notes"] = (
-            "Line 1 of notes. "
-            "Line 2 with special chars: $100 #ref @mention. "
-            "Line 3 with unicode. "
-            "Line 4: please pay promptly."
-        )
+        data["notes"] = "Line 1 of notes. Line 2 with special chars: $100 #ref @mention. Line 3 with unicode. Line 4: please pay promptly."
         assert_valid_pdf(render(self.TEMPLATE, data))
 
     def test_empty_optional_fields(self):
@@ -327,10 +319,7 @@ class TestReceiptUglyData:
         data = self._base_data()
         data["items"] = [
             {
-                "description": (
-                    "Organic Free-Range Triple-Filtered Cold Brew Coffee "
-                    "with Oat Milk and Madagascar Vanilla Extract (Venti)"
-                ),
+                "description": ("Organic Free-Range Triple-Filtered Cold Brew Coffee with Oat Milk and Madagascar Vanilla Extract (Venti)"),
                 "qty": 1,
                 "unit_price": "$8.95",
                 "amount": "$8.95",
@@ -415,9 +404,7 @@ class TestLetterUglyData:
 
     def test_many_paragraphs(self):
         data = self._base_data()
-        data["body_paragraphs"] = [
-            f"Paragraph {i}: {'Lorem ipsum dolor sit amet. ' * 5}" for i in range(1, 11)
-        ]
+        data["body_paragraphs"] = [f"Paragraph {i}: {'Lorem ipsum dolor sit amet. ' * 5}" for i in range(1, 11)]
         assert_valid_pdf(render(self.TEMPLATE, data))
 
     def test_unicode_names(self):

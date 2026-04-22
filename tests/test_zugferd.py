@@ -331,11 +331,13 @@ class TestMixedVATRates:
     def test_xsd_passes(self):
         xml = build_invoice_xml(self._mixed_rate_data())
         from facturx import xml_check_xsd
+
         xml_check_xsd(xml)
 
     def test_schematron_passes(self):
         xml = build_invoice_xml(self._mixed_rate_data())
         from facturx.facturx import xml_check_schematron
+
         xml_check_schematron(xml)
 
     def test_render_produces_valid_pdf(self):
@@ -348,6 +350,7 @@ class TestMixedVATRates:
         )
         assert pdf[:5] == b"%PDF-"
         from facturx import get_xml_from_pdf
+
         filename, _ = get_xml_from_pdf(pdf)
         assert filename == "factur-x.xml"
 
@@ -366,14 +369,16 @@ class TestFixtureVariants:
     def test_single_item_invoice(self):
         """Minimal invoice: 1 item, small amount."""
         data = self._base_data()
-        data["items"] = [{
-            "description": "Beratungsstunde",
-            "quantity": 1,
-            "unit": "C62",
-            "unit_price": 150.00,
-            "tax_rate": 19,
-            "line_total": 150.00,
-        }]
+        data["items"] = [
+            {
+                "description": "Beratungsstunde",
+                "quantity": 1,
+                "unit": "C62",
+                "unit_price": 150.00,
+                "tax_rate": 19,
+                "line_total": 150.00,
+            }
+        ]
         data["subtotal"] = 150.00
         data["tax_entries"] = [{"rate": 19, "basis": 150.00, "amount": 28.50}]
         data["tax_total"] = 28.50
@@ -382,6 +387,7 @@ class TestFixtureVariants:
         assert errors == []
         xml = build_invoice_xml(data)
         from facturx import xml_check_xsd
+
         xml_check_xsd(xml)
 
     def test_many_items_invoice(self):
@@ -389,7 +395,7 @@ class TestFixtureVariants:
         data = self._base_data()
         data["items"] = [
             {
-                "description": f"Posten {i+1}",
+                "description": f"Posten {i + 1}",
                 "quantity": i + 1,
                 "unit": "C62",
                 "unit_price": 10.00,
@@ -408,19 +414,22 @@ class TestFixtureVariants:
         assert errors == []
         xml = build_invoice_xml(data)
         from facturx import xml_check_xsd
+
         xml_check_xsd(xml)
 
     def test_small_amounts(self):
         """Invoice with penny-level amounts (boundary values)."""
         data = self._base_data()
-        data["items"] = [{
-            "description": "Kleinstbetrag",
-            "quantity": 1,
-            "unit": "C62",
-            "unit_price": 0.01,
-            "tax_rate": 19,
-            "line_total": 0.01,
-        }]
+        data["items"] = [
+            {
+                "description": "Kleinstbetrag",
+                "quantity": 1,
+                "unit": "C62",
+                "unit_price": 0.01,
+                "tax_rate": 19,
+                "line_total": 0.01,
+            }
+        ]
         data["subtotal"] = 0.01
         data["tax_entries"] = [{"rate": 19, "basis": 0.01, "amount": 0.00}]
         data["tax_total"] = 0.00
@@ -429,19 +438,22 @@ class TestFixtureVariants:
         assert errors == []
         xml = build_invoice_xml(data)
         from facturx import xml_check_xsd
+
         xml_check_xsd(xml)
 
     def test_large_amounts(self):
         """Invoice with large amounts."""
         data = self._base_data()
-        data["items"] = [{
-            "description": "Enterprise-Lizenz",
-            "quantity": 1,
-            "unit": "C62",
-            "unit_price": 999999.99,
-            "tax_rate": 19,
-            "line_total": 999999.99,
-        }]
+        data["items"] = [
+            {
+                "description": "Enterprise-Lizenz",
+                "quantity": 1,
+                "unit": "C62",
+                "unit_price": 999999.99,
+                "tax_rate": 19,
+                "line_total": 999999.99,
+            }
+        ]
         data["subtotal"] = 999999.99
         tax = round(999999.99 * 0.19, 2)
         data["tax_entries"] = [{"rate": 19, "basis": 999999.99, "amount": tax}]
@@ -451,6 +463,7 @@ class TestFixtureVariants:
         assert errors == []
         xml = build_invoice_xml(data)
         from facturx import xml_check_xsd
+
         xml_check_xsd(xml)
 
     def test_direct_debit_payment(self):
@@ -475,6 +488,7 @@ class TestFixtureVariants:
         assert errors == []
         xml = build_invoice_xml(data)
         from facturx import xml_check_xsd
+
         xml_check_xsd(xml)
         assert "Müller".encode("utf-8") in xml
 
@@ -557,11 +571,13 @@ class TestCreditNotes:
     def test_credit_note_xsd_passes(self):
         xml = build_invoice_xml(_load_creditnote_data())
         from facturx import xml_check_xsd
+
         xml_check_xsd(xml)
 
     def test_credit_note_schematron_passes(self):
         xml = build_invoice_xml(_load_creditnote_data())
         from facturx.facturx import xml_check_schematron
+
         xml_check_schematron(xml)
 
     def test_credit_note_render_produces_pdf(self):
@@ -574,12 +590,14 @@ class TestCreditNotes:
         )
         assert pdf[:5] == b"%PDF-"
         from facturx import get_xml_from_pdf
+
         filename, _ = get_xml_from_pdf(pdf)
         assert filename == "factur-x.xml"
 
     def test_credit_note_preflight_passes(self):
         """Credit note passes readiness preflight."""
         from trustrender.readiness import preflight
+
         data = _load_creditnote_data()
         verdict = preflight(
             "examples/einvoice.j2.typ",
@@ -591,6 +609,7 @@ class TestCreditNotes:
     def test_credit_note_preflight_fails_without_ref(self):
         """Credit note without referenced_invoice fails preflight."""
         from trustrender.readiness import preflight
+
         data = _load_creditnote_data()
         del data["referenced_invoice"]
         verdict = preflight(
@@ -611,6 +630,7 @@ class TestCreditNotes:
         assert pdf[:5] == b"%PDF-"
         # Verify type code 380 in embedded XML
         from facturx import get_xml_from_pdf
+
         _, xml_bytes = get_xml_from_pdf(pdf)
         assert b">380<" in xml_bytes
 
@@ -696,6 +716,7 @@ class TestArithmeticConsistency:
     def test_preflight_rejects_inconsistent_totals(self):
         """preflight() fails for arithmetic mismatch."""
         from trustrender.readiness import preflight
+
         data = _load_einvoice_data()
         data["total"] = 9999.00
         verdict = preflight("examples/einvoice.j2.typ", data, zugferd="en16931")
@@ -784,6 +805,7 @@ class TestZeroTaxRateRejection:
     def test_preflight_rejects_zero_rate(self):
         """preflight() fails for 0% tax rate."""
         from trustrender.readiness import preflight
+
         data = _load_einvoice_data()
         data["items"][0]["tax_rate"] = 0
         verdict = preflight("examples/einvoice.j2.typ", data, zugferd="en16931")

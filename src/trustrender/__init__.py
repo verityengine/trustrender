@@ -23,6 +23,7 @@ from .invoice_ingest import IngestionReport, ingest_invoice
 try:
     from .engine import CompileBackend, compile_typst, compile_typst_file
     from .templates import render_template
+
     _HAS_RENDER = True
 except ImportError:
     _HAS_RENDER = False
@@ -40,17 +41,24 @@ __version__ = "0.3.4"
 
 __all__ = [
     # Core API (always available)
-    "validate_invoice", "ingest_invoice", "IngestionReport",
+    "validate_invoice",
+    "ingest_invoice",
+    "IngestionReport",
     # Rendering API (requires [render] extras)
-    "render", "audit", "AuditResult",
+    "render",
+    "audit",
+    "AuditResult",
     # Errors
-    "TrustRenderError", "ErrorCode",
+    "TrustRenderError",
+    "ErrorCode",
     # Meta
-    "__version__", "bundled_font_dir",
+    "__version__",
+    "bundled_font_dir",
 ]
 
 
 # ── Core API: validation (always available) ──────────────────────────
+
 
 def validate_invoice(data: dict, *, zugferd: bool = False) -> dict:
     """Validate and normalize messy invoice data. Returns structured result.
@@ -100,10 +108,9 @@ def validate_invoice(data: dict, *, zugferd: bool = False) -> dict:
 
     if zugferd and report.render_ready:
         from .zugferd import validate_zugferd_invoice_data
+
         zug_errors = validate_zugferd_invoice_data(report.canonical)
-        result["zugferd_errors"] = [
-            {"path": e.path, "message": e.message} for e in zug_errors
-        ]
+        result["zugferd_errors"] = [{"path": e.path, "message": e.message} for e in zug_errors]
         result["zugferd_ready"] = len(zug_errors) == 0
     elif zugferd:
         result["zugferd_errors"] = []
@@ -171,8 +178,7 @@ def _require_render():
     """Raise a clear error if rendering dependencies are not installed."""
     if not _HAS_RENDER:
         raise TrustRenderError(
-            "Rendering requires additional dependencies. "
-            "Install with: pip install trustrender[render]",
+            "Rendering requires additional dependencies. Install with: pip install trustrender[render]",
             code=ErrorCode.BACKEND_ERROR,
             stage="import",
         )
@@ -221,7 +227,7 @@ def _render_document_pipeline(
     trace = RenderTrace(
         template_name=display_name or template_path.name,
         template_hash=f"sha256:{hashlib.sha256(template_path.read_bytes()).hexdigest()[:16]}",
-        data_hash=f"sha256:{hashlib.sha256(json.dumps(data, sort_keys=True, separators=(',',':')).encode()).hexdigest()[:16]}",
+        data_hash=f"sha256:{hashlib.sha256(json.dumps(data, sort_keys=True, separators=(',', ':')).encode()).hexdigest()[:16]}",
         engine_version=__version__,
         zugferd_profile=zugferd or "",
         validated=validate,
@@ -330,16 +336,18 @@ def _render_document_pipeline(
                 timeout=timeout,
                 pdf_standards=pdf_standards,
             )
-        trace.stages.append(StageTrace(
-            stage="compilation",
-            status="pass",
-            duration_ms=int((time.monotonic() - t0) * 1000),
-            metadata={
-                "template_type": "jinja2" if is_jinja else "raw",
-                "pdf_standards": pdf_standards or [],
-                "pdf_size": len(pdf_bytes),
-            },
-        ))
+        trace.stages.append(
+            StageTrace(
+                stage="compilation",
+                status="pass",
+                duration_ms=int((time.monotonic() - t0) * 1000),
+                metadata={
+                    "template_type": "jinja2" if is_jinja else "raw",
+                    "pdf_standards": pdf_standards or [],
+                    "pdf_size": len(pdf_bytes),
+                },
+            )
+        )
 
         # 4. ZUGFeRD post-processing
         if zugferd:
@@ -363,12 +371,14 @@ def _render_document_pipeline(
                     )
 
                 pdf_bytes = apply_zugferd(pdf_bytes, xml_bytes)
-                trace.stages.append(StageTrace(
-                    stage="zugferd_postprocess",
-                    status="pass",
-                    duration_ms=int((time.monotonic() - t0) * 1000),
-                    metadata={"xml_size": len(xml_bytes), "profile": zugferd},
-                ))
+                trace.stages.append(
+                    StageTrace(
+                        stage="zugferd_postprocess",
+                        status="pass",
+                        duration_ms=int((time.monotonic() - t0) * 1000),
+                        metadata={"xml_size": len(xml_bytes), "profile": zugferd},
+                    )
+                )
             except TrustRenderError:
                 raise
             except Exception as exc:
@@ -387,12 +397,14 @@ def _render_document_pipeline(
             t0 = time.monotonic()
             prov_record = create_provenance(template_path, data)
             pdf_bytes = embed_provenance(pdf_bytes, prov_record)
-            trace.stages.append(StageTrace(
-                stage="provenance",
-                status="pass",
-                duration_ms=int((time.monotonic() - t0) * 1000),
-                metadata={"proof_hash": prov_record.proof[:30]},
-            ))
+            trace.stages.append(
+                StageTrace(
+                    stage="provenance",
+                    status="pass",
+                    duration_ms=int((time.monotonic() - t0) * 1000),
+                    metadata={"proof_hash": prov_record.proof[:30]},
+                )
+            )
             trace.provenance_hash = prov_record.proof
 
         # Output fingerprint: hash the final PDF bytes after all post-processing
@@ -545,7 +557,8 @@ def audit(
     import time
 
     from .fingerprint import InputFingerprint, compare, compute_fingerprint
-    from .regression import check_drift, save_baseline as _save_baseline
+    from .regression import check_drift
+    from .regression import save_baseline as _save_baseline
     from .semantic import SemanticReport, validate_semantics
 
     _SUPPORTED_ZUGFERD = {"en16931"}
@@ -623,9 +636,7 @@ def audit(
                 pdf_bytes,
                 zugferd_valid=zugferd is not None,
                 contract_valid=validate,
-                semantic_issue_count=(
-                    len(semantic_report.issues) if semantic_report else 0
-                ),
+                semantic_issue_count=(len(semantic_report.issues) if semantic_report else 0),
             )
 
     # 6. Save baseline (if requested)
@@ -638,9 +649,7 @@ def audit(
             render_duration_ms=render_duration_ms,
             zugferd_valid=zugferd is not None if zugferd else None,
             contract_valid=True if validate else None,
-            semantic_issue_count=(
-                len(semantic_report.issues) if semantic_report else 0
-            ),
+            semantic_issue_count=(len(semantic_report.issues) if semantic_report else 0),
         )
 
     return AuditResult(
@@ -659,8 +668,7 @@ def _resolve_data(data: dict | str | os.PathLike) -> dict:
 
     if not isinstance(data, (str, os.PathLike)):
         raise TrustRenderError(
-            f"Data must be a dict, JSON string, or path to a .json file, "
-            f"got {type(data).__name__}",
+            f"Data must be a dict, JSON string, or path to a .json file, got {type(data).__name__}",
             code=ErrorCode.INVALID_DATA,
             stage="data_resolution",
         )

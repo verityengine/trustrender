@@ -29,10 +29,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 # ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class StageTrace:
@@ -210,35 +210,34 @@ class TraceStore:
         traces = []
         for row in rows:
             stages = json.loads(row["stages_json"] or "[]")
-            traces.append(RenderTrace(
-                id=row["id"],
-                timestamp=row["timestamp"],
-                template_name=row["template_name"],
-                template_hash=row["template_hash"] or "",
-                data_hash=row["data_hash"] or "",
-                outcome=row["outcome"],
-                error_code=row["error_code"] or "",
-                error_stage=row["error_stage"] or "",
-                error_message=row["error_message"] or "",
-                total_ms=row["total_ms"] or 0,
-                pdf_size=row["pdf_size"] or 0,
-                engine_version=row["engine_version"] or "",
-                backend=row["backend"] or "",
-                zugferd_profile=row["zugferd_profile"] or "",
-                provenance_hash=row["provenance_hash"] or "",
-                output_hash=row["output_hash"] if "output_hash" in row.keys() else "",
-                validated=bool(row["validated"]),
-                stages=[StageTrace(**s) for s in stages],
-            ))
+            traces.append(
+                RenderTrace(
+                    id=row["id"],
+                    timestamp=row["timestamp"],
+                    template_name=row["template_name"],
+                    template_hash=row["template_hash"] or "",
+                    data_hash=row["data_hash"] or "",
+                    outcome=row["outcome"],
+                    error_code=row["error_code"] or "",
+                    error_stage=row["error_stage"] or "",
+                    error_message=row["error_message"] or "",
+                    total_ms=row["total_ms"] or 0,
+                    pdf_size=row["pdf_size"] or 0,
+                    engine_version=row["engine_version"] or "",
+                    backend=row["backend"] or "",
+                    zugferd_profile=row["zugferd_profile"] or "",
+                    provenance_hash=row["provenance_hash"] or "",
+                    output_hash=row["output_hash"] if "output_hash" in row.keys() else "",
+                    validated=bool(row["validated"]),
+                    stages=[StageTrace(**s) for s in stages],
+                )
+            )
         return traces
 
     def get(self, trace_id: str) -> RenderTrace | None:
         """Get a single trace by ID."""
-        results = self.query(limit=1)
         with self._connect() as conn:
-            row = conn.execute(
-                "SELECT * FROM render_traces WHERE id = ?", (trace_id,)
-            ).fetchone()
+            row = conn.execute("SELECT * FROM render_traces WHERE id = ?", (trace_id,)).fetchone()
         if not row:
             return None
         stages = json.loads(row["stages_json"] or "[]")
@@ -317,5 +316,3 @@ def init_store(path: str | os.PathLike) -> TraceStore:
     global _store
     _store = TraceStore(path)
     return _store
-
-

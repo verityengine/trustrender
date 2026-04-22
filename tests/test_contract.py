@@ -396,9 +396,7 @@ class TestIncludeInference:
         (frag_dir / "header.j2.typ").write_text("{{ company_name }}")
 
         # Main template includes the fragment.
-        (tmp_path / "main.j2.typ").write_text(
-            '{% include "fragments/header.j2.typ" %}\n{{ title }}'
-        )
+        (tmp_path / "main.j2.typ").write_text('{% include "fragments/header.j2.typ" %}\n{{ title }}')
 
         contract = infer_contract(tmp_path / "main.j2.typ")
         assert "title" in contract
@@ -422,10 +420,7 @@ class TestIncludeInference:
         (frag_dir / "frag.j2.typ").write_text("{{ local_var }}")
 
         # Parent sets local_var then includes without context.
-        (tmp_path / "main.j2.typ").write_text(
-            '{% set local_var = "x" %}\n'
-            '{% include "fragments/frag.j2.typ" without context %}'
-        )
+        (tmp_path / "main.j2.typ").write_text('{% set local_var = "x" %}\n{% include "fragments/frag.j2.typ" without context %}')
 
         contract = infer_contract(tmp_path / "main.j2.typ")
         # Without context: fragment's local_var is NOT the parent's set var,
@@ -434,12 +429,8 @@ class TestIncludeInference:
 
     def test_circular_include_no_crash(self, tmp_path):
         """Circular includes do not cause infinite recursion."""
-        (tmp_path / "a.j2.typ").write_text(
-            '{% include "b.j2.typ" %}\n{{ field_a }}'
-        )
-        (tmp_path / "b.j2.typ").write_text(
-            '{% include "a.j2.typ" %}\n{{ field_b }}'
-        )
+        (tmp_path / "a.j2.typ").write_text('{% include "b.j2.typ" %}\n{{ field_a }}')
+        (tmp_path / "b.j2.typ").write_text('{% include "a.j2.typ" %}\n{{ field_b }}')
 
         contract = infer_contract(tmp_path / "a.j2.typ")
         assert "field_a" in contract
@@ -449,9 +440,7 @@ class TestIncludeInference:
         """{% include some_var %} marks the contract as partial."""
         from trustrender.contract import infer_contract_with_metadata
 
-        (tmp_path / "main.j2.typ").write_text(
-            "{% include template_name %}\n{{ title }}"
-        )
+        (tmp_path / "main.j2.typ").write_text("{% include template_name %}\n{{ title }}")
 
         result = infer_contract_with_metadata(tmp_path / "main.j2.typ")
         assert result.is_partial is True
@@ -462,9 +451,7 @@ class TestIncludeInference:
         """{% include 'nonexistent.j2.typ' %} marks partial, no crash."""
         from trustrender.contract import infer_contract_with_metadata
 
-        (tmp_path / "main.j2.typ").write_text(
-            '{% include "nonexistent.j2.typ" %}\n{{ title }}'
-        )
+        (tmp_path / "main.j2.typ").write_text('{% include "nonexistent.j2.typ" %}\n{{ title }}')
 
         result = infer_contract_with_metadata(tmp_path / "main.j2.typ")
         assert result.is_partial is True
@@ -475,9 +462,7 @@ class TestIncludeInference:
         """{% include 'x' ignore missing %} does not mark as partial."""
         from trustrender.contract import infer_contract_with_metadata
 
-        (tmp_path / "main.j2.typ").write_text(
-            '{% include "nonexistent.j2.typ" ignore missing %}\n{{ title }}'
-        )
+        (tmp_path / "main.j2.typ").write_text('{% include "nonexistent.j2.typ" ignore missing %}\n{{ title }}')
 
         result = infer_contract_with_metadata(tmp_path / "main.j2.typ")
         assert result.is_partial is False
@@ -488,12 +473,8 @@ class TestIncludeInference:
         frag_dir = tmp_path / "fragments"
         frag_dir.mkdir()
         (frag_dir / "inner.j2.typ").write_text("{{ deep_field }}")
-        (frag_dir / "outer.j2.typ").write_text(
-            '{% include "fragments/inner.j2.typ" %}\n{{ mid_field }}'
-        )
-        (tmp_path / "main.j2.typ").write_text(
-            '{% include "fragments/outer.j2.typ" %}\n{{ top_field }}'
-        )
+        (frag_dir / "outer.j2.typ").write_text('{% include "fragments/inner.j2.typ" %}\n{{ mid_field }}')
+        (tmp_path / "main.j2.typ").write_text('{% include "fragments/outer.j2.typ" %}\n{{ top_field }}')
 
         contract = infer_contract(tmp_path / "main.j2.typ")
         assert "top_field" in contract
@@ -505,9 +486,18 @@ class TestIncludeInference:
         contract = infer_contract(EXAMPLES / "invoice.j2.typ")
         # Same fields as before — includes only use {% set %} vars.
         expected = {
-            "invoice_number", "invoice_date", "due_date", "payment_terms",
-            "notes", "sender", "recipient", "items",
-            "subtotal", "tax_rate", "tax_amount", "total",
+            "invoice_number",
+            "invoice_date",
+            "due_date",
+            "payment_terms",
+            "notes",
+            "sender",
+            "recipient",
+            "items",
+            "subtotal",
+            "tax_rate",
+            "tax_amount",
+            "total",
         }
         assert set(contract.keys()) == expected
 
@@ -515,9 +505,17 @@ class TestIncludeInference:
         """Statement contract is unchanged after include support."""
         contract = infer_contract(EXAMPLES / "statement.j2.typ")
         expected = {
-            "company", "customer", "statement_date", "period",
-            "opening_balance", "closing_balance", "total_charges",
-            "total_payments", "transactions", "aging", "notes",
+            "company",
+            "customer",
+            "statement_date",
+            "period",
+            "opening_balance",
+            "closing_balance",
+            "total_charges",
+            "total_payments",
+            "transactions",
+            "aging",
+            "notes",
         }
         assert set(contract.keys()) == expected
 

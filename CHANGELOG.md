@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.4
+
+- Fix Python 3.11 compatibility: f-string backslash syntax error in CLI status output. No functional changes from 0.3.3.
+
+## 0.3.3
+
+- Stripe and Shopify adapters now preserve `sender` / `vendor` / `seller` dicts from enriched source payloads (guarded — won't overwrite if adapter populates sender internally in the future)
+- New demo fixtures in `examples/`: `demo_stripe.json`, `demo_shopify.json`, `demo_stripe_ready.json`, `demo_shopify_ready.json` — show the blocked → pass proof flow with German B2B EUR / 19% MwSt math
+- New `examples/start_to_finish.py` walking through raw Stripe payload → adapter → blocked → fix → pass → canonical Factur-X-ready dict
+- README restructured as a proof loop: install + real CLI output for both adapters at the top, "why this exists" section explaining the gap factur-x / drafthorse don't fill
+- 8 new adapter passthrough tests (993 total)
+
 ## 0.3.2
 
 - Add `from_shopify()` adapter for raw Shopify Order API payloads

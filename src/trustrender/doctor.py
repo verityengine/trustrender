@@ -78,10 +78,7 @@ def check_backends(typst_py_status: str, typst_cli_status: str) -> tuple[str, st
     if py_ok and cli_ok:
         return OK, "Both backends available (library + server)"
     if py_ok and not cli_ok:
-        return WARN, (
-            "Only typst-py backend available\n"
-            "         Library rendering works, but server mode requires typst CLI"
-        )
+        return WARN, ("Only typst-py backend available\n         Library rendering works, but server mode requires typst CLI")
     if cli_ok and not py_ok:
         return OK, "Only typst-cli backend available (library + server both work)"
     return FAIL, (
@@ -177,9 +174,7 @@ def check_template_fonts(templates_dir: Path | None = None) -> tuple[str, str]:
             f"         Declared: {declared_str}",
         ]
         if found_names:
-            found_detail = ", ".join(
-                f"{n} ({available[n.lower()]})" for n in found_names
-            )
+            found_detail = ", ".join(f"{n} ({available[n.lower()]})" for n in found_names)
             lines.append(f"         Found:    {found_detail}")
         else:
             lines.append("         Found:    (none in configured paths)")
@@ -192,21 +187,15 @@ def check_template_fonts(templates_dir: Path | None = None) -> tuple[str, str]:
             )
         # Actionable fix commands
         if "Inter" in missing_names:
-            lines.append(
-                "         Fix:      download Inter from https://fonts.google.com/specimen/Inter"
-            )
+            lines.append("         Fix:      download Inter from https://fonts.google.com/specimen/Inter")
         target = env_path or (str(fonts_dir) if fonts_dir else None)
         if target:
             lines.append(f"         Path:     install missing fonts to {target}")
         else:
-            lines.append(
-                "         Tip:      set TRUSTRENDER_FONT_PATH to a directory with your fonts"
-            )
+            lines.append("         Tip:      set TRUSTRENDER_FONT_PATH to a directory with your fonts")
         return WARN, "\n".join(lines)
 
-    found_detail = ", ".join(
-        f"{n} ({available[n.lower()]})" for n in found_names
-    )
+    found_detail = ", ".join(f"{n} ({available[n.lower()]})" for n in found_names)
     result = f"Font inventory: {declared_str} — all found ({found_detail})"
     if env_families:
         result += (

@@ -12,10 +12,10 @@ from trustrender.doctor import (
     check_env_backend,
     check_env_font_path,
     check_fonts_dir,
-    check_trustrender_import,
     check_python_version,
     check_smoke_render,
     check_smoke_server,
+    check_trustrender_import,
     check_typst_cli,
     check_typst_py,
     run_doctor,
@@ -130,8 +130,7 @@ class TestDoctorFontEnhancements:
         template = tmp_path / "test.j2.typ"
         template.write_text('#set text(font: ("Inter", "Noto Sans"))\nHello')
 
-        with patch("trustrender.bundled_font_dir", return_value=None), \
-             patch("trustrender.doctor._find_repo_root", return_value=None):
+        with patch("trustrender.bundled_font_dir", return_value=None), patch("trustrender.doctor._find_repo_root", return_value=None):
             status, msg = check_template_fonts(templates_dir=tmp_path)
         assert "Inter" in msg
         assert "Noto Sans" in msg
@@ -143,8 +142,7 @@ class TestDoctorFontEnhancements:
         template = tmp_path / "test.j2.typ"
         template.write_text('#set text(font: "Roboto")\nHello')
 
-        with patch("trustrender.bundled_font_dir", return_value=None), \
-             patch("trustrender.doctor._find_repo_root", return_value=None):
+        with patch("trustrender.bundled_font_dir", return_value=None), patch("trustrender.doctor._find_repo_root", return_value=None):
             status, msg = check_template_fonts(templates_dir=tmp_path)
         assert "Roboto" in msg
         assert status == WARN  # not available
@@ -154,13 +152,9 @@ class TestDoctorFontEnhancements:
         from trustrender.doctor import check_template_fonts
 
         template = tmp_path / "test.j2.typ"
-        template.write_text(
-            '#set text(font: "Inter")\n'
-            '#show heading: set text(font: ("Roboto", "Arial"))\n'
-        )
+        template.write_text('#set text(font: "Inter")\n#show heading: set text(font: ("Roboto", "Arial"))\n')
 
-        with patch("trustrender.bundled_font_dir", return_value=None), \
-             patch("trustrender.doctor._find_repo_root", return_value=None):
+        with patch("trustrender.bundled_font_dir", return_value=None), patch("trustrender.doctor._find_repo_root", return_value=None):
             status, msg = check_template_fonts(templates_dir=tmp_path)
         assert "Inter" in msg
         assert "Roboto" in msg
@@ -173,8 +167,7 @@ class TestDoctorFontEnhancements:
         template = tmp_path / "test.j2.typ"
         template.write_text('#set text(font: "Inter")\nHello')
 
-        with patch("trustrender.bundled_font_dir", return_value=None), \
-             patch("trustrender.doctor._find_repo_root", return_value=None):
+        with patch("trustrender.bundled_font_dir", return_value=None), patch("trustrender.doctor._find_repo_root", return_value=None):
             env = dict(**__import__("os").environ)
             env.pop("TRUSTRENDER_FONT_PATH", None)
             with patch.dict("os.environ", env, clear=True):
@@ -194,9 +187,11 @@ class TestDoctorFontEnhancements:
         template = template_dir / "test.j2.typ"
         template.write_text('#set text(font: "CustomFont")\nHello')
 
-        with patch("trustrender.bundled_font_dir", return_value=None), \
-             patch("trustrender.doctor._find_repo_root", return_value=None), \
-             patch.dict("os.environ", {"TRUSTRENDER_FONT_PATH": str(font_dir)}):
+        with (
+            patch("trustrender.bundled_font_dir", return_value=None),
+            patch("trustrender.doctor._find_repo_root", return_value=None),
+            patch.dict("os.environ", {"TRUSTRENDER_FONT_PATH": str(font_dir)}),
+        ):
             status, msg = check_template_fonts(templates_dir=template_dir)
         assert status == WARN
         assert str(font_dir) in msg
@@ -214,9 +209,11 @@ class TestDoctorFontEnhancements:
         template = template_dir / "test.j2.typ"
         template.write_text('#set text(font: "Inter")\nHello')
 
-        with patch("trustrender.bundled_font_dir", return_value=None), \
-             patch("trustrender.doctor._find_repo_root", return_value=None), \
-             patch.dict("os.environ", {"TRUSTRENDER_FONT_PATH": str(font_dir)}):
+        with (
+            patch("trustrender.bundled_font_dir", return_value=None),
+            patch("trustrender.doctor._find_repo_root", return_value=None),
+            patch.dict("os.environ", {"TRUSTRENDER_FONT_PATH": str(font_dir)}),
+        ):
             status, msg = check_template_fonts(templates_dir=template_dir)
         assert "Env path:" in msg
         assert "roboto" in msg.lower()
@@ -233,9 +230,11 @@ class TestDoctorFontEnhancements:
         template = template_dir / "test.j2.typ"
         template.write_text('#set text(font: "Inter")\nHello')
 
-        with patch("trustrender.bundled_font_dir", return_value=None), \
-             patch("trustrender.doctor._find_repo_root", return_value=None), \
-             patch.dict("os.environ", {"TRUSTRENDER_FONT_PATH": str(font_dir)}):
+        with (
+            patch("trustrender.bundled_font_dir", return_value=None),
+            patch("trustrender.doctor._find_repo_root", return_value=None),
+            patch.dict("os.environ", {"TRUSTRENDER_FONT_PATH": str(font_dir)}),
+        ):
             status, msg = check_template_fonts(templates_dir=template_dir)
         assert status == WARN
         assert "Inter" in msg

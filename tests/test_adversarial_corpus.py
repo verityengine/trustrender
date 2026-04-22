@@ -13,11 +13,11 @@ Corpus:
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import pytest
 
-import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from trustrender.invoice_ingest import ingest_invoice
@@ -35,32 +35,48 @@ def load(name: str) -> dict:
 # ---------------------------------------------------------------------------
 
 REQUIRED_CANONICAL_KEYS = {
-    "invoice_number", "invoice_date", "due_date", "sender", "recipient",
-    "items", "subtotal", "tax_rate", "tax_amount", "total",
-    "currency", "payment_terms", "notes",
+    "invoice_number",
+    "invoice_date",
+    "due_date",
+    "sender",
+    "recipient",
+    "items",
+    "subtotal",
+    "tax_rate",
+    "tax_amount",
+    "total",
+    "currency",
+    "payment_terms",
+    "notes",
 }
 
 REQUIRED_TEMPLATE_KEYS = {
-    "invoice_number", "invoice_date", "due_date", "payment_terms",
-    "sender", "recipient", "items", "subtotal", "tax_rate",
-    "tax_amount", "total", "notes",
+    "invoice_number",
+    "invoice_date",
+    "due_date",
+    "payment_terms",
+    "sender",
+    "recipient",
+    "items",
+    "subtotal",
+    "tax_rate",
+    "tax_amount",
+    "total",
+    "notes",
 }
 
 
-def assert_render_ready(report, *, sender_name: str, recipient_name: str,
-                        invoice_number: str, min_items: int = 1):
+def assert_render_ready(report, *, sender_name: str, recipient_name: str, invoice_number: str, min_items: int = 1):
     """Golden assertions for any render-ready result."""
     assert report.render_ready is True
     assert report.status in ("ready", "ready_with_warnings")
     # Canonical has all required keys
     canonical = report.canonical
-    assert REQUIRED_CANONICAL_KEYS <= set(canonical.keys()), \
-        f"Missing canonical keys: {REQUIRED_CANONICAL_KEYS - set(canonical.keys())}"
+    assert REQUIRED_CANONICAL_KEYS <= set(canonical.keys()), f"Missing canonical keys: {REQUIRED_CANONICAL_KEYS - set(canonical.keys())}"
     # Template payload exists and has required shape
     tp = report.template_payload
     assert tp is not None, "template_payload should not be None for render-ready"
-    assert REQUIRED_TEMPLATE_KEYS <= set(tp.keys()), \
-        f"Missing template keys: {REQUIRED_TEMPLATE_KEYS - set(tp.keys())}"
+    assert REQUIRED_TEMPLATE_KEYS <= set(tp.keys()), f"Missing template keys: {REQUIRED_TEMPLATE_KEYS - set(tp.keys())}"
     # Core identity checks
     assert canonical["invoice_number"] == invoice_number
     assert canonical["sender"]["name"] == sender_name
@@ -84,16 +100,15 @@ def assert_blocked(report, *, expected_rule_ids: list[str]):
     blocked = [e for e in report.errors if e.severity == "blocked"]
     actual_ids = {e.rule_id for e in blocked}
     for rid in expected_rule_ids:
-        assert rid in actual_ids, \
-            f"Expected blocking rule {rid!r} not found. Got: {actual_ids}"
+        assert rid in actual_ids, f"Expected blocking rule {rid!r} not found. Got: {actual_ids}"
 
 
 # ---------------------------------------------------------------------------
 # Ready payloads (3)
 # ---------------------------------------------------------------------------
 
-class TestReadyCorpus:
 
+class TestReadyCorpus:
     def test_generic_erp(self):
         """Generic ERP export with no vendor branding — PascalCase, nested parties."""
         report = ingest_invoice(load("generic_erp"))
@@ -139,19 +154,17 @@ class TestReadyCorpus:
         )
         # Should have computed subtotal and total from items
         canonical = report.canonical
-        assert canonical["subtotal"] > 0 or canonical["total"] > 0, \
-            "minimal payload should compute totals from items"
+        assert canonical["subtotal"] > 0 or canonical["total"] > 0, "minimal payload should compute totals from items"
         # Computed fields should be tracked
-        assert len(report.computed_fields) > 0, \
-            "minimal payload should have computed fields"
+        assert len(report.computed_fields) > 0, "minimal payload should have computed fields"
 
 
 # ---------------------------------------------------------------------------
 # Blocked payloads (4)
 # ---------------------------------------------------------------------------
 
-class TestBlockedCorpus:
 
+class TestBlockedCorpus:
     def test_no_sender(self):
         """Missing sender blocks on identity.sender_name."""
         report = ingest_invoice(load("no_sender"))
@@ -185,8 +198,8 @@ class TestBlockedCorpus:
 # Weird but recoverable payloads (3)
 # ---------------------------------------------------------------------------
 
-class TestRecoverableCorpus:
 
+class TestRecoverableCorpus:
     def test_extra_junk_fields(self):
         """Valid invoice with 10 extra unrecognized fields → ready + unknown_fields."""
         report = ingest_invoice(load("extra_junk"))
@@ -197,8 +210,7 @@ class TestRecoverableCorpus:
             invoice_number="JUNK-777",
         )
         # Unknown fields should be captured, not silently dropped
-        assert len(report.unknown_fields) >= 5, \
-            f"Expected 5+ unknown fields, got {len(report.unknown_fields)}"
+        assert len(report.unknown_fields) >= 5, f"Expected 5+ unknown fields, got {len(report.unknown_fields)}"
         unknown_paths = {u.path for u in report.unknown_fields}
         assert "internal_tracking_id" in unknown_paths
         assert "salesforce_opportunity_id" in unknown_paths
@@ -243,13 +255,20 @@ class TestRecoverableCorpus:
 # Cross-corpus structural assertions
 # ---------------------------------------------------------------------------
 
+
 class TestCorpusStructure:
     """Meta-assertions that prove the pipeline is rule-driven, not fixture-driven."""
 
-    @pytest.fixture(params=[
-        "generic_erp", "flat_billing", "minimal_valid",
-        "extra_junk", "mixed_casing", "nested_unwrap",
-    ])
+    @pytest.fixture(
+        params=[
+            "generic_erp",
+            "flat_billing",
+            "minimal_valid",
+            "extra_junk",
+            "mixed_casing",
+            "nested_unwrap",
+        ]
+    )
     def ready_report(self, request):
         return ingest_invoice(load(request.param))
 
@@ -267,8 +286,7 @@ class TestCorpusStructure:
         """Canonical keys should never contain vendor-specific names."""
         vendor_fragments = {"stripe", "quickbooks", "qbo", "xero", "freshbooks"}
         for key in ready_report.canonical.keys():
-            assert not any(v in key.lower() for v in vendor_fragments), \
-                f"Vendor name leaked into canonical key: {key}"
+            assert not any(v in key.lower() for v in vendor_fragments), f"Vendor name leaked into canonical key: {key}"
 
     def test_template_infers_to_invoice(self, ready_report):
         """All ready corpus entries should infer to invoice.j2.typ."""

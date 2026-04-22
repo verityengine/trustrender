@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
-from pathlib import Path
 
 try:
     from drafthorse.models.accounting import ApplicableTradeTax
@@ -32,13 +31,9 @@ try:
     from drafthorse.models.tradelines import LineItem
     from drafthorse.pdf import attach_xml
 except ImportError:
-    raise ImportError(
-        "ZUGFeRD support requires the 'drafthorse' package. "
-        "Install with: pip install trustrender[zugferd]"
-    )
+    raise ImportError("ZUGFeRD support requires the 'drafthorse' package. Install with: pip install trustrender[zugferd]")
 
 from .contract import ContractError
-
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -46,7 +41,7 @@ from .contract import ContractError
 
 _PAYMENT_MEANS_CODES = {
     "credit_transfer": "58",  # SEPA credit transfer
-    "direct_debit": "59",     # SEPA direct debit
+    "direct_debit": "59",  # SEPA direct debit
 }
 
 _SUPPORTED_CURRENCIES = {"EUR"}
@@ -58,8 +53,11 @@ _SUPPORTED_TYPE_CODES = {"380", "381"}  # standard invoice, credit note
 # Invoice data validation (EN 16931 specific)
 # ---------------------------------------------------------------------------
 
+
 def validate_zugferd_invoice_data(
-    data: dict, *, profile: str = "en16931",
+    data: dict,
+    *,
+    profile: str = "en16931",
 ) -> list[ContractError]:
     """Validate that data satisfies EN 16931 requirements.
 
@@ -73,157 +71,205 @@ def validate_zugferd_invoice_data(
     # --- Required top-level fields ---
     for field in ("invoice_number", "invoice_date", "due_date", "currency"):
         if field not in data or not data[field]:
-            errors.append(ContractError(
-                path=field,
-                message=f"required for EN 16931",
-                expected="string",
-                actual="missing",
-            ))
+            errors.append(
+                ContractError(
+                    path=field,
+                    message="required for EN 16931",
+                    expected="string",
+                    actual="missing",
+                )
+            )
 
     # --- Invoice type ---
     invoice_type = str(data.get("invoice_type", "380"))
     if invoice_type not in _SUPPORTED_TYPE_CODES:
-        errors.append(ContractError(
-            path="invoice_type",
-            message=f"invoice_type '{invoice_type}' is not supported; supported types are 380 (invoice) and 381 (credit note)",
-            expected=f"one of {sorted(_SUPPORTED_TYPE_CODES)}",
-            actual=invoice_type,
-        ))
+        errors.append(
+            ContractError(
+                path="invoice_type",
+                message=f"invoice_type '{invoice_type}' is not supported; supported types are 380 (invoice) and 381 (credit note)",
+                expected=f"one of {sorted(_SUPPORTED_TYPE_CODES)}",
+                actual=invoice_type,
+            )
+        )
 
     # Credit note requires referenced_invoice; standard invoice rejects it
     ref = data.get("referenced_invoice")
     if invoice_type == "381":
         if not isinstance(ref, str) or not ref.strip():
-            errors.append(ContractError(
-                path="referenced_invoice",
-                message="referenced_invoice is required for credit notes (type 381)",
-                expected="non-empty string (original invoice number)",
-                actual="missing" if ref is None else repr(ref),
-            ))
+            errors.append(
+                ContractError(
+                    path="referenced_invoice",
+                    message="referenced_invoice is required for credit notes (type 381)",
+                    expected="non-empty string (original invoice number)",
+                    actual="missing" if ref is None else repr(ref),
+                )
+            )
     elif ref is not None:
-        errors.append(ContractError(
-            path="referenced_invoice",
-            message="referenced_invoice is not valid for invoice type 380; only credit notes (381) reference a prior invoice",
-            expected="absent",
-            actual=repr(ref),
-        ))
+        errors.append(
+            ContractError(
+                path="referenced_invoice",
+                message="referenced_invoice is not valid for invoice type 380; only credit notes (381) reference a prior invoice",
+                expected="absent",
+                actual=repr(ref),
+            )
+        )
 
     # --- Unsupported shapes: fail loudly ---
     currency = data.get("currency", "")
     if currency and currency not in _SUPPORTED_CURRENCIES:
-        errors.append(ContractError(
-            path="currency",
-            message=f"only EUR is supported in v1, got '{currency}'",
-            expected="EUR",
-            actual=currency,
-        ))
+        errors.append(
+            ContractError(
+                path="currency",
+                message=f"only EUR is supported in v1, got '{currency}'",
+                expected="EUR",
+                actual=currency,
+            )
+        )
 
     # --- Seller ---
     seller = data.get("seller")
     if not isinstance(seller, dict):
-        errors.append(ContractError(
-            path="seller", message="required object", expected="object", actual="missing",
-        ))
+        errors.append(
+            ContractError(
+                path="seller",
+                message="required object",
+                expected="object",
+                actual="missing",
+            )
+        )
     else:
         for field in ("name", "address", "city", "postal_code", "country"):
             if not seller.get(field):
-                errors.append(ContractError(
-                    path=f"seller.{field}",
-                    message=f"required for EN 16931",
-                    expected="string",
-                    actual="missing",
-                ))
+                errors.append(
+                    ContractError(
+                        path=f"seller.{field}",
+                        message="required for EN 16931",
+                        expected="string",
+                        actual="missing",
+                    )
+                )
         if not seller.get("vat_id"):
-            errors.append(ContractError(
-                path="seller.vat_id",
-                message="seller VAT ID required for EN 16931",
-                expected="string (e.g. DE123456789)",
-                actual="missing",
-            ))
+            errors.append(
+                ContractError(
+                    path="seller.vat_id",
+                    message="seller VAT ID required for EN 16931",
+                    expected="string (e.g. DE123456789)",
+                    actual="missing",
+                )
+            )
         country = seller.get("country", "")
         if country and country not in _SUPPORTED_COUNTRIES:
-            errors.append(ContractError(
-                path="seller.country",
-                message=f"only DE is supported in v1, got '{country}'",
-                expected="DE",
-                actual=country,
-            ))
+            errors.append(
+                ContractError(
+                    path="seller.country",
+                    message=f"only DE is supported in v1, got '{country}'",
+                    expected="DE",
+                    actual=country,
+                )
+            )
 
     # --- Buyer ---
     buyer = data.get("buyer")
     if not isinstance(buyer, dict):
-        errors.append(ContractError(
-            path="buyer", message="required object", expected="object", actual="missing",
-        ))
+        errors.append(
+            ContractError(
+                path="buyer",
+                message="required object",
+                expected="object",
+                actual="missing",
+            )
+        )
     else:
         if not buyer.get("name"):
-            errors.append(ContractError(
-                path="buyer.name", message="required for EN 16931",
-                expected="string", actual="missing",
-            ))
+            errors.append(
+                ContractError(
+                    path="buyer.name",
+                    message="required for EN 16931",
+                    expected="string",
+                    actual="missing",
+                )
+            )
 
     # --- Items ---
     items = data.get("items")
     tax_rates = set()
     if not isinstance(items, list) or not items:
-        errors.append(ContractError(
-            path="items", message="at least one line item required",
-            expected="list", actual="missing" if items is None else "empty",
-        ))
+        errors.append(
+            ContractError(
+                path="items",
+                message="at least one line item required",
+                expected="list",
+                actual="missing" if items is None else "empty",
+            )
+        )
     else:
         for i, item in enumerate(items):
             if not isinstance(item, dict):
-                errors.append(ContractError(
-                    path=f"items[{i}]", message="must be an object",
-                    expected="object", actual=type(item).__name__,
-                ))
+                errors.append(
+                    ContractError(
+                        path=f"items[{i}]",
+                        message="must be an object",
+                        expected="object",
+                        actual=type(item).__name__,
+                    )
+                )
                 continue
             for field in ("description", "quantity", "unit_price", "tax_rate", "line_total"):
                 if field not in item:
-                    errors.append(ContractError(
-                        path=f"items[{i}].{field}",
-                        message=f"required for EN 16931",
-                        expected="number" if field != "description" else "string",
-                        actual="missing",
-                    ))
+                    errors.append(
+                        ContractError(
+                            path=f"items[{i}].{field}",
+                            message="required for EN 16931",
+                            expected="number" if field != "description" else "string",
+                            actual="missing",
+                        )
+                    )
             if "tax_rate" in item:
                 rate = item["tax_rate"]
                 if isinstance(rate, (int, float)) and rate <= 0:
-                    errors.append(ContractError(
-                        path=f"items[{i}].tax_rate",
-                        message=(
-                            f"tax_rate must be > 0 (got {rate}); "
-                            "zero-rated, exempt, and reverse-charge categories "
-                            "are not supported in v1"
-                        ),
-                        expected="positive number (e.g. 7 or 19)",
-                        actual=str(rate),
-                    ))
+                    errors.append(
+                        ContractError(
+                            path=f"items[{i}].tax_rate",
+                            message=(
+                                f"tax_rate must be > 0 (got {rate}); "
+                                "zero-rated, exempt, and reverse-charge categories "
+                                "are not supported in v1"
+                            ),
+                            expected="positive number (e.g. 7 or 19)",
+                            actual=str(rate),
+                        )
+                    )
                 tax_rates.add(rate)
 
     # --- Tax entries ---
     tax_entries = data.get("tax_entries")
     if not isinstance(tax_entries, list) or not tax_entries:
-        errors.append(ContractError(
-            path="tax_entries", message="at least one tax entry required",
-            expected="list", actual="missing",
-        ))
+        errors.append(
+            ContractError(
+                path="tax_entries",
+                message="at least one tax entry required",
+                expected="list",
+                actual="missing",
+            )
+        )
     else:
         # Reject zero/negative rates in tax_entries
         for j, entry in enumerate(tax_entries):
             if isinstance(entry, dict):
                 erate = entry.get("rate")
                 if isinstance(erate, (int, float)) and erate <= 0:
-                    errors.append(ContractError(
-                        path=f"tax_entries[{j}].rate",
-                        message=(
-                            f"tax_entries rate must be > 0 (got {erate}); "
-                            "zero-rated, exempt, and reverse-charge categories "
-                            "are not supported in v1"
-                        ),
-                        expected="positive number (e.g. 7 or 19)",
-                        actual=str(erate),
-                    ))
+                    errors.append(
+                        ContractError(
+                            path=f"tax_entries[{j}].rate",
+                            message=(
+                                f"tax_entries rate must be > 0 (got {erate}); "
+                                "zero-rated, exempt, and reverse-charge categories "
+                                "are not supported in v1"
+                            ),
+                            expected="positive number (e.g. 7 or 19)",
+                            actual=str(erate),
+                        )
+                    )
 
         # Bidirectional consistency: item rates ↔ tax_entries rates
         entry_rates = {e.get("rate") for e in tax_entries if isinstance(e, dict)}
@@ -231,12 +277,14 @@ def validate_zugferd_invoice_data(
         # Every item tax rate must have a matching tax_entries entry
         missing_from_entries = tax_rates - entry_rates
         if missing_from_entries:
-            errors.append(ContractError(
-                path="tax_entries",
-                message=f"tax_entries missing for item rate(s): {sorted(missing_from_entries)}",
-                expected=f"entry for each rate in items ({sorted(tax_rates)})",
-                actual=f"entries for {sorted(entry_rates)}",
-            ))
+            errors.append(
+                ContractError(
+                    path="tax_entries",
+                    message=f"tax_entries missing for item rate(s): {sorted(missing_from_entries)}",
+                    expected=f"entry for each rate in items ({sorted(tax_rates)})",
+                    actual=f"entries for {sorted(entry_rates)}",
+                )
+            )
 
         # Every non-zero tax_entries rate must appear in items
         orphan_rates = entry_rates - tax_rates
@@ -249,24 +297,28 @@ def validate_zugferd_invoice_data(
                 if rate in orphan_rates:
                     basis = entry.get("basis", 0)
                     if isinstance(basis, (int, float)) and basis != 0:
-                        errors.append(ContractError(
-                            path="tax_entries",
-                            message=f"tax_entries rate {rate}% has non-zero basis but no items use that rate",
-                            expected="matching items or zero basis",
-                            actual=f"basis={basis}",
-                        ))
+                        errors.append(
+                            ContractError(
+                                path="tax_entries",
+                                message=f"tax_entries rate {rate}% has non-zero basis but no items use that rate",
+                                expected="matching items or zero basis",
+                                actual=f"basis={basis}",
+                            )
+                        )
 
     # --- Totals ---
     totals_numeric = True
     for field in ("subtotal", "tax_total", "total"):
         val = data.get(field)
         if val is None or not isinstance(val, (int, float)):
-            errors.append(ContractError(
-                path=field,
-                message=f"required numeric value for EN 16931",
-                expected="number",
-                actual="missing" if val is None else type(val).__name__,
-            ))
+            errors.append(
+                ContractError(
+                    path=field,
+                    message="required numeric value for EN 16931",
+                    expected="number",
+                    actual="missing" if val is None else type(val).__name__,
+                )
+            )
             totals_numeric = False
 
     # --- Arithmetic consistency ---
@@ -277,71 +329,77 @@ def validate_zugferd_invoice_data(
         total = data.get("total", 0)
 
         # sum(line_total) == subtotal
-        line_totals = [
-            item["line_total"]
-            for item in items
-            if isinstance(item, dict) and isinstance(item.get("line_total"), (int, float))
-        ]
+        line_totals = [item["line_total"] for item in items if isinstance(item, dict) and isinstance(item.get("line_total"), (int, float))]
         if line_totals:
             expected_subtotal = round(sum(line_totals), 2)
             if round(abs(expected_subtotal - subtotal), 2) > 0.01:
-                errors.append(ContractError(
-                    path="subtotal",
-                    message=f"subtotal ({subtotal}) does not match sum of line totals ({expected_subtotal})",
-                    expected=str(expected_subtotal),
-                    actual=str(subtotal),
-                ))
+                errors.append(
+                    ContractError(
+                        path="subtotal",
+                        message=f"subtotal ({subtotal}) does not match sum of line totals ({expected_subtotal})",
+                        expected=str(expected_subtotal),
+                        actual=str(subtotal),
+                    )
+                )
 
         # sum(tax_entries.amount) == tax_total
         if isinstance(tax_entries, list) and tax_entries:
-            entry_amounts = [
-                e["amount"]
-                for e in tax_entries
-                if isinstance(e, dict) and isinstance(e.get("amount"), (int, float))
-            ]
+            entry_amounts = [e["amount"] for e in tax_entries if isinstance(e, dict) and isinstance(e.get("amount"), (int, float))]
             if entry_amounts:
                 expected_tax = round(sum(entry_amounts), 2)
                 if round(abs(expected_tax - tax_total), 2) > 0.01:
-                    errors.append(ContractError(
-                        path="tax_total",
-                        message=f"tax_total ({tax_total}) does not match sum of tax entry amounts ({expected_tax})",
-                        expected=str(expected_tax),
-                        actual=str(tax_total),
-                    ))
+                    errors.append(
+                        ContractError(
+                            path="tax_total",
+                            message=f"tax_total ({tax_total}) does not match sum of tax entry amounts ({expected_tax})",
+                            expected=str(expected_tax),
+                            actual=str(tax_total),
+                        )
+                    )
 
         # subtotal + tax_total == total
         expected_total = round(subtotal + tax_total, 2)
         if round(abs(expected_total - total), 2) > 0.01:
-            errors.append(ContractError(
-                path="total",
-                message=f"total ({total}) does not match subtotal + tax_total ({expected_total})",
-                expected=str(expected_total),
-                actual=str(total),
-            ))
+            errors.append(
+                ContractError(
+                    path="total",
+                    message=f"total ({total}) does not match subtotal + tax_total ({expected_total})",
+                    expected=str(expected_total),
+                    actual=str(total),
+                )
+            )
 
     # --- Payment ---
     payment = data.get("payment")
     if not isinstance(payment, dict):
-        errors.append(ContractError(
-            path="payment", message="payment details required for EN 16931",
-            expected="object", actual="missing",
-        ))
+        errors.append(
+            ContractError(
+                path="payment",
+                message="payment details required for EN 16931",
+                expected="object",
+                actual="missing",
+            )
+        )
     else:
         means = payment.get("means", "")
         if means and means not in _PAYMENT_MEANS_CODES:
-            errors.append(ContractError(
-                path="payment.means",
-                message=f"unsupported payment means: '{means}'",
-                expected=f"one of {list(_PAYMENT_MEANS_CODES.keys())}",
-                actual=means,
-            ))
+            errors.append(
+                ContractError(
+                    path="payment.means",
+                    message=f"unsupported payment means: '{means}'",
+                    expected=f"one of {list(_PAYMENT_MEANS_CODES.keys())}",
+                    actual=means,
+                )
+            )
         if means == "credit_transfer" and not payment.get("iban"):
-            errors.append(ContractError(
-                path="payment.iban",
-                message="IBAN required for credit transfer",
-                expected="string",
-                actual="missing",
-            ))
+            errors.append(
+                ContractError(
+                    path="payment.iban",
+                    message="IBAN required for credit transfer",
+                    expected="string",
+                    actual="missing",
+                )
+            )
 
     # --- Unsupported features: fail loudly ---
     # Allowances and charges are hardcoded to zero in XML generation.
@@ -349,12 +407,14 @@ def validate_zugferd_invoice_data(
     # embedded XML would disagree — a compliance failure.  Reject early.
     for field in ("allowances", "charges", "discounts"):
         if data.get(field):
-            errors.append(ContractError(
-                path=field,
-                message=f"allowances/charges/discounts not supported in v1 (field '{field}' present)",
-                expected="absent or empty",
-                actual=f"{len(data[field])} entries" if isinstance(data[field], list) else "present",
-            ))
+            errors.append(
+                ContractError(
+                    path=field,
+                    message=f"allowances/charges/discounts not supported in v1 (field '{field}' present)",
+                    expected="absent or empty",
+                    actual=f"{len(data[field])} entries" if isinstance(data[field], list) else "present",
+                )
+            )
 
     return errors
 
@@ -362,6 +422,7 @@ def validate_zugferd_invoice_data(
 # ---------------------------------------------------------------------------
 # XML generation
 # ---------------------------------------------------------------------------
+
 
 def _parse_date(date_str: str) -> datetime.date:
     """Parse an ISO date string (YYYY-MM-DD) to a date object."""
@@ -407,9 +468,7 @@ def build_invoice_xml(data: dict, *, profile: str = "en16931") -> bytes:
     seller.address.city_name = seller_data["city"]
     seller.address.postcode = seller_data["postal_code"]
     seller.address.country_id = seller_data["country"]
-    seller.tax_registrations.add(
-        TaxRegistration(id=("VA", seller_data["vat_id"]))
-    )
+    seller.tax_registrations.add(TaxRegistration(id=("VA", seller_data["vat_id"])))
     # Contact details (EXTENDED profile only — optional for EN 16931)
     if seller_data.get("email"):
         seller.contact.email.address = seller_data["email"]
@@ -532,6 +591,7 @@ def validate_zugferd_xml(xml_bytes: bytes) -> list[str] | None:
 
     try:
         from facturx.facturx import xml_check_schematron
+
         xml_check_schematron(xml_bytes)
     except ImportError:
         pass  # Schematron not available in this facturx build
@@ -544,6 +604,7 @@ def validate_zugferd_xml(xml_bytes: bytes) -> list[str] | None:
 # ---------------------------------------------------------------------------
 # PDF post-processing
 # ---------------------------------------------------------------------------
+
 
 def apply_zugferd(pdf_bytes: bytes, xml_bytes: bytes, *, lang: str = "de") -> bytes:
     """Combine a visual PDF with CII XML into a ZUGFeRD PDF/A-3b document.

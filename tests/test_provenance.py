@@ -5,8 +5,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
 from trustrender import render
 from trustrender.provenance import (
     create_provenance,
@@ -129,8 +127,10 @@ class TestProvenanceWithZugferd:
         """All three: render + ZUGFeRD + provenance. All must be present."""
         data = json.loads((EXAMPLES / "einvoice_data.json").read_text())
         pdf = render(
-            "examples/einvoice.j2.typ", data,
-            zugferd="en16931", provenance=True,
+            "examples/einvoice.j2.typ",
+            data,
+            zugferd="en16931",
+            provenance=True,
         )
         assert pdf[:5] == b"%PDF-"
 
@@ -141,6 +141,7 @@ class TestProvenanceWithZugferd:
 
         # ZUGFeRD XML must be extractable
         from facturx import get_xml_from_pdf
+
         filename, xml = get_xml_from_pdf(pdf)
         assert filename == "factur-x.xml"
         assert len(xml) > 100
@@ -150,8 +151,10 @@ class TestProvenanceWithZugferd:
         """Provenance verification works on ZUGFeRD PDFs."""
         data = json.loads((EXAMPLES / "einvoice_data.json").read_text())
         pdf = render(
-            "examples/einvoice.j2.typ", data,
-            zugferd="en16931", provenance=True,
+            "examples/einvoice.j2.typ",
+            data,
+            zugferd="en16931",
+            provenance=True,
         )
         result = verify_provenance(pdf, EXAMPLES / "einvoice.j2.typ", data)
         assert result.verified is True

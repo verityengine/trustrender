@@ -35,7 +35,12 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Mount, Route
 
-from . import TrustRenderError, RenderResult, __version__, _build_font_paths, _render_document_pipeline
+from . import (
+    TrustRenderError,
+    __version__,
+    _build_font_paths,
+    _render_document_pipeline,
+)
 from .engine import TypstCliBackend
 from .errors import ErrorCode
 
@@ -120,7 +125,11 @@ def create_app(
 
     logger.info(
         "server.startup templates_dir=%s max_concurrent=%d timeout=%ds debug=%s version=%s",
-        templates_dir, max_concurrent_renders, render_timeout, debug, __version__,
+        templates_dir,
+        max_concurrent_renders,
+        render_timeout,
+        debug,
+        __version__,
     )
 
     async def health(request: Request) -> JSONResponse:
@@ -189,6 +198,7 @@ def create_app(
                 return JSONResponse({"data": None}, headers={"X-Request-ID": request_id})
 
         import json
+
         with open(data_path) as f:
             data = json.load(f)
         return JSONResponse({"data": data}, headers={"X-Request-ID": request_id})
@@ -312,7 +322,13 @@ def create_app(
             if not isinstance(template_source, str):
                 return _error(400, ErrorCode.INVALID_DATA, "'template_source' must be a string", request_id, stage="execution")
             if len(template_source.encode("utf-8")) > MAX_TEMPLATE_SOURCE_SIZE:
-                return _error(400, ErrorCode.INVALID_DATA, f"'template_source' exceeds {MAX_TEMPLATE_SOURCE_SIZE // 1024}KB limit", request_id, stage="execution")
+                return _error(
+                    400,
+                    ErrorCode.INVALID_DATA,
+                    f"'template_source' exceeds {MAX_TEMPLATE_SOURCE_SIZE // 1024}KB limit",
+                    request_id,
+                    stage="execution",
+                )
             # Still validate that the base template exists (for include resolution context)
             base_path = (templates_dir / template_name).resolve()
             if not str(base_path).startswith(str(templates_dir)):
@@ -321,7 +337,13 @@ def create_app(
                 # Fall back to built-in template
                 builtin_base = builtin_templates_dir / template_name
                 if not builtin_base.exists():
-                    return _error(404, ErrorCode.TEMPLATE_NOT_FOUND, f"Base template not found: {template_name}", request_id, stage="execution")
+                    return _error(
+                        404,
+                        ErrorCode.TEMPLATE_NOT_FOUND,
+                        f"Base template not found: {template_name}",
+                        request_id,
+                        stage="execution",
+                    )
             ephemeral_path = _write_ephemeral_template(template_name, template_source)
             template_path = ephemeral_path
         else:
@@ -360,7 +382,9 @@ def create_app(
                 ephemeral_path.unlink(missing_ok=True)
             logger.warning(
                 "render.backpressure request_id=%s template=%s concurrent=%d",
-                request_id, template_name, max_concurrent_renders,
+                request_id,
+                template_name,
+                max_concurrent_renders,
             )
             return _error(
                 503,
@@ -393,7 +417,9 @@ def create_app(
                 elapsed_ms = (time.monotonic() - t_start) * 1000
                 logger.error(
                     "render.timeout request_id=%s template=%s elapsed_ms=%.0f",
-                    request_id, template_name, elapsed_ms,
+                    request_id,
+                    template_name,
+                    elapsed_ms,
                 )
                 return _error(
                     504,
@@ -414,7 +440,11 @@ def create_app(
                     status = 500
                 logger.warning(
                     "render.error request_id=%s template=%s code=%s status=%d elapsed_ms=%.0f",
-                    request_id, template_name, exc.code.value, status, elapsed_ms,
+                    request_id,
+                    template_name,
+                    exc.code.value,
+                    status,
+                    elapsed_ms,
                 )
                 error_data = exc.to_dict(include_debug=use_debug)
                 error_data["request_id"] = request_id
@@ -428,7 +458,10 @@ def create_app(
             pdf_size = len(result.pdf_bytes)
             logger.info(
                 "render.ok request_id=%s template=%s elapsed_ms=%.0f pdf_bytes=%d",
-                request_id, template_name, elapsed_ms, pdf_size,
+                request_id,
+                template_name,
+                elapsed_ms,
+                pdf_size,
             )
 
             headers = {
@@ -458,11 +491,23 @@ def create_app(
         # Same body parsing as /render
         content_length = request.headers.get("content-length")
         if content_length and int(content_length) > max_body_size:
-            return _error(400, ErrorCode.INVALID_DATA, f"Request body too large (limit: {max_body_size:,} bytes)", request_id, stage="execution")
+            return _error(
+                400,
+                ErrorCode.INVALID_DATA,
+                f"Request body too large (limit: {max_body_size:,} bytes)",
+                request_id,
+                stage="execution",
+            )
 
         body = await request.body()
         if len(body) > max_body_size:
-            return _error(400, ErrorCode.INVALID_DATA, f"Request body too large (limit: {max_body_size:,} bytes)", request_id, stage="execution")
+            return _error(
+                400,
+                ErrorCode.INVALID_DATA,
+                f"Request body too large (limit: {max_body_size:,} bytes)",
+                request_id,
+                stage="execution",
+            )
 
         try:
             payload = json.loads(body)
@@ -494,14 +539,26 @@ def create_app(
             if not isinstance(template_source, str):
                 return _error(400, ErrorCode.INVALID_DATA, "'template_source' must be a string", request_id, stage="execution")
             if len(template_source.encode("utf-8")) > MAX_TEMPLATE_SOURCE_SIZE:
-                return _error(400, ErrorCode.INVALID_DATA, f"'template_source' exceeds {MAX_TEMPLATE_SOURCE_SIZE // 1024}KB limit", request_id, stage="execution")
+                return _error(
+                    400,
+                    ErrorCode.INVALID_DATA,
+                    f"'template_source' exceeds {MAX_TEMPLATE_SOURCE_SIZE // 1024}KB limit",
+                    request_id,
+                    stage="execution",
+                )
             base_path = (templates_dir / template_name).resolve()
             if not str(base_path).startswith(str(templates_dir)):
                 return _error(400, ErrorCode.INVALID_DATA, "Invalid template path", request_id, stage="execution")
             if not base_path.exists():
                 builtin_base = builtin_templates_dir / template_name
                 if not builtin_base.exists():
-                    return _error(404, ErrorCode.TEMPLATE_NOT_FOUND, f"Base template not found: {template_name}", request_id, stage="execution")
+                    return _error(
+                        404,
+                        ErrorCode.TEMPLATE_NOT_FOUND,
+                        f"Base template not found: {template_name}",
+                        request_id,
+                        stage="execution",
+                    )
             ephemeral_path = _write_ephemeral_template(template_name, template_source)
             template_path = ephemeral_path
         else:
@@ -518,6 +575,7 @@ def create_app(
 
         try:
             from .semantic import resolve_hints
+
             sem_hints = resolve_hints(template_name)
             verdict = preflight(template_path, data, font_paths=resolved_fonts, zugferd=req_zugferd, semantic_hints=sem_hints)
             return JSONResponse(
@@ -543,11 +601,23 @@ def create_app(
 
         content_length = request.headers.get("content-length")
         if content_length and int(content_length) > max_body_size:
-            return _error(400, ErrorCode.INVALID_DATA, f"Request body too large (limit: {max_body_size:,} bytes)", request_id, stage="execution")
+            return _error(
+                400,
+                ErrorCode.INVALID_DATA,
+                f"Request body too large (limit: {max_body_size:,} bytes)",
+                request_id,
+                stage="execution",
+            )
 
         body = await request.body()
         if len(body) > max_body_size:
-            return _error(400, ErrorCode.INVALID_DATA, f"Request body too large (limit: {max_body_size:,} bytes)", request_id, stage="execution")
+            return _error(
+                400,
+                ErrorCode.INVALID_DATA,
+                f"Request body too large (limit: {max_body_size:,} bytes)",
+                request_id,
+                stage="execution",
+            )
 
         try:
             payload = json.loads(body)
@@ -603,11 +673,13 @@ def create_app(
     # build calls these paths directly.
     from .dashboard import api_history, api_stats, api_trace
 
-    routes.extend([
-        Route("/history", api_history, methods=["GET"]),
-        Route("/history/{trace_id}", api_trace, methods=["GET"]),
-        Route("/stats", api_stats, methods=["GET"]),
-    ])
+    routes.extend(
+        [
+            Route("/history", api_history, methods=["GET"]),
+            Route("/history/{trace_id}", api_trace, methods=["GET"]),
+            Route("/stats", api_stats, methods=["GET"]),
+        ]
+    )
 
     # /api/ route group: same endpoints under /api/ prefix for the bundled
     # playground frontend (which always calls /api/...).
@@ -635,6 +707,7 @@ def create_app(
     playground_dir = Path(__file__).parent / "playground"
     if playground_dir.is_dir() and (playground_dir / "index.html").exists():
         from starlette.staticfiles import StaticFiles
+
         routes.append(Mount("/", app=StaticFiles(directory=str(playground_dir), html=True), name="playground"))
 
     middleware_stack = [
@@ -644,13 +717,16 @@ def create_app(
     if cors_origins:
         from starlette.middleware.cors import CORSMiddleware
 
-        middleware_stack.insert(0, Middleware(
-            CORSMiddleware,
-            allow_origins=cors_origins,
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
-        ))
+        middleware_stack.insert(
+            0,
+            Middleware(
+                CORSMiddleware,
+                allow_origins=cors_origins,
+                allow_credentials=True,
+                allow_methods=["*"],
+                allow_headers=["*"],
+            ),
+        )
         logger.info("CORS enabled for origins: %s", cors_origins)
 
     app = Starlette(
