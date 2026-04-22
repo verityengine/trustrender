@@ -176,6 +176,28 @@ result = validate_invoice(from_shopify(raw_shopify_order))
 
 Parses string amounts to floats, combines first_name + last_name, maps order fields to invoice structure, preserves structured address fields. Shopify orders have no seller info or due date — TrustRender flags the missing seller and handles the absent due date correctly.
 
+## End-to-end example: Stripe → real Factur-X PDF
+
+[`examples/with_drafthorse_facturx.py`](examples/with_drafthorse_facturx.py) runs the full pipeline:
+
+1. Raw Stripe payload → TrustRender adapter + validation
+2. Add the regulatory metadata Stripe doesn't ship (VAT ID, payment IBAN, tax entries)
+3. drafthorse builds UN/CEFACT CII XML
+4. factur-x embeds the XML into a PDF/A-3b container
+5. Verify with `xml_check_xsd(flavor="factur-x", level="en16931")` — passes
+
+Output: a 15 KB Factur-X invoice PDF that validates against the EN 16931 XSD.
+
+```
+$ python examples/with_drafthorse_facturx.py
+Step 1: Adapt + validate via TrustRender    → status=ready
+Step 2: Build CII XML via drafthorse        → 8,290 bytes of CII XML
+Step 3: Render visual PDF                   → 1,599 bytes
+Step 4: Embed CII XML as PDF/A-3b           → 14,936 bytes
+Step 5: Verify with factur-x library        → ✓ passes EN 16931 XSD
+✓ factur-x.xml is embedded in the PDF
+```
+
 ## What it normalizes
 
 90+ vendor field aliases across QuickBooks, Xero, Stripe, and generic CSV/ERP formats:
